@@ -1,0 +1,431 @@
+@import url(https://fonts.googleapis.com/css?family=Space+Mono:regular,italic,700,700italic);
+@import url(https://fonts.googleapis.com/css?family=Space+Grotesk:regular,italic,700,700italic);
+
+:root {
+  --vp-c-brand: #ff7340;
+  --vp-c-brand-light: #ff5719;
+  --vp-c-brand-lighter: #ff7340;
+  --vp-c-brand-lighter: rgba(255, 135, 23, 0.25);
+  --vp-c-brand-dark: #ff622d;
+  --vp-c-brand-darker: #e23c00;
+
+  --vp-c-sponsor: #fd1d7c;
+
+  /* Typography */
+  --vp-font-family-base: "Space Grotesk", "Inter var experimental", "Inter var",
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+    Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+
+  /* Code Snippet font */
+  --vp-font-family-mono: "Space Mono", Menlo, Monaco, Consolas, "Courier New",
+    monospace;
+}
+
+html,
+body,
+a,
+button,
+input,
+textarea,
+select,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+/* Custom Stlye */
+.custom-layout {
+  background-color: var(--vp-c-bg-soft);
+  color: var(--vp-c-text-1);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 1rem;
+  min-height: 400px;
+  max-width: 1152px;
+  margin: 6rem auto 0;
+  border-radius: 10px;
+}
+
+.custom-layout h1 {
+  font-size: 2.2rem;
+  font-weight: 600;
+}
+
+.custom-layout .btn {
+  background-color: var(--vp-button-brand-bg);
+  color: var(--vp-button-brand-text);
+  border-radius: 20px;
+  padding: 0.5rem 1.4rem;
+}
+
+:root:not(.dark) .VPNavBarTitle .title .VPImage.logo {
+  padding: 0;
+  border-radius: 999px;
+  background: transparent;
+  filter: brightness(0) drop-shadow(0 1px 1px rgba(17, 17, 17, 0.08));
+}
+
+.dark .VPNavBarTitle .title .VPImage.logo {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  filter: none;
+}
+
+.VPNavBarTitle .title .VPImage.logo {
+  display: block;
+  width: auto;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.VPNavBarTitle .title {
+  gap: 0.14rem;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-new(root) {
+  z-index: 9999;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+body.sousuokaiqi {
+  overflow: auto !important;
+}
+
+html.mulugundongzhong {
+  scroll-behavior: smooth;
+}
+
+.VPDocAsideOutline .outline-marker {
+  transition: top var(--mulubiaojishichang, 0.32s) cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease;
+  will-change: top, opacity;
+}
+
+.VPLocalNavOutlineDropdown > button {
+  max-width: min(58vw, 360px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.VPLocalNavOutlineDropdown > button.youxianzai {
+  color: var(--vp-c-text-1);
+}
+
+.VPLocalNavOutlineDropdown .outline-link.shoujimuluxuanzhong {
+  color: var(--vp-c-brand-1);
+  font-weight: 600;
+}
+
+.vp-doc :where(p, figure) > img {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 1.35rem auto;
+  border: 1px solid color-mix(in srgb, var(--vp-c-divider), transparent 22%);
+  border-radius: 10px;
+  background: var(--vp-c-bg-soft);
+  box-shadow: 0 14px 44px rgba(15, 23, 42, 0.12);
+  cursor: zoom-in;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.vp-doc :where(p, figure) > img:hover {
+  border-color: color-mix(in srgb, var(--vp-c-brand-1), transparent 38%);
+  box-shadow: 0 18px 54px rgba(15, 23, 42, 0.18);
+  transform: translateY(-1px);
+}
+
+.viewer-container {
+  z-index: 10000;
+}
+
+.viewer-backdrop {
+  background: rgba(255, 250, 245, 0.92);
+}
+
+:root.dark .viewer-backdrop {
+  background: rgba(12, 14, 18, 0.9);
+}
+
+.viewer-container,
+.viewer-canvas,
+.viewer-footer,
+.viewer-title,
+.viewer-tooltip,
+.viewer-button,
+.viewer-toolbar > ul > li {
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.viewer-canvas img {
+  border-radius: 12px;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.22);
+}
+
+.viewer-title {
+  padding: 0.7rem 1rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #18212f;
+  backdrop-filter: blur(14px);
+}
+
+:root.dark .viewer-title {
+  background: rgba(19, 23, 31, 0.8);
+  color: rgba(244, 247, 251, 0.94);
+}
+
+.viewer-tooltip {
+  background: rgba(18, 23, 31, 0.82);
+}
+
+.viewer-toolbar > ul {
+  padding: 0.35rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 16px 38px rgba(15, 23, 42, 0.16);
+}
+
+:root.dark .viewer-toolbar > ul {
+  background: rgba(20, 24, 31, 0.78);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.3);
+}
+
+.viewer-toolbar > ul > li {
+  margin: 0 0.08rem;
+  border-radius: 999px;
+}
+
+.viewer-button::before,
+.viewer-toolbar > ul > li::before {
+  background-color: currentColor;
+}
+
+.viewer-button {
+  color: #18212f;
+}
+
+:root.dark .viewer-button {
+  color: rgba(244, 247, 251, 0.94);
+}
+
+.viewer-toolbar > ul > li {
+  color: #18212f;
+}
+
+:root.dark .viewer-toolbar > ul > li {
+  color: rgba(244, 247, 251, 0.94);
+}
+
+@media (max-width: 767px) {
+  .vp-doc :where(p, figure) > img {
+    margin: 1rem auto;
+    border-radius: 8px;
+  }
+
+  .viewer-canvas img {
+    border-radius: 10px;
+    box-shadow: 0 18px 46px rgba(15, 23, 42, 0.18);
+  }
+
+  .viewer-title {
+    max-width: calc(100vw - 2rem);
+    padding: 0.6rem 0.9rem;
+    font-size: 0.82rem;
+  }
+
+  .viewer-toolbar > ul {
+    padding: 0.2rem;
+  }
+
+  .viewer-toolbar > ul > li {
+    transform: scale(0.92);
+    transform-origin: center;
+  }
+}
+
+.VPLocalSearchBox .backdrop {
+  animation: sousuobeijingtanchu 0.24s ease both;
+}
+
+.VPLocalSearchBox .shell {
+  animation: sousuomiabantanchu 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.2);
+}
+
+.VPLocalSearchBox.sousuoguanbizhong {
+  pointer-events: none;
+}
+
+.VPLocalSearchBox.sousuoguanbizhong .backdrop {
+  animation: sousuobeijingguanbi 0.24s ease both;
+}
+
+.VPLocalSearchBox.sousuoguanbizhong .shell {
+  animation: sousuomianguanbi 0.24s cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+
+@keyframes sousuobeijingtanchu {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sousuobeijingguanbi {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes sousuomiabantanchu {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes sousuomianguanbi {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.985);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.mulugundongzhong {
+    scroll-behavior: auto;
+  }
+
+  .VPDocAsideOutline .outline-marker {
+    transition: none;
+  }
+
+  .vp-doc :where(p, figure) > img {
+    transition: none;
+  }
+
+  .vp-doc :where(p, figure) > img:hover {
+    transform: none;
+  }
+
+  .VPLocalSearchBox .backdrop,
+  .VPLocalSearchBox .shell,
+  .VPLocalSearchBox.sousuoguanbizhong .backdrop,
+  .VPLocalSearchBox.sousuoguanbizhong .shell {
+    animation: none;
+  }
+}
+
+.VPNavBarSocialLinks.social-links > a:nth-child(4),
+.VPSocialLinks.social-links-list > a:nth-child(4) {
+  display: none;
+}
+
+.VPNavBarTranslations .button {
+  min-width: 88px;
+  padding: 0 0.25rem;
+  color: var(--vp-c-text-1);
+  background: transparent;
+  transition: color 0.18s ease;
+}
+
+.VPNavBarTranslations .button:hover {
+  color: var(--vp-c-brand-1);
+}
+
+.VPNavBarTranslations .button:focus-visible {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: 2px;
+}
+
+.VPNavBarTranslations .button .text {
+  gap: 0.32rem;
+}
+
+.VPNavBarTranslations .button .text::after {
+  content: "English";
+  font-family: var(--vp-font-family-base);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+html[lang="ja-JP"] .VPNavBarTranslations .button .text::after {
+  content: "日本語";
+}
+
+html[lang="ko-KR"] .VPNavBarTranslations .button .text::after {
+  content: "한국어";
+}
+
+html[lang="es-ES"] .VPNavBarTranslations .button .text::after {
+  content: "Español";
+}
+
+html[lang="pt-BR"] .VPNavBarTranslations .button .text::after {
+  content: "Português";
+}
+
+html[lang="ru-RU"] .VPNavBarTranslations .button .text::after {
+  content: "Русский";
+}
+
+html[lang="zh-CN"] .VPNavBarTranslations .button .text::after {
+  content: "简体中文";
+}
+
+html[lang="zh-TW"] .VPNavBarTranslations .button .text::after {
+  content: "繁體中文";
+}
+
+@media (max-width: 959px) {
+  .VPNavBarTranslations .button {
+    min-width: 32px;
+    padding: 0 0.38rem;
+  }
+
+  .VPNavBarTranslations .button .text::after {
+    display: none;
+  }
+}

@@ -9,7 +9,18 @@ It is designed for modern developers who want to ship faster without sacrificing
 ## Official Links
 
 - 🌐 **Website:** [https://breezell.com](https://breezell.com)
+- 📚 **Documentation:** [https://doc.breezell.com](https://doc.breezell.com/)
 - 📢 **Official Channel:** [https://t.me/BreezellCode](https://t.me/BreezellCode)
+
+## Documentation
+
+<p align="center">
+  <a href="https://doc.breezell.com/">
+    <img src="https://img.shields.io/badge/Explore_Breezell_Documentation-doc.breezell.com-4F46E5?style=for-the-badge&logo=readthedocs&logoColor=white" alt="Explore Breezell Documentation">
+  </a>
+</p>
+
+The multilingual documentation source is available in [`docs/`](docs/).
 
 ## Key Features
 
