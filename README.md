@@ -1,25 +1,113 @@
-Introduction
-Breezell is an AI-powered code editor IDE built on VS Code (Code – OSS). It's designed for modern developers who want to ship faster without sacrificing quality — combining AI agents, multi-model support, and deep codebase understanding in one tool.
+# Breezell
 
-Key Features
-Multiple AI models, one place — Switch freely between Claude, GPT, Gemini, Grok, DeepSeek and more.
-Multiple work modes — Chat (quick Q&A), Agent (autonomously edits files and uses tools), Analyze (deep analysis without editing), Plan (implementation plan before coding), Entanglement (causal reasoning with emotional awareness), and Teams (parallel AI teammates for complex tasks).
-Deep codebase understanding — Intelligent code indexing, code symbol index with jump-to-definition, and dependency analysis (cycle detection and impact tracking).
-Rules, Memories & Skills — Customize AI behavior with persistent rules, project memories, and a reusable Skill Library.
-Built-in database operations — Connect and manage SQLite, MongoDB, Oracle, Redis, MariaDB and more directly inside the editor.
-Built-in browser — An integrated browser with automation (screenshots, clicks, navigation, DOM snapshots) and device viewport simulation.
-MCP support — Connect external tools and services via the Model Context Protocol.
-Rich workspace — Live theme preview, a built-in icon library, and full SSH remote development support.
-Highlights
+## Introduction
+
+Breezell is an AI-powered code editor IDE built on VS Code (Code - OSS).
+
+It is designed for modern developers who want to ship faster without sacrificing quality, combining AI agents, multi-model support, and deep codebase understanding in one tool.
+
+## Key Features
+
+- **Multiple AI models, one place:** Switch freely between Claude, GPT, Gemini, Grok, DeepSeek, and more.
+
+- **Multiple work modes:**
+  - **Chat:** Quick questions and answers.
+  - **Agent:** Autonomously edits files and uses tools.
+  - **Analyze:** Performs deep analysis without editing files.
+  - **Plan:** Creates an implementation plan before coding.
+  - **Entanglement:** Provides causal reasoning with emotional awareness.
+  - **Teams:** Runs parallel AI teammates for complex tasks.
+
+- **Deep codebase understanding:** Intelligent code indexing, code symbol indexing with jump-to-definition, and dependency analysis with cycle detection and impact tracking.
+
+- **Rules, Memories & Skills:** Customize AI behavior with persistent rules, project memories, and a reusable Skill Library.
+
+- **Built-in database operations:** Connect to and manage SQLite, MongoDB, Oracle, Redis, MariaDB, and more directly inside the editor.
+
+- **Built-in browser:** Use an integrated browser with screenshots, clicks, navigation, DOM snapshots, and device viewport simulation.
+
+- **MCP support:** Connect external tools and services through the Model Context Protocol.
+
+- **Rich workspace:** Includes live theme previews, a built-in icon library, and full SSH remote development support.
+
+## Highlights
+
 The latest Breezell releases focus on smarter agents, deeper code understanding, and a more powerful all-in-one workspace.
 
-Code Review Panel — A standalone review view with line-number diffs, large-file Myers diff, one-click rollback/revert, and "send to chat" for AI-assisted reviews.
-Entanglement (Causal) mode — Causal reasoning with emotional awareness for higher-quality, intent-aware responses.
-Parallel AI Teammates (Teams) — Run multiple AI teammates in parallel to tackle complex tasks faster.
-Super Memory — Time-aware long-term memory with "Just now / Today / This week" tags and memory recall cards, so the AI remembers context across sessions.
-Built-in browser automation — Integrated browser with screenshots, clicks, navigation, DOM snapshots, and device viewport simulation (mobile / tablet / desktop).
-Always-fresh codebase tools — Code symbol index with jump-to-definition and dependency analysis (cycle detection + impact tracking), with file tools kept in sync with disk.
-Broad model & provider support — Claude (incl. Opus 4.8), GPT (incl. GPT-5.5), Gemini 3.5, DeepSeek V4, Kimi K2.6, MiniMax M3, GLM-5.1, plus GitHub Copilot and OpenAI-compatible providers.
-In-chat rich rendering — LaTeX math (KaTeX), Mermaid flowcharts, expandable tool cards, and a built-in web search tool.
-Full SSH remote development — Run the complete toolchain on remote SSH hosts.
-Context controls — A per-session token usage bar and manual context compression to keep long conversations fast and lightweight.
+### Code Review Panel
+
+A standalone review view with:
+
+- Line-numbered diffs
+- Large-file Myers diff
+- One-click rollback and revert
+- Send to Chat for AI-assisted reviews
+
+### Entanglement Mode
+
+Causal reasoning with emotional awareness for higher-quality, intent-aware responses.
+
+### Parallel AI Teammates
+
+Run multiple AI teammates in parallel to tackle complex tasks faster.
+
+### Super Memory
+
+Time-aware long-term memory with:
+
+- `Just now`
+- `Today`
+- `This week`
+- Memory recall cards
+- Cross-session context retention
+
+### Built-in Browser Automation
+
+Integrated browser automation with:
+
+- Screenshots
+- Click automation
+- Page navigation
+- DOM snapshots
+- Mobile, tablet, and desktop viewport simulation
+
+### Always-Fresh Codebase Tools
+
+Codebase tools remain synchronized with files on disk and provide:
+
+- Code symbol indexing
+- Jump-to-definition
+- Dependency cycle detection
+- Change impact tracking
+
+### Broad Model and Provider Support
+
+Breezell supports a broad selection of models and providers, including:
+
+- Claude, including Opus 4.8
+- GPT, including GPT-5.5
+- Gemini 3.5
+- DeepSeek V4
+- Kimi K2.6
+- MiniMax M3
+- GLM-5.1
+- GitHub Copilot
+- OpenAI-compatible providers
+
+### Rich In-Chat Rendering
+
+- LaTeX mathematics powered by KaTeX
+- Mermaid flowcharts
+- Expandable tool cards
+- Built-in web search
+
+### Full SSH Remote Development
+
+Run the complete Breezell development toolchain on remote SSH hosts.
+
+### Context Controls
+
+Keep long conversations fast and lightweight with:
+
+- Per-session token usage bar
+- Manual context compression
