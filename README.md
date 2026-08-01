@@ -116,3 +116,7 @@ Keep long conversations fast and lightweight with:
 
 - Per-session token usage bar
 - Manual context compression
+
+## Feedback & Bug Reports
+
+If you discover a bug or have feedback, please contact us at [email@breezell.com](mailto:email@breezell.com), submit an issue on GitHub, or visit our [official Telegram channel](https://t.me/BreezellCode).
