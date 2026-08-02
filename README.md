@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Breezell is an AI-powered code editor IDE built on VS Code (Code - OSS).
+Breezell is an AI-powered code editor IDE built on VS Code (Code - OSS)
 
 It is designed for modern developers who want to ship faster without sacrificing quality, combining AI agents, multi-model support, and deep codebase understanding in one tool.
 
