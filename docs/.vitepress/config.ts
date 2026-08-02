@@ -79,7 +79,7 @@ export default defineConfig({
       {
         text: "Guide",
         link: "/introduction",
-        activeMatch: "^/(introduction|settings-page-language-settings|custom-api|prompt-settings|feature-options-overview|dialog-box-overview|mode-selection)(/|$)",
+        activeMatch: "^/(introduction|settings-page-language-settings|custom-api|prompt-settings|feature-options-overview|dialog-box-overview|mode-selection|entanglement-mode-overview)(/|$)",
       },
       { text: "About", link: "/about" },
       { text: "Contact", link: "/contact" },
@@ -126,6 +126,12 @@ export default defineConfig({
             { text: "Mode Selection", link: "/mode-selection" },
           ],
         },
+        {
+          text: "Mode Guides",
+          items: [
+            { text: "Entanglement Mode Overview", link: "/entanglement-mode-overview" },
+          ],
+        },
       ],
       "/contact": [
         {
@@ -147,6 +153,12 @@ export default defineConfig({
           items: [
             { text: "Dialog Box Overview", link: "/dialog-box-overview" },
             { text: "Mode Selection", link: "/mode-selection" },
+          ],
+        },
+        {
+          text: "Mode Guides",
+          items: [
+            { text: "Entanglement Mode Overview", link: "/entanglement-mode-overview" },
           ],
         },
       ],
@@ -172,6 +184,12 @@ export default defineConfig({
             { text: "Mode Selection", link: "/mode-selection" },
           ],
         },
+        {
+          text: "Mode Guides",
+          items: [
+            { text: "Entanglement Mode Overview", link: "/entanglement-mode-overview" },
+          ],
+        },
       ],
       "/": [
         {
@@ -189,6 +207,12 @@ export default defineConfig({
           items: [
             { text: "Dialog Box Overview", link: "/dialog-box-overview" },
             { text: "Mode Selection", link: "/mode-selection" },
+          ],
+        },
+        {
+          text: "Mode Guides",
+          items: [
+            { text: "Entanglement Mode Overview", link: "/entanglement-mode-overview" },
           ],
         },
       ],

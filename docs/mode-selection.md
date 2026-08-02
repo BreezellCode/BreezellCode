@@ -43,6 +43,8 @@ Entanglement uses causal reasoning and context awareness for deeper product and 
 
 Entanglement is independently researched and released by Breezell. It is a Breezell-exclusive mode and unique across the web.
 
+For a technical overview of its causal state tracking and validation loop, see [Entanglement Mode Overview](/entanglement-mode-overview).
+
 Use Entanglement when a request depends on intent, trade-offs, hidden causes, emotional nuance, or multi-step reasoning that needs more than a direct answer.
 
 Tip: This mode can greatly improve model capability, but it consumes more resources than standard workflows. Its side effects are unknown.
