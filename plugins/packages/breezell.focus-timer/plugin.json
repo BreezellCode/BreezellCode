@@ -22,6 +22,17 @@
 	"readme": "packages/breezell.focus-timer/README.md",
 	"versions": [
 		{
+			"version": "1.0.1",
+			"path": "packages/breezell.focus-timer/1.0.1/breezell.focus-timer-1.0.1.vsix",
+			"sha256": "3ac7c452769b5f51d0b7b685b6778f8507578cc7a37b5b6a42e994fc2f0c1f3c",
+			"size": 13362,
+			"apiVersion": 1,
+			"permissions": [
+				"chat.events"
+			],
+			"publishedAt": "2026-10-29T21:03:27.911Z"
+		},
+		{
 			"version": "1.0.0",
 			"path": "packages/breezell.focus-timer/1.0.0/breezell.focus-timer-1.0.0.vsix",
 			"sha256": "0c86c08ec63203cef6bac84f55e5d10ea14667c81f70c33561e1e297563c31f6",

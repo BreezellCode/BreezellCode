@@ -29,7 +29,8 @@
 					"minHeight": 360,
 					"requiresEditor": false
 				}
-			]
+			],
+			"launcher": { "window": "main", "sidebar": true }
 		},
 		"commands": [
 			{ "command": "{{name}}.openWindow", "title": "{{displayName}}: Open Window" }

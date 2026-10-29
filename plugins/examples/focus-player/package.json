@@ -3,7 +3,7 @@
 	"publisher": "breezell",
 	"displayName": "Focus Player",
 	"description": "Ambient focus sounds and your own music, in step with Breezell: a chime when the AI finishes.",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"license": "MIT",
 	"author": {
 		"name": "Breezell",
@@ -40,6 +40,12 @@
 		"source": "open"
 	},
 	"contributes": {
+		"breezell": {
+			"launcher": {
+				"command": "focusPlayer.open",
+				"sidebar": true
+			}
+		},
 		"commands": [
 			{
 				"command": "focusPlayer.open",

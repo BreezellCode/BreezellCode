@@ -1,6 +1,6 @@
 {
 	"schemaVersion": 1,
-	"updatedAt": "2026-10-29T20:40:12.596Z",
+	"updatedAt": "2026-10-29T21:03:27.911Z",
 	"plugins": [
 		{
 			"id": "breezell.doc-writer",
@@ -40,7 +40,7 @@
 			"id": "breezell.focus-player",
 			"displayName": "Focus Player",
 			"description": "Ambient focus sounds and your own music, in step with Breezell: a chime when the AI finishes.",
-			"version": "1.0.1",
+			"version": "1.0.2",
 			"apiVersion": 1,
 			"categories": [
 				"Productivity",
@@ -65,17 +65,17 @@
 			"icon": "packages/breezell.focus-player/icon.png",
 			"readme": "packages/breezell.focus-player/README.md",
 			"package": {
-				"path": "packages/breezell.focus-player/1.0.1/breezell.focus-player-1.0.1.vsix",
-				"sha256": "9080358881a479bd793b328e69cee6e7fe155652d2cbc0b78b9012d8ce72872f",
-				"size": 23294
+				"path": "packages/breezell.focus-player/1.0.2/breezell.focus-player-1.0.2.vsix",
+				"sha256": "493bcc6f2bf6447b9265d6e9d290a0d4e2c6262ff3af389c622f0f1907c5fc86",
+				"size": 23376
 			},
-			"updatedAt": "2026-10-29T20:15:46.500Z"
+			"updatedAt": "2026-10-29T21:03:27.827Z"
 		},
 		{
 			"id": "breezell.focus-timer",
 			"displayName": "Focus Timer",
 			"description": "A Pomodoro timer in a window of its own, also from the Start menu without opening the editor.",
-			"version": "1.0.0",
+			"version": "1.0.1",
 			"apiVersion": 1,
 			"categories": [
 				"Productivity"
@@ -99,11 +99,11 @@
 			"icon": "packages/breezell.focus-timer/icon.png",
 			"readme": "packages/breezell.focus-timer/README.md",
 			"package": {
-				"path": "packages/breezell.focus-timer/1.0.0/breezell.focus-timer-1.0.0.vsix",
-				"sha256": "0c86c08ec63203cef6bac84f55e5d10ea14667c81f70c33561e1e297563c31f6",
-				"size": 13274
+				"path": "packages/breezell.focus-timer/1.0.1/breezell.focus-timer-1.0.1.vsix",
+				"sha256": "3ac7c452769b5f51d0b7b685b6778f8507578cc7a37b5b6a42e994fc2f0c1f3c",
+				"size": 13362
 			},
-			"updatedAt": "2026-10-29T20:40:12.596Z"
+			"updatedAt": "2026-10-29T21:03:27.911Z"
 		},
 		{
 			"id": "breezell.starter-pack",

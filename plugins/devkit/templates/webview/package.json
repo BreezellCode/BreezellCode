@@ -17,6 +17,9 @@
 		"source": "{{source}}"
 	},
 	"contributes": {
+		"breezell": {
+			"launcher": { "command": "{{name}}.open", "sidebar": true }
+		},
 		"commands": [
 			{ "command": "{{name}}.open", "title": "{{displayName}}: Open" }
 		]

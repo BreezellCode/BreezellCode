@@ -245,6 +245,14 @@ function checkPackage(pkg, { forMarket = false } = {}) {
 				errors.push('"contributes.breezell.windows": each window needs an "id" (lowercase, digits, dashes) and an .html "entry" inside the plugin');
 			}
 		}
+		if (declared.launcher !== undefined) {
+			const own = (pkg.contributes?.commands ?? []).map(c => c?.command);
+			const l = declared.launcher;
+			const ok = l && typeof l === 'object' && (typeof l.command === 'string' ? own.includes(l.command) : typeof l.window === 'string' && (declared.windows ?? []).some(w => w?.id === l.window));
+			if (!ok) {
+				errors.push('"contributes.breezell.launcher" needs "command" (one of the plugin\'s contributes.commands) or "window" (one of its windows); "sidebar": false keeps it out of the Box sidebar');
+			}
+		}
 		for (const key of ['skills', 'rules']) {
 			const list = declared[key] ?? [];
 			if (!Array.isArray(list) || list.some(p => typeof p !== 'string' || p.startsWith('/') || p.split(/[\\/]/).includes('..'))) {

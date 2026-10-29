@@ -103,6 +103,26 @@ Rules of `models.request`:
 - Errors carry a `name`: `BreezellNotSignedIn`, `BreezellPermissionDenied`, `BreezellRateLimited`,
   `BreezellNoModel`, `BreezellInvalidRequest`, `BreezellModelError`, `BreezellCancelled`.
 
+## Opening a plugin
+
+Users should not need a command to open a plugin. Declare how it opens:
+
+```json
+"contributes": {
+	"breezell": {
+		"launcher": { "command": "focusPlayer.open", "sidebar": true }
+	},
+	"commands": [{ "command": "focusPlayer.open", "title": "Open", "category": "Focus Player" }]
+}
+```
+
+- `command`: one of the plugin's own `contributes.commands` (Breezell refuses any other), or
+  `window`: one of its windows (`"launcher": { "window": "timer" }`).
+- The plugin then gets an **Open** button in Breezell Console › Plugins (market card and Installed page).
+- `sidebar` (default `true`): it is also listed by name under **Plugins** in the Box sidebar. Clicking it
+  leaves Box for the editor and opens the plugin there (or opens its window). Set `false` to stay out of the list.
+- Plugins without an interface (packs, right-click commands) need no launcher.
+
 ## Packs: skills, rules, MCP servers
 
 Declare them in `package.json`; no code is needed:
