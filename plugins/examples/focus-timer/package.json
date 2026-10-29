@@ -1,9 +1,9 @@
 {
 	"name": "focus-timer",
 	"publisher": "breezell",
-	"displayName": "Focus Timer",
-	"description": "A Pomodoro timer in a window of its own, also from the Start menu without opening the editor.",
-	"version": "1.0.2",
+	"displayName": "%displayName%",
+	"description": "%description%",
+	"version": "1.0.3",
 	"license": "MIT",
 	"author": {
 		"name": "Breezell",
@@ -60,7 +60,7 @@
 		"commands": [
 			{
 				"command": "focusTimer.open",
-				"title": "Open",
+				"title": "%command.open%",
 				"category": "Focus Timer"
 			}
 		]

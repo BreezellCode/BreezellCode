@@ -1,0 +1,9 @@
+{
+	"description": "專注用的環境音和你自己的音樂，與 Breezell 同步：AI 完成時響起提示音。",
+	"command.open": "開啟",
+	"command.toggle": "播放／暫停",
+	"command.chooseFolder": "選擇音樂資料夾…",
+	"config.chime": "Breezell 對話完成一輪時響起柔和的提示音。",
+	"config.auto": "Breezell 開始一輪時自動播放，全部完成後暫停。",
+	"config.folder": "放你自己音樂的資料夾（mp3、ogg、wav、flac、m4a、opus、webm）。"
+}

@@ -1,0 +1,6 @@
+{
+	"description": "Breezell 채팅 모델로 문서 주석을 작성하고 코드를 설명합니다.",
+	"command.writeDoc": "문서 주석 작성",
+	"command.explain": "선택 영역 설명",
+	"config.language": "문서 주석과 설명의 언어(예: English, Korean, Japanese)."
+}

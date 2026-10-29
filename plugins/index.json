@@ -1,12 +1,12 @@
 {
 	"schemaVersion": 1,
-	"updatedAt": "2026-10-29T21:20:48.185Z",
+	"updatedAt": "2026-10-29T21:30:05.925Z",
 	"plugins": [
 		{
 			"id": "breezell.doc-writer",
 			"displayName": "Doc Writer",
 			"description": "Writes doc comments and explains code with your Breezell chat model.",
-			"version": "1.0.1",
+			"version": "1.0.2",
 			"apiVersion": 1,
 			"categories": [
 				"Programming Languages"
@@ -38,18 +38,41 @@
 				"es": "packages/breezell.doc-writer/README.es.md",
 				"pt-BR": "packages/breezell.doc-writer/README.pt-BR.md"
 			},
-			"package": {
-				"path": "packages/breezell.doc-writer/1.0.1/breezell.doc-writer-1.0.1.vsix",
-				"sha256": "326b29c64800299a240c7d6c7079eca819f8aa126cd9169ae064c7c72190f031",
-				"size": 20983
+			"l10n": {
+				"zh-CN": {
+					"description": "用你的 Breezell 对话模型撰写文档注释并讲解代码。"
+				},
+				"zh-TW": {
+					"description": "用你的 Breezell 對話模型撰寫文件註解並解說程式碼。"
+				},
+				"ja": {
+					"description": "Breezell のチャットモデルでドキュメントコメントを書き、コードを説明します。"
+				},
+				"ko": {
+					"description": "Breezell 채팅 모델로 문서 주석을 작성하고 코드를 설명합니다."
+				},
+				"ru": {
+					"description": "Пишет документирующие комментарии и объясняет код с помощью модели чата Breezell."
+				},
+				"es": {
+					"description": "Escribe comentarios de documentación y explica código con tu modelo de chat de Breezell."
+				},
+				"pt-BR": {
+					"description": "Escreve comentários de documentação e explica código com o seu modelo de chat do Breezell."
+				}
 			},
-			"updatedAt": "2026-10-29T21:20:48.133Z"
+			"package": {
+				"path": "packages/breezell.doc-writer/1.0.2/breezell.doc-writer-1.0.2.vsix",
+				"sha256": "6455878641bf8ff495a981e1efce8f4e6818a87be3ed81e865f6b27bb3d18e98",
+				"size": 23817
+			},
+			"updatedAt": "2026-10-29T21:30:05.849Z"
 		},
 		{
 			"id": "breezell.focus-player",
 			"displayName": "Focus Player",
 			"description": "Ambient focus sounds and your own music, in step with Breezell: a chime when the AI finishes.",
-			"version": "1.0.3",
+			"version": "1.0.4",
 			"apiVersion": 1,
 			"categories": [
 				"Productivity",
@@ -82,18 +105,41 @@
 				"es": "packages/breezell.focus-player/README.es.md",
 				"pt-BR": "packages/breezell.focus-player/README.pt-BR.md"
 			},
-			"package": {
-				"path": "packages/breezell.focus-player/1.0.3/breezell.focus-player-1.0.3.vsix",
-				"sha256": "f4fa9d1c3c74cbb6884e43eebcd09ee5f19a2aeb095c0b4116e55e7374781b60",
-				"size": 31731
+			"l10n": {
+				"zh-CN": {
+					"description": "专注用的环境音和你自己的音乐，与 Breezell 同步：AI 完成时响起提示音。"
+				},
+				"zh-TW": {
+					"description": "專注用的環境音和你自己的音樂，與 Breezell 同步：AI 完成時響起提示音。"
+				},
+				"ja": {
+					"description": "集中のための環境音と自分の音楽を Breezell と連動して再生。AI が終わるとチャイムが鳴ります。"
+				},
+				"ko": {
+					"description": "집중을 위한 환경음과 내 음악을 Breezell과 함께. AI가 끝나면 알림음이 울립니다."
+				},
+				"ru": {
+					"description": "Фоновые звуки для концентрации и ваша музыка в такт с Breezell: сигнал, когда ИИ закончил."
+				},
+				"es": {
+					"description": "Sonidos ambientales para concentrarte y tu propia música, al ritmo de Breezell: un aviso cuando la IA termina."
+				},
+				"pt-BR": {
+					"description": "Sons ambientes para foco e a sua música, no ritmo do Breezell: um aviso quando a IA termina."
+				}
 			},
-			"updatedAt": "2026-10-29T21:20:48.005Z"
+			"package": {
+				"path": "packages/breezell.focus-player/1.0.4/breezell.focus-player-1.0.4.vsix",
+				"sha256": "a2a17a7ddf00491b3a0503d6e29e377300db36a2701710d8839b47bafb881182",
+				"size": 35382
+			},
+			"updatedAt": "2026-10-29T21:30:05.669Z"
 		},
 		{
 			"id": "breezell.focus-timer",
 			"displayName": "Focus Timer",
 			"description": "A Pomodoro timer in a window of its own, also from the Start menu without opening the editor.",
-			"version": "1.0.2",
+			"version": "1.0.3",
 			"apiVersion": 1,
 			"categories": [
 				"Productivity"
@@ -125,18 +171,41 @@
 				"es": "packages/breezell.focus-timer/README.es.md",
 				"pt-BR": "packages/breezell.focus-timer/README.pt-BR.md"
 			},
-			"package": {
-				"path": "packages/breezell.focus-timer/1.0.2/breezell.focus-timer-1.0.2.vsix",
-				"sha256": "03091105e607cb11931936b4f275eaa84b8a3df5ed0e4e2c098b47e9b6eed5a7",
-				"size": 21463
+			"l10n": {
+				"zh-CN": {
+					"description": "拥有独立窗口的番茄钟，也能从开始菜单直接打开，不必打开编辑器。"
+				},
+				"zh-TW": {
+					"description": "擁有獨立視窗的番茄鐘，也能從開始選單直接開啟，不必開啟編輯器。"
+				},
+				"ja": {
+					"description": "独立したウィンドウで動くポモドーロタイマー。エディターを開かずにスタートメニューからも起動できます。"
+				},
+				"ko": {
+					"description": "자체 창에서 동작하는 뽀모도로 타이머. 편집기 없이 시작 메뉴에서도 열 수 있습니다."
+				},
+				"ru": {
+					"description": "Таймер «Помодоро» в отдельном окне — открывается и из меню «Пуск», без редактора."
+				},
+				"es": {
+					"description": "Un temporizador Pomodoro en su propia ventana, que también se abre desde el menú Inicio sin el editor."
+				},
+				"pt-BR": {
+					"description": "Um timer Pomodoro numa janela própria, que também abre pelo menu Iniciar sem o editor."
+				}
 			},
-			"updatedAt": "2026-10-29T21:20:48.067Z"
+			"package": {
+				"path": "packages/breezell.focus-timer/1.0.3/breezell.focus-timer-1.0.3.vsix",
+				"sha256": "a372044871e4f151c1186011390eadae90939610efd370a870d37a534c962e4d",
+				"size": 23617
+			},
+			"updatedAt": "2026-10-29T21:30:05.758Z"
 		},
 		{
 			"id": "breezell.starter-pack",
 			"displayName": "Starter Pack",
 			"description": "Code review and testing skills, short house rules, a thinking MCP server and a calm dark theme: no code.",
-			"version": "1.0.1",
+			"version": "1.0.2",
 			"apiVersion": 1,
 			"categories": [
 				"Themes"
@@ -168,12 +237,35 @@
 				"es": "packages/breezell.starter-pack/README.es.md",
 				"pt-BR": "packages/breezell.starter-pack/README.pt-BR.md"
 			},
-			"package": {
-				"path": "packages/breezell.starter-pack/1.0.1/breezell.starter-pack-1.0.1.vsix",
-				"sha256": "25941de9d1801cb25809e978e5013be74b988f04a247e1bccf102f5b739a2d9f",
-				"size": 14352
+			"l10n": {
+				"zh-CN": {
+					"description": "代码审查与测试技能、简短的团队规则、思考用的 MCP 服务器和柔和的深色主题：完全不需要代码。"
+				},
+				"zh-TW": {
+					"description": "程式碼審查與測試技能、簡短的團隊規則、思考用的 MCP 伺服器和柔和的深色主題：完全不需要程式碼。"
+				},
+				"ja": {
+					"description": "コードレビューとテストのスキル、短いハウスルール、思考用の MCP サーバー、落ち着いたダークテーマ。コード不要。"
+				},
+				"ko": {
+					"description": "코드 리뷰와 테스트 스킬, 짧은 팀 규칙, 생각을 돕는 MCP 서버, 차분한 다크 테마. 코드가 필요 없습니다."
+				},
+				"ru": {
+					"description": "Навыки для ревью и тестов, короткие правила команды, MCP-сервер для размышлений и спокойная тёмная тема — без кода."
+				},
+				"es": {
+					"description": "Skills de revisión y pruebas, reglas breves del equipo, un servidor MCP para pensar y un tema oscuro tranquilo: sin código."
+				},
+				"pt-BR": {
+					"description": "Skills de revisão e testes, regras curtas do time, um servidor MCP para raciocínio e um tema escuro tranquilo: sem código."
+				}
 			},
-			"updatedAt": "2026-10-29T21:20:48.185Z"
+			"package": {
+				"path": "packages/breezell.starter-pack/1.0.2/breezell.starter-pack-1.0.2.vsix",
+				"sha256": "bda569f3dd8a6d7d0d7dc5e8ebcf125eb1341068565c46f35e1f6ce762ed79b3",
+				"size": 16531
+			},
+			"updatedAt": "2026-10-29T21:30:05.925Z"
 		}
 	]
 }

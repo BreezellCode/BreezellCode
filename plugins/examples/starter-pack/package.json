@@ -1,9 +1,9 @@
 {
 	"name": "starter-pack",
 	"publisher": "breezell",
-	"displayName": "Starter Pack",
-	"description": "Code review and testing skills, short house rules, a thinking MCP server and a calm dark theme: no code.",
-	"version": "1.0.1",
+	"displayName": "%displayName%",
+	"description": "%description%",
+	"version": "1.0.2",
 	"license": "MIT",
 	"author": {
 		"name": "Breezell",

@@ -1,9 +1,9 @@
 {
 	"name": "doc-writer",
 	"publisher": "breezell",
-	"displayName": "Doc Writer",
-	"description": "Writes doc comments and explains code with your Breezell chat model.",
-	"version": "1.0.1",
+	"displayName": "%displayName%",
+	"description": "%description%",
+	"version": "1.0.2",
 	"license": "MIT",
 	"author": {
 		"name": "Breezell",
@@ -41,12 +41,12 @@
 		"commands": [
 			{
 				"command": "docWriter.writeDoc",
-				"title": "Write Doc Comment",
+				"title": "%command.writeDoc%",
 				"category": "Doc Writer"
 			},
 			{
 				"command": "docWriter.explain",
-				"title": "Explain Selection",
+				"title": "%command.explain%",
 				"category": "Doc Writer"
 			}
 		],
@@ -70,7 +70,7 @@
 				"docWriter.language": {
 					"type": "string",
 					"default": "English",
-					"description": "Language of the doc comments and explanations, e.g. English, Traditional Chinese, Japanese."
+					"description": "%config.language%"
 				}
 			}
 		}

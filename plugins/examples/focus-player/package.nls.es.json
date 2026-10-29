@@ -1,0 +1,9 @@
+{
+	"description": "Sonidos ambientales para concentrarte y tu propia música, al ritmo de Breezell: un aviso cuando la IA termina.",
+	"command.open": "Abrir",
+	"command.toggle": "Reproducir / Pausar",
+	"command.chooseFolder": "Elegir carpeta de música…",
+	"config.chime": "Reproducir un aviso suave cuando termina un turno de conversación de Breezell.",
+	"config.auto": "Empezar a reproducir cuando empieza un turno de Breezell y pausar cuando termina el último.",
+	"config.folder": "Carpeta con tu propia música (mp3, ogg, wav, flac, m4a, opus, webm)."
+}

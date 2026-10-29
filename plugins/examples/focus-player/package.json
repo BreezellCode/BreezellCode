@@ -1,9 +1,9 @@
 {
 	"name": "focus-player",
 	"publisher": "breezell",
-	"displayName": "Focus Player",
-	"description": "Ambient focus sounds and your own music, in step with Breezell: a chime when the AI finishes.",
-	"version": "1.0.3",
+	"displayName": "%displayName%",
+	"description": "%description%",
+	"version": "1.0.4",
 	"license": "MIT",
 	"author": {
 		"name": "Breezell",
@@ -49,17 +49,17 @@
 		"commands": [
 			{
 				"command": "focusPlayer.open",
-				"title": "Open",
+				"title": "%command.open%",
 				"category": "Focus Player"
 			},
 			{
 				"command": "focusPlayer.toggle",
-				"title": "Play / Pause",
+				"title": "%command.toggle%",
 				"category": "Focus Player"
 			},
 			{
 				"command": "focusPlayer.chooseFolder",
-				"title": "Choose Music Folder…",
+				"title": "%command.chooseFolder%",
 				"category": "Focus Player"
 			}
 		],
@@ -69,17 +69,17 @@
 				"focusPlayer.chimeWhenTurnFinishes": {
 					"type": "boolean",
 					"default": true,
-					"description": "Play a soft chime when a Breezell conversation turn finishes."
+					"description": "%config.chime%"
 				},
 				"focusPlayer.playWhileAgentWorks": {
 					"type": "boolean",
 					"default": false,
-					"description": "Start playing when a Breezell turn starts and pause when the last one finishes."
+					"description": "%config.auto%"
 				},
 				"focusPlayer.musicFolder": {
 					"type": "string",
 					"default": "",
-					"description": "Folder with your own music (mp3, ogg, wav, flac, m4a, opus, webm)."
+					"description": "%config.folder%"
 				}
 			}
 		}

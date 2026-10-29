@@ -1,0 +1,4 @@
+{
+	"description": "Un temporizador Pomodoro en su propia ventana, que también se abre desde el menú Inicio sin el editor.",
+	"command.open": "Abrir"
+}

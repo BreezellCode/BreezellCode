@@ -124,6 +124,28 @@ otherwise. `pack` ships the translations and `submit` publishes them; other `REA
 In the README, raw HTML is not shown. Links open outside Breezell (http, https, mailto, or a file of the
 market by relative path, shown on GitHub); images load over https or from the market.
 
+## Name, description and commands in several languages
+
+Use VS Code's own mechanism: write `"%key%"` in `package.json` and put the texts in `package.nls.json`
+(English) and `package.nls.<locale>.json` (`zh-cn`, `zh-tw`, `ja`, `ko`, `ru`, `es`, `pt-br`):
+
+```json
+// package.json
+"displayName": "%displayName%",
+"description": "%description%",
+"contributes": { "commands": [{ "command": "focusPlayer.open", "title": "%command.open%", "category": "Focus Player" }] }
+```
+
+```json
+// package.nls.zh-tw.json
+{ "description": "專注用的環境音和你自己的音樂…", "command.open": "開啟" }
+```
+
+`submit` puts the translated name and description in the market index: the market shows them in Breezell's
+display language, English where a language is missing. Command titles and setting descriptions follow the
+editor's display language, as for any VS Code extension. The market also translates the standard categories
+(Themes, Programming Languages, Productivity, …); other categories are shown as written.
+
 ## Opening a plugin
 
 Users should not need a command to open a plugin. Declare how it opens:

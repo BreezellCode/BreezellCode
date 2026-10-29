@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.4
+
+- Description, commands and settings in Simplified and Traditional Chinese, Japanese, Korean, Russian, Spanish and Portuguese (Brazil).
+
 ## 1.0.3
 
 - README in Simplified and Traditional Chinese, Japanese, Korean, Russian, Spanish and Portuguese (Brazil).

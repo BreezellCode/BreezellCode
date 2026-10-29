@@ -31,7 +31,39 @@
 		"es": "packages/breezell.starter-pack/README.es.md",
 		"pt-BR": "packages/breezell.starter-pack/README.pt-BR.md"
 	},
+	"l10n": {
+		"zh-CN": {
+			"description": "代码审查与测试技能、简短的团队规则、思考用的 MCP 服务器和柔和的深色主题：完全不需要代码。"
+		},
+		"zh-TW": {
+			"description": "程式碼審查與測試技能、簡短的團隊規則、思考用的 MCP 伺服器和柔和的深色主題：完全不需要程式碼。"
+		},
+		"ja": {
+			"description": "コードレビューとテストのスキル、短いハウスルール、思考用の MCP サーバー、落ち着いたダークテーマ。コード不要。"
+		},
+		"ko": {
+			"description": "코드 리뷰와 테스트 스킬, 짧은 팀 규칙, 생각을 돕는 MCP 서버, 차분한 다크 테마. 코드가 필요 없습니다."
+		},
+		"ru": {
+			"description": "Навыки для ревью и тестов, короткие правила команды, MCP-сервер для размышлений и спокойная тёмная тема — без кода."
+		},
+		"es": {
+			"description": "Skills de revisión y pruebas, reglas breves del equipo, un servidor MCP para pensar y un tema oscuro tranquilo: sin código."
+		},
+		"pt-BR": {
+			"description": "Skills de revisão e testes, regras curtas do time, um servidor MCP para raciocínio e um tema escuro tranquilo: sem código."
+		}
+	},
 	"versions": [
+		{
+			"version": "1.0.2",
+			"path": "packages/breezell.starter-pack/1.0.2/breezell.starter-pack-1.0.2.vsix",
+			"sha256": "bda569f3dd8a6d7d0d7dc5e8ebcf125eb1341068565c46f35e1f6ce762ed79b3",
+			"size": 16531,
+			"apiVersion": 1,
+			"permissions": [],
+			"publishedAt": "2026-10-29T21:30:05.925Z"
+		},
 		{
 			"version": "1.0.1",
 			"path": "packages/breezell.starter-pack/1.0.1/breezell.starter-pack-1.0.1.vsix",

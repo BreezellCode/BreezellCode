@@ -1,0 +1,9 @@
+{
+	"description": "Sons ambientes para foco e a sua música, no ritmo do Breezell: um aviso quando a IA termina.",
+	"command.open": "Abrir",
+	"command.toggle": "Tocar / Pausar",
+	"command.chooseFolder": "Escolher pasta de músicas…",
+	"config.chime": "Tocar um aviso suave quando um turno da conversa no Breezell termina.",
+	"config.auto": "Começar a tocar quando um turno do Breezell começa e pausar quando o último termina.",
+	"config.folder": "Pasta com as suas músicas (mp3, ogg, wav, flac, m4a, opus, webm)."
+}

@@ -1,0 +1,5 @@
+{
+	"displayName": "Focus Timer",
+	"description": "A Pomodoro timer in a window of its own, also from the Start menu without opening the editor.",
+	"command.open": "Open"
+}

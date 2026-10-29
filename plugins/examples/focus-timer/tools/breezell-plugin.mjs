@@ -222,9 +222,15 @@ function readZip(buffer) {
 // package.json checks
 // ---------------------------------------------------------------------------
 
-function checkPackage(pkg, { forMarket = false } = {}) {
+function checkPackage(pkg, { forMarket = false, nls } = {}) {
 	const errors = [];
 	const warnings = [];
+	for (const field of ['displayName', 'description']) {
+		const key = nlsPlaceholder(pkg[field]);
+		if (key !== undefined && typeof nls?.[key] !== 'string') {
+			errors.push(`"${field}" is "%${key}%" but package.nls.json has no "${key}"`);
+		}
+	}
 	if (!ID_PART.test(pkg.publisher ?? '')) {
 		errors.push('"publisher": lowercase letters, digits and dashes');
 	}
@@ -306,6 +312,38 @@ function checkPackage(pkg, { forMarket = false } = {}) {
 }
 
 const pluginId = pkg => `${pkg.publisher}.${pkg.name}`.toLowerCase();
+
+/**
+ * VS Code's way to translate package.json: "%key%" values, with the text in package.nls.json
+ * (English) and package.nls.<locale>.json (translations, locale in lowercase: zh-tw, pt-br).
+ * `readNls(suffix)` returns that file's object, or undefined.
+ */
+const nlsPlaceholder = value => typeof value === 'string' ? /^%(.+)%$/.exec(value)?.[1] : undefined;
+function resolveNls(value, nls) {
+	const key = nlsPlaceholder(value);
+	return key === undefined ? value : typeof nls?.[key] === 'string' ? nls[key] : undefined;
+}
+/** Name and description per README locale, where the plugin translated them. */
+function marketL10n(pkg, readNls) {
+	const l10n = {};
+	for (const locale of README_LOCALES) {
+		const nls = readNls(locale.toLowerCase());
+		if (!nls) {
+			continue;
+		}
+		const entry = {};
+		for (const field of ['displayName', 'description']) {
+			const key = nlsPlaceholder(pkg[field]);
+			if (key !== undefined && typeof nls[key] === 'string' && nls[key].trim()) {
+				entry[field] = nls[key].trim();
+			}
+		}
+		if (Object.keys(entry).length) {
+			l10n[locale] = entry;
+		}
+	}
+	return l10n;
+}
 
 // ---------------------------------------------------------------------------
 // build / pack
@@ -444,7 +482,8 @@ async function pack(dir, flags) {
 		fail('say how to publish: pack --open (source included) or pack --closed (minified, no source)');
 	}
 	pkg.breezell = { ...pkg.breezell, source: mode };
-	const { errors, warnings } = checkPackage(pkg);
+	const nlsFile = path.join(dir, 'package.nls.json');
+	const { errors, warnings } = checkPackage(pkg, { nls: fs.existsSync(nlsFile) ? readJson(nlsFile) : undefined });
 	warnings.forEach(w => log(`warning: ${w}`));
 	if (errors.length) {
 		fail(`package.json:\n  - ${errors.join('\n  - ')}`);
@@ -519,8 +558,16 @@ function submit(dir, flags) {
 	if (!fs.existsSync(vsixFile)) {
 		fail(`${vsixFile} not found: run "npm run package:open" or "npm run package:closed" first`);
 	}
-	const { buffer, pkg } = readVsix(vsixFile);
-	const { errors } = checkPackage(pkg, { forMarket: true });
+	const { buffer, files, pkg } = readVsix(vsixFile);
+	const readNls = suffix => {
+		const raw = files.get(`extension/package.nls${suffix ? `.${suffix}` : ''}.json`);
+		try {
+			return raw ? JSON.parse(raw.toString('utf8')) : undefined;
+		} catch {
+			fail(`package.nls${suffix ? `.${suffix}` : ''}.json in the package is not valid JSON`);
+		}
+	};
+	const { errors } = checkPackage(pkg, { forMarket: true, nls: readNls('') });
 	if (errors.length) {
 		fail(`the package's package.json:\n  - ${errors.join('\n  - ')}`);
 	}
@@ -572,10 +619,11 @@ function submit(dir, flags) {
 	const versions = (previous?.versions ?? []).filter(v => v.version !== pkg.version);
 	versions.push({ version: pkg.version, path: relPackage, sha256: digest, size: buffer.length, apiVersion: pkg.breezell.apiVersion, permissions: pkg.breezell.permissions ?? [], publishedAt: new Date().toISOString() });
 	versions.sort((a, b) => compareVersions(b.version, a.version));
+	const l10n = marketL10n(pkg, readNls);
 	const meta = {
 		id,
-		displayName: pkg.displayName,
-		description: pkg.description,
+		displayName: resolveNls(pkg.displayName, readNls('')),
+		description: resolveNls(pkg.description, readNls('')),
 		categories: (pkg.categories ?? []).filter(c => c !== 'Other').slice(0, 6),
 		tags: (pkg.keywords ?? []).slice(0, 12),
 		source: pkg.breezell.source,
@@ -585,6 +633,7 @@ function submit(dir, flags) {
 		icon,
 		readme,
 		readmes: Object.keys(readmes).length ? readmes : undefined,
+		l10n: Object.keys(l10n).length ? l10n : undefined,
 		versions,
 	};
 	writeJson(metaFile, meta);
@@ -625,6 +674,7 @@ function buildIndex(marketRoot) {
 			icon: meta.icon,
 			readme: meta.readme,
 			readmes: meta.readmes && Object.keys(meta.readmes).length ? meta.readmes : undefined,
+			l10n: meta.l10n && Object.keys(meta.l10n).length ? meta.l10n : undefined,
 			package: { path: latest.path, sha256: latest.sha256, size: latest.size },
 			updatedAt: latest.publishedAt,
 		});
@@ -668,11 +718,17 @@ function checkMarket(marketRoot) {
 			continue;
 		}
 		const { files, pkg } = read;
+		const packagedNls = files.get('extension/package.nls.json');
 		if (pluginId(pkg) !== entry.id || pkg.version !== entry.version) {
 			problems.push(`${where}: the package says ${pluginId(pkg)}@${pkg.version}`);
 		}
-		const { errors } = checkPackage(pkg, { forMarket: true });
+		const { errors } = checkPackage(pkg, { forMarket: true, nls: packagedNls ? JSON.parse(packagedNls.toString('utf8')) : undefined });
 		errors.forEach(e => problems.push(`${where}: ${e}`));
+		for (const locale of Object.keys(entry.l10n ?? {})) {
+			if (!README_LOCALES.includes(locale)) {
+				problems.push(`${where}: unknown l10n locale ${locale}`);
+			}
+		}
 		const declared = [...(pkg.breezell?.permissions ?? [])].sort().join(',');
 		if (declared !== [...entry.permissions].sort().join(',')) {
 			problems.push(`${where}: permissions differ from the package (${declared})`);
@@ -808,7 +864,8 @@ async function main() {
 		case 'build':
 			return build(dir, { closed: !!flags.closed, watch: !!flags.watch });
 		case 'validate': {
-			const { errors, warnings } = checkPackage(readJson(path.join(dir, 'package.json')));
+			const nlsFile = path.join(dir, 'package.nls.json');
+			const { errors, warnings } = checkPackage(readJson(path.join(dir, 'package.json')), { nls: fs.existsSync(nlsFile) ? readJson(nlsFile) : undefined });
 			warnings.forEach(w => log(`warning: ${w}`));
 			if (errors.length) {
 				fail(`package.json:\n  - ${errors.join('\n  - ')}`);

@@ -30,7 +30,41 @@
 		"es": "packages/breezell.focus-player/README.es.md",
 		"pt-BR": "packages/breezell.focus-player/README.pt-BR.md"
 	},
+	"l10n": {
+		"zh-CN": {
+			"description": "专注用的环境音和你自己的音乐，与 Breezell 同步：AI 完成时响起提示音。"
+		},
+		"zh-TW": {
+			"description": "專注用的環境音和你自己的音樂，與 Breezell 同步：AI 完成時響起提示音。"
+		},
+		"ja": {
+			"description": "集中のための環境音と自分の音楽を Breezell と連動して再生。AI が終わるとチャイムが鳴ります。"
+		},
+		"ko": {
+			"description": "집중을 위한 환경음과 내 음악을 Breezell과 함께. AI가 끝나면 알림음이 울립니다."
+		},
+		"ru": {
+			"description": "Фоновые звуки для концентрации и ваша музыка в такт с Breezell: сигнал, когда ИИ закончил."
+		},
+		"es": {
+			"description": "Sonidos ambientales para concentrarte y tu propia música, al ritmo de Breezell: un aviso cuando la IA termina."
+		},
+		"pt-BR": {
+			"description": "Sons ambientes para foco e a sua música, no ritmo do Breezell: um aviso quando a IA termina."
+		}
+	},
 	"versions": [
+		{
+			"version": "1.0.4",
+			"path": "packages/breezell.focus-player/1.0.4/breezell.focus-player-1.0.4.vsix",
+			"sha256": "a2a17a7ddf00491b3a0503d6e29e377300db36a2701710d8839b47bafb881182",
+			"size": 35382,
+			"apiVersion": 1,
+			"permissions": [
+				"chat.events"
+			],
+			"publishedAt": "2026-10-29T21:30:05.669Z"
+		},
 		{
 			"version": "1.0.3",
 			"path": "packages/breezell.focus-player/1.0.3/breezell.focus-player-1.0.3.vsix",

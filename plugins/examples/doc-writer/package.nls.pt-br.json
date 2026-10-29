@@ -1,0 +1,6 @@
+{
+	"description": "Escreve comentários de documentação e explica código com o seu modelo de chat do Breezell.",
+	"command.writeDoc": "Escrever comentário de documentação",
+	"command.explain": "Explicar a seleção",
+	"config.language": "Idioma dos comentários e explicações, por exemplo English, Portuguese, Japanese."
+}

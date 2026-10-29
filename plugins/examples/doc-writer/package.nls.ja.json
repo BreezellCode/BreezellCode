@@ -1,0 +1,6 @@
+{
+	"description": "Breezell のチャットモデルでドキュメントコメントを書き、コードを説明します。",
+	"command.writeDoc": "ドキュメントコメントを書く",
+	"command.explain": "選択範囲を説明",
+	"config.language": "ドキュメントコメントと説明の言語（例：English、Japanese、Traditional Chinese）。"
+}

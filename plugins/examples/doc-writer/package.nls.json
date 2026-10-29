@@ -1,0 +1,7 @@
+{
+	"displayName": "Doc Writer",
+	"description": "Writes doc comments and explains code with your Breezell chat model.",
+	"command.writeDoc": "Write Doc Comment",
+	"command.explain": "Explain Selection",
+	"config.language": "Language of the doc comments and explanations, e.g. English, Traditional Chinese, Japanese."
+}

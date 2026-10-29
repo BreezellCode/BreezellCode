@@ -1,0 +1,9 @@
+{
+	"description": "集中のための環境音と自分の音楽を Breezell と連動して再生。AI が終わるとチャイムが鳴ります。",
+	"command.open": "開く",
+	"command.toggle": "再生 / 一時停止",
+	"command.chooseFolder": "音楽フォルダーを選択…",
+	"config.chime": "Breezell の会話のターンが終わったら、やわらかなチャイムを鳴らします。",
+	"config.auto": "Breezell のターンが始まったら再生し、最後のターンが終わったら一時停止します。",
+	"config.folder": "自分の音楽が入ったフォルダー（mp3、ogg、wav、flac、m4a、opus、webm）。"
+}

@@ -1,0 +1,10 @@
+{
+	"displayName": "Focus Player",
+	"description": "Ambient focus sounds and your own music, in step with Breezell: a chime when the AI finishes.",
+	"command.open": "Open",
+	"command.toggle": "Play / Pause",
+	"command.chooseFolder": "Choose Music Folder…",
+	"config.chime": "Play a soft chime when a Breezell conversation turn finishes.",
+	"config.auto": "Start playing when a Breezell turn starts and pause when the last one finishes.",
+	"config.folder": "Folder with your own music (mp3, ogg, wav, flac, m4a, opus, webm)."
+}

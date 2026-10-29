@@ -1,0 +1,6 @@
+{
+	"description": "用你的 Breezell 对话模型撰写文档注释并讲解代码。",
+	"command.writeDoc": "撰写文档注释",
+	"command.explain": "讲解选中的代码",
+	"config.language": "文档注释和讲解使用的语言，例如 English、Simplified Chinese、Japanese。"
+}

@@ -29,7 +29,41 @@
 		"es": "packages/breezell.focus-timer/README.es.md",
 		"pt-BR": "packages/breezell.focus-timer/README.pt-BR.md"
 	},
+	"l10n": {
+		"zh-CN": {
+			"description": "拥有独立窗口的番茄钟，也能从开始菜单直接打开，不必打开编辑器。"
+		},
+		"zh-TW": {
+			"description": "擁有獨立視窗的番茄鐘，也能從開始選單直接開啟，不必開啟編輯器。"
+		},
+		"ja": {
+			"description": "独立したウィンドウで動くポモドーロタイマー。エディターを開かずにスタートメニューからも起動できます。"
+		},
+		"ko": {
+			"description": "자체 창에서 동작하는 뽀모도로 타이머. 편집기 없이 시작 메뉴에서도 열 수 있습니다."
+		},
+		"ru": {
+			"description": "Таймер «Помодоро» в отдельном окне — открывается и из меню «Пуск», без редактора."
+		},
+		"es": {
+			"description": "Un temporizador Pomodoro en su propia ventana, que también se abre desde el menú Inicio sin el editor."
+		},
+		"pt-BR": {
+			"description": "Um timer Pomodoro numa janela própria, que também abre pelo menu Iniciar sem o editor."
+		}
+	},
 	"versions": [
+		{
+			"version": "1.0.3",
+			"path": "packages/breezell.focus-timer/1.0.3/breezell.focus-timer-1.0.3.vsix",
+			"sha256": "a372044871e4f151c1186011390eadae90939610efd370a870d37a534c962e4d",
+			"size": 23617,
+			"apiVersion": 1,
+			"permissions": [
+				"chat.events"
+			],
+			"publishedAt": "2026-10-29T21:30:05.758Z"
+		},
 		{
 			"version": "1.0.2",
 			"path": "packages/breezell.focus-timer/1.0.2/breezell.focus-timer-1.0.2.vsix",

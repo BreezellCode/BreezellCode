@@ -29,7 +29,41 @@
 		"es": "packages/breezell.doc-writer/README.es.md",
 		"pt-BR": "packages/breezell.doc-writer/README.pt-BR.md"
 	},
+	"l10n": {
+		"zh-CN": {
+			"description": "用你的 Breezell 对话模型撰写文档注释并讲解代码。"
+		},
+		"zh-TW": {
+			"description": "用你的 Breezell 對話模型撰寫文件註解並解說程式碼。"
+		},
+		"ja": {
+			"description": "Breezell のチャットモデルでドキュメントコメントを書き、コードを説明します。"
+		},
+		"ko": {
+			"description": "Breezell 채팅 모델로 문서 주석을 작성하고 코드를 설명합니다."
+		},
+		"ru": {
+			"description": "Пишет документирующие комментарии и объясняет код с помощью модели чата Breezell."
+		},
+		"es": {
+			"description": "Escribe comentarios de documentación y explica código con tu modelo de chat de Breezell."
+		},
+		"pt-BR": {
+			"description": "Escreve comentários de documentação e explica código com o seu modelo de chat do Breezell."
+		}
+	},
 	"versions": [
+		{
+			"version": "1.0.2",
+			"path": "packages/breezell.doc-writer/1.0.2/breezell.doc-writer-1.0.2.vsix",
+			"sha256": "6455878641bf8ff495a981e1efce8f4e6818a87be3ed81e865f6b27bb3d18e98",
+			"size": 23817,
+			"apiVersion": 1,
+			"permissions": [
+				"models.request"
+			],
+			"publishedAt": "2026-10-29T21:30:05.849Z"
+		},
 		{
 			"version": "1.0.1",
 			"path": "packages/breezell.doc-writer/1.0.1/breezell.doc-writer-1.0.1.vsix",

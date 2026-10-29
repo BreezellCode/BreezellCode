@@ -1,0 +1,6 @@
+{
+	"description": "用你的 Breezell 對話模型撰寫文件註解並解說程式碼。",
+	"command.writeDoc": "撰寫文件註解",
+	"command.explain": "解說選取的程式碼",
+	"config.language": "文件註解和解說使用的語言，例如 English、Traditional Chinese、Japanese。"
+}

@@ -1,0 +1,9 @@
+{
+	"description": "Фоновые звуки для концентрации и ваша музыка в такт с Breezell: сигнал, когда ИИ закончил.",
+	"command.open": "Открыть",
+	"command.toggle": "Играть / Пауза",
+	"command.chooseFolder": "Выбрать папку с музыкой…",
+	"config.chime": "Мягкий сигнал, когда ход беседы в Breezell завершён.",
+	"config.auto": "Начинать играть, когда начинается ход Breezell, и ставить на паузу после последнего.",
+	"config.folder": "Папка с вашей музыкой (mp3, ogg, wav, flac, m4a, opus, webm)."
+}

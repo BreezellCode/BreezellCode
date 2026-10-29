@@ -1,0 +1,4 @@
+{
+	"description": "Um timer Pomodoro numa janela própria, que também abre pelo menu Iniciar sem o editor.",
+	"command.open": "Abrir"
+}

@@ -1,0 +1,9 @@
+{
+	"description": "집중을 위한 환경음과 내 음악을 Breezell과 함께. AI가 끝나면 알림음이 울립니다.",
+	"command.open": "열기",
+	"command.toggle": "재생 / 일시 정지",
+	"command.chooseFolder": "음악 폴더 선택…",
+	"config.chime": "Breezell 대화 턴이 끝나면 부드러운 알림음을 울립니다.",
+	"config.auto": "Breezell 턴이 시작되면 재생하고 마지막 턴이 끝나면 일시 정지합니다.",
+	"config.folder": "내 음악이 들어 있는 폴더(mp3, ogg, wav, flac, m4a, opus, webm)."
+}
