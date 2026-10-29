@@ -36,6 +36,8 @@ const MARKET_URLS = [
 	`https://fastly.jsdelivr.net/gh/${MARKET_REPO}@main/plugins/`,
 ];
 const MAX_PACKAGE_BYTES = 50 * 1024 * 1024;
+/** README.<locale>.md next to README.md (English): Breezell shows the user's language, else English. */
+const README_LOCALES = ['zh-CN', 'zh-TW', 'ja', 'ko', 'ru', 'es', 'pt-BR'];
 const SELF = fileURLToPath(import.meta.url);
 const ID_PART = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const VERSION = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/;
@@ -375,7 +377,7 @@ function packageFiles(dir, pkg, open) {
 			out.add(rel);
 		}
 	};
-	const top = ['package.json', 'README.md', 'CHANGELOG.md', 'package.nls.json', ...fs.readdirSync(dir).filter(n => /^LICEN[CS]E/i.test(n) || /^package\.nls\..+\.json$/.test(n))];
+	const top = ['package.json', 'README.md', 'CHANGELOG.md', 'package.nls.json', ...README_LOCALES.map(l => `README.${l}.md`), ...fs.readdirSync(dir).filter(n => /^LICEN[CS]E/i.test(n) || /^package\.nls\..+\.json$/.test(n))];
 	for (const name of top) {
 		walk(name);
 	}
@@ -551,6 +553,20 @@ function submit(dir, flags) {
 		readme = `packages/${id}/README.md`;
 		fs.copyFileSync(path.join(dir, 'README.md'), path.join(marketRoot, readme));
 	}
+	// Translations: README.<locale>.md, shown to users of that language (English for the others).
+	const readmes = {};
+	for (const locale of README_LOCALES) {
+		const name = `README.${locale}.md`;
+		if (fs.existsSync(path.join(dir, name))) {
+			readmes[locale] = `packages/${id}/${name}`;
+			fs.copyFileSync(path.join(dir, name), path.join(marketRoot, readmes[locale]));
+		}
+	}
+	for (const name of fs.readdirSync(dir).filter(n => /^README\..+\.md$/.test(n))) {
+		if (!README_LOCALES.some(l => name === `README.${l}.md`)) {
+			log(`warning: ${name} is not one of README.<${README_LOCALES.join('|')}>.md and is left out`);
+		}
+	}
 	const repository = typeof pkg.repository === 'string' ? pkg.repository : pkg.repository?.url;
 	const author = typeof pkg.author === 'string' ? { name: pkg.author } : pkg.author ?? { name: pkg.publisher };
 	const versions = (previous?.versions ?? []).filter(v => v.version !== pkg.version);
@@ -568,6 +584,7 @@ function submit(dir, flags) {
 		license: pkg.license,
 		icon,
 		readme,
+		readmes: Object.keys(readmes).length ? readmes : undefined,
 		versions,
 	};
 	writeJson(metaFile, meta);
@@ -607,6 +624,7 @@ function buildIndex(marketRoot) {
 			license: meta.license,
 			icon: meta.icon,
 			readme: meta.readme,
+			readmes: meta.readmes && Object.keys(meta.readmes).length ? meta.readmes : undefined,
 			package: { path: latest.path, sha256: latest.sha256, size: latest.size },
 			updatedAt: latest.publishedAt,
 		});
@@ -625,7 +643,10 @@ function checkMarket(marketRoot) {
 			problems.push(`${where}: bad id`);
 			continue;
 		}
-		for (const rel of [entry.package.path, entry.icon, entry.readme].filter(Boolean)) {
+		for (const [locale] of Object.entries(entry.readmes ?? {}).filter(([l]) => !README_LOCALES.includes(l))) {
+			problems.push(`${where}: unknown README locale ${locale}`);
+		}
+		for (const rel of [entry.package.path, entry.icon, entry.readme, ...Object.values(entry.readmes ?? {})].filter(Boolean)) {
 			if (!/^[A-Za-z0-9._\-/]+$/.test(rel) || rel.split('/').some(s => s === '..' || s === '.' || !s) || !fs.existsSync(path.join(marketRoot, rel))) {
 				problems.push(`${where}: missing or unsafe path ${rel}`);
 			}

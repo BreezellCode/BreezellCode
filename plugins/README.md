@@ -103,6 +103,27 @@ Rules of `models.request`:
 - Errors carry a `name`: `BreezellNotSignedIn`, `BreezellPermissionDenied`, `BreezellRateLimited`,
   `BreezellNoModel`, `BreezellInvalidRequest`, `BreezellModelError`, `BreezellCancelled`.
 
+## README in several languages
+
+Breezell shows a plugin's README (as Markdown) on its market page. `README.md` is the English one and is
+required. Translations go next to it as `README.<locale>.md`, with these locales:
+
+| Locale | Language |
+|---|---|
+| `zh-CN` | Simplified Chinese |
+| `zh-TW` | Traditional Chinese |
+| `ja` | Japanese |
+| `ko` | Korean |
+| `ru` | Russian |
+| `es` | Spanish |
+| `pt-BR` | Portuguese (Brazil) |
+
+A user sees the README in Breezell's display language when the plugin has it, and the English one
+otherwise. `pack` ships the translations and `submit` publishes them; other `README.*.md` names are left out.
+
+In the README, raw HTML is not shown. Links open outside Breezell (http, https, mailto, or a file of the
+market by relative path, shown on GitHub); images load over https or from the market.
+
 ## Opening a plugin
 
 Users should not need a command to open a plugin. Declare how it opens:
