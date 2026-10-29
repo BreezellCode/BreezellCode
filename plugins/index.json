@@ -1,12 +1,12 @@
 {
 	"schemaVersion": 1,
-	"updatedAt": "2026-10-29T21:03:27.911Z",
+	"updatedAt": "2026-10-29T21:20:48.185Z",
 	"plugins": [
 		{
 			"id": "breezell.doc-writer",
 			"displayName": "Doc Writer",
 			"description": "Writes doc comments and explains code with your Breezell chat model.",
-			"version": "1.0.0",
+			"version": "1.0.1",
 			"apiVersion": 1,
 			"categories": [
 				"Programming Languages"
@@ -29,18 +29,27 @@
 			"license": "MIT",
 			"icon": "packages/breezell.doc-writer/icon.png",
 			"readme": "packages/breezell.doc-writer/README.md",
-			"package": {
-				"path": "packages/breezell.doc-writer/1.0.0/breezell.doc-writer-1.0.0.vsix",
-				"sha256": "40930e617a0d2dff60a9ce25eae251de113a648f92ee8b63550f9ebc362fd02d",
-				"size": 13282
+			"readmes": {
+				"zh-CN": "packages/breezell.doc-writer/README.zh-CN.md",
+				"zh-TW": "packages/breezell.doc-writer/README.zh-TW.md",
+				"ja": "packages/breezell.doc-writer/README.ja.md",
+				"ko": "packages/breezell.doc-writer/README.ko.md",
+				"ru": "packages/breezell.doc-writer/README.ru.md",
+				"es": "packages/breezell.doc-writer/README.es.md",
+				"pt-BR": "packages/breezell.doc-writer/README.pt-BR.md"
 			},
-			"updatedAt": "2026-10-29T20:40:12.483Z"
+			"package": {
+				"path": "packages/breezell.doc-writer/1.0.1/breezell.doc-writer-1.0.1.vsix",
+				"sha256": "326b29c64800299a240c7d6c7079eca819f8aa126cd9169ae064c7c72190f031",
+				"size": 20983
+			},
+			"updatedAt": "2026-10-29T21:20:48.133Z"
 		},
 		{
 			"id": "breezell.focus-player",
 			"displayName": "Focus Player",
 			"description": "Ambient focus sounds and your own music, in step with Breezell: a chime when the AI finishes.",
-			"version": "1.0.2",
+			"version": "1.0.3",
 			"apiVersion": 1,
 			"categories": [
 				"Productivity",
@@ -64,18 +73,27 @@
 			"license": "MIT",
 			"icon": "packages/breezell.focus-player/icon.png",
 			"readme": "packages/breezell.focus-player/README.md",
-			"package": {
-				"path": "packages/breezell.focus-player/1.0.2/breezell.focus-player-1.0.2.vsix",
-				"sha256": "493bcc6f2bf6447b9265d6e9d290a0d4e2c6262ff3af389c622f0f1907c5fc86",
-				"size": 23376
+			"readmes": {
+				"zh-CN": "packages/breezell.focus-player/README.zh-CN.md",
+				"zh-TW": "packages/breezell.focus-player/README.zh-TW.md",
+				"ja": "packages/breezell.focus-player/README.ja.md",
+				"ko": "packages/breezell.focus-player/README.ko.md",
+				"ru": "packages/breezell.focus-player/README.ru.md",
+				"es": "packages/breezell.focus-player/README.es.md",
+				"pt-BR": "packages/breezell.focus-player/README.pt-BR.md"
 			},
-			"updatedAt": "2026-10-29T21:03:27.827Z"
+			"package": {
+				"path": "packages/breezell.focus-player/1.0.3/breezell.focus-player-1.0.3.vsix",
+				"sha256": "f4fa9d1c3c74cbb6884e43eebcd09ee5f19a2aeb095c0b4116e55e7374781b60",
+				"size": 31731
+			},
+			"updatedAt": "2026-10-29T21:20:48.005Z"
 		},
 		{
 			"id": "breezell.focus-timer",
 			"displayName": "Focus Timer",
 			"description": "A Pomodoro timer in a window of its own, also from the Start menu without opening the editor.",
-			"version": "1.0.1",
+			"version": "1.0.2",
 			"apiVersion": 1,
 			"categories": [
 				"Productivity"
@@ -98,18 +116,27 @@
 			"license": "MIT",
 			"icon": "packages/breezell.focus-timer/icon.png",
 			"readme": "packages/breezell.focus-timer/README.md",
-			"package": {
-				"path": "packages/breezell.focus-timer/1.0.1/breezell.focus-timer-1.0.1.vsix",
-				"sha256": "3ac7c452769b5f51d0b7b685b6778f8507578cc7a37b5b6a42e994fc2f0c1f3c",
-				"size": 13362
+			"readmes": {
+				"zh-CN": "packages/breezell.focus-timer/README.zh-CN.md",
+				"zh-TW": "packages/breezell.focus-timer/README.zh-TW.md",
+				"ja": "packages/breezell.focus-timer/README.ja.md",
+				"ko": "packages/breezell.focus-timer/README.ko.md",
+				"ru": "packages/breezell.focus-timer/README.ru.md",
+				"es": "packages/breezell.focus-timer/README.es.md",
+				"pt-BR": "packages/breezell.focus-timer/README.pt-BR.md"
 			},
-			"updatedAt": "2026-10-29T21:03:27.911Z"
+			"package": {
+				"path": "packages/breezell.focus-timer/1.0.2/breezell.focus-timer-1.0.2.vsix",
+				"sha256": "03091105e607cb11931936b4f275eaa84b8a3df5ed0e4e2c098b47e9b6eed5a7",
+				"size": 21463
+			},
+			"updatedAt": "2026-10-29T21:20:48.067Z"
 		},
 		{
 			"id": "breezell.starter-pack",
 			"displayName": "Starter Pack",
 			"description": "Code review and testing skills, short house rules, a thinking MCP server and a calm dark theme: no code.",
-			"version": "1.0.0",
+			"version": "1.0.1",
 			"apiVersion": 1,
 			"categories": [
 				"Themes"
@@ -132,12 +159,21 @@
 			"license": "MIT",
 			"icon": "packages/breezell.starter-pack/icon.png",
 			"readme": "packages/breezell.starter-pack/README.md",
-			"package": {
-				"path": "packages/breezell.starter-pack/1.0.0/breezell.starter-pack-1.0.0.vsix",
-				"sha256": "440271bd02053b55e4b889b615e6fd22caa6182938becbd85810d6882407eeda",
-				"size": 6924
+			"readmes": {
+				"zh-CN": "packages/breezell.starter-pack/README.zh-CN.md",
+				"zh-TW": "packages/breezell.starter-pack/README.zh-TW.md",
+				"ja": "packages/breezell.starter-pack/README.ja.md",
+				"ko": "packages/breezell.starter-pack/README.ko.md",
+				"ru": "packages/breezell.starter-pack/README.ru.md",
+				"es": "packages/breezell.starter-pack/README.es.md",
+				"pt-BR": "packages/breezell.starter-pack/README.pt-BR.md"
 			},
-			"updatedAt": "2026-10-29T20:40:12.534Z"
+			"package": {
+				"path": "packages/breezell.starter-pack/1.0.1/breezell.starter-pack-1.0.1.vsix",
+				"sha256": "25941de9d1801cb25809e978e5013be74b988f04a247e1bccf102f5b739a2d9f",
+				"size": 14352
+			},
+			"updatedAt": "2026-10-29T21:20:48.185Z"
 		}
 	]
 }

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.3
+
+- README in Simplified and Traditional Chinese, Japanese, Korean, Russian, Spanish and Portuguese (Brazil).
+
 ## 1.0.2
 
 - Opens from Breezell Console › Plugins and from its entry in the Box sidebar, no command needed.

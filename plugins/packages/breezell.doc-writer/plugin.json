@@ -20,7 +20,27 @@
 	"license": "MIT",
 	"icon": "packages/breezell.doc-writer/icon.png",
 	"readme": "packages/breezell.doc-writer/README.md",
+	"readmes": {
+		"zh-CN": "packages/breezell.doc-writer/README.zh-CN.md",
+		"zh-TW": "packages/breezell.doc-writer/README.zh-TW.md",
+		"ja": "packages/breezell.doc-writer/README.ja.md",
+		"ko": "packages/breezell.doc-writer/README.ko.md",
+		"ru": "packages/breezell.doc-writer/README.ru.md",
+		"es": "packages/breezell.doc-writer/README.es.md",
+		"pt-BR": "packages/breezell.doc-writer/README.pt-BR.md"
+	},
 	"versions": [
+		{
+			"version": "1.0.1",
+			"path": "packages/breezell.doc-writer/1.0.1/breezell.doc-writer-1.0.1.vsix",
+			"sha256": "326b29c64800299a240c7d6c7079eca819f8aa126cd9169ae064c7c72190f031",
+			"size": 20983,
+			"apiVersion": 1,
+			"permissions": [
+				"models.request"
+			],
+			"publishedAt": "2026-10-29T21:20:48.133Z"
+		},
 		{
 			"version": "1.0.0",
 			"path": "packages/breezell.doc-writer/1.0.0/breezell.doc-writer-1.0.0.vsix",

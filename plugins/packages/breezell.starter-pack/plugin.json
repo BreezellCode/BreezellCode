@@ -22,7 +22,25 @@
 	"license": "MIT",
 	"icon": "packages/breezell.starter-pack/icon.png",
 	"readme": "packages/breezell.starter-pack/README.md",
+	"readmes": {
+		"zh-CN": "packages/breezell.starter-pack/README.zh-CN.md",
+		"zh-TW": "packages/breezell.starter-pack/README.zh-TW.md",
+		"ja": "packages/breezell.starter-pack/README.ja.md",
+		"ko": "packages/breezell.starter-pack/README.ko.md",
+		"ru": "packages/breezell.starter-pack/README.ru.md",
+		"es": "packages/breezell.starter-pack/README.es.md",
+		"pt-BR": "packages/breezell.starter-pack/README.pt-BR.md"
+	},
 	"versions": [
+		{
+			"version": "1.0.1",
+			"path": "packages/breezell.starter-pack/1.0.1/breezell.starter-pack-1.0.1.vsix",
+			"sha256": "25941de9d1801cb25809e978e5013be74b988f04a247e1bccf102f5b739a2d9f",
+			"size": 14352,
+			"apiVersion": 1,
+			"permissions": [],
+			"publishedAt": "2026-10-29T21:20:48.185Z"
+		},
 		{
 			"version": "1.0.0",
 			"path": "packages/breezell.starter-pack/1.0.0/breezell.starter-pack-1.0.0.vsix",

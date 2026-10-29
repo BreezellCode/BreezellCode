@@ -21,7 +21,27 @@
 	"license": "MIT",
 	"icon": "packages/breezell.focus-player/icon.png",
 	"readme": "packages/breezell.focus-player/README.md",
+	"readmes": {
+		"zh-CN": "packages/breezell.focus-player/README.zh-CN.md",
+		"zh-TW": "packages/breezell.focus-player/README.zh-TW.md",
+		"ja": "packages/breezell.focus-player/README.ja.md",
+		"ko": "packages/breezell.focus-player/README.ko.md",
+		"ru": "packages/breezell.focus-player/README.ru.md",
+		"es": "packages/breezell.focus-player/README.es.md",
+		"pt-BR": "packages/breezell.focus-player/README.pt-BR.md"
+	},
 	"versions": [
+		{
+			"version": "1.0.3",
+			"path": "packages/breezell.focus-player/1.0.3/breezell.focus-player-1.0.3.vsix",
+			"sha256": "f4fa9d1c3c74cbb6884e43eebcd09ee5f19a2aeb095c0b4116e55e7374781b60",
+			"size": 31731,
+			"apiVersion": 1,
+			"permissions": [
+				"chat.events"
+			],
+			"publishedAt": "2026-10-29T21:20:48.005Z"
+		},
 		{
 			"version": "1.0.2",
 			"path": "packages/breezell.focus-player/1.0.2/breezell.focus-player-1.0.2.vsix",

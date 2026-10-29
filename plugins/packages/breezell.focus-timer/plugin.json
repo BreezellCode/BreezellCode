@@ -20,7 +20,27 @@
 	"license": "MIT",
 	"icon": "packages/breezell.focus-timer/icon.png",
 	"readme": "packages/breezell.focus-timer/README.md",
+	"readmes": {
+		"zh-CN": "packages/breezell.focus-timer/README.zh-CN.md",
+		"zh-TW": "packages/breezell.focus-timer/README.zh-TW.md",
+		"ja": "packages/breezell.focus-timer/README.ja.md",
+		"ko": "packages/breezell.focus-timer/README.ko.md",
+		"ru": "packages/breezell.focus-timer/README.ru.md",
+		"es": "packages/breezell.focus-timer/README.es.md",
+		"pt-BR": "packages/breezell.focus-timer/README.pt-BR.md"
+	},
 	"versions": [
+		{
+			"version": "1.0.2",
+			"path": "packages/breezell.focus-timer/1.0.2/breezell.focus-timer-1.0.2.vsix",
+			"sha256": "03091105e607cb11931936b4f275eaa84b8a3df5ed0e4e2c098b47e9b6eed5a7",
+			"size": 21463,
+			"apiVersion": 1,
+			"permissions": [
+				"chat.events"
+			],
+			"publishedAt": "2026-10-29T21:20:48.067Z"
+		},
 		{
 			"version": "1.0.1",
 			"path": "packages/breezell.focus-timer/1.0.1/breezell.focus-timer-1.0.1.vsix",

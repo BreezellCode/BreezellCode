@@ -3,15 +3,33 @@
 	"publisher": "breezell",
 	"displayName": "Starter Pack",
 	"description": "Code review and testing skills, short house rules, a thinking MCP server and a calm dark theme: no code.",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"license": "MIT",
-	"author": { "name": "Breezell", "url": "https://breezell.com" },
+	"author": {
+		"name": "Breezell",
+		"url": "https://breezell.com"
+	},
 	"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/starter-pack",
 	"icon": "media/icon.png",
-	"engines": { "vscode": "^1.90.0" },
-	"extensionKind": ["ui", "workspace"],
-	"categories": ["Themes", "Other"],
-	"keywords": ["skills", "rules", "mcp", "theme", "review", "testing"],
+	"engines": {
+		"vscode": "^1.90.0"
+	},
+	"extensionKind": [
+		"ui",
+		"workspace"
+	],
+	"categories": [
+		"Themes",
+		"Other"
+	],
+	"keywords": [
+		"skills",
+		"rules",
+		"mcp",
+		"theme",
+		"review",
+		"testing"
+	],
 	"breezell": {
 		"apiVersion": 1,
 		"permissions": [],
@@ -19,17 +37,28 @@
 	},
 	"contributes": {
 		"breezell": {
-			"skills": ["skills"],
-			"rules": ["rules/house-rules.md"],
+			"skills": [
+				"skills"
+			],
+			"rules": [
+				"rules/house-rules.md"
+			],
 			"mcpServers": {
 				"sequential-thinking": {
 					"command": "npx",
-					"args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+					"args": [
+						"-y",
+						"@modelcontextprotocol/server-sequential-thinking"
+					]
 				}
 			}
 		},
 		"themes": [
-			{ "label": "Breezell Calm Dark", "uiTheme": "vs-dark", "path": "./themes/calm-dark.json" }
+			{
+				"label": "Breezell Calm Dark",
+				"uiTheme": "vs-dark",
+				"path": "./themes/calm-dark.json"
+			}
 		]
 	},
 	"scripts": {

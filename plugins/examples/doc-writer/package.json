@@ -3,31 +3,65 @@
 	"publisher": "breezell",
 	"displayName": "Doc Writer",
 	"description": "Writes doc comments and explains code with your Breezell chat model.",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"license": "MIT",
-	"author": { "name": "Breezell", "url": "https://breezell.com" },
+	"author": {
+		"name": "Breezell",
+		"url": "https://breezell.com"
+	},
 	"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/doc-writer",
 	"icon": "media/icon.png",
-	"engines": { "vscode": "^1.90.0" },
-	"extensionKind": ["ui", "workspace"],
-	"categories": ["Programming Languages", "Other"],
-	"keywords": ["ai", "documentation", "comments", "explain"],
+	"engines": {
+		"vscode": "^1.90.0"
+	},
+	"extensionKind": [
+		"ui",
+		"workspace"
+	],
+	"categories": [
+		"Programming Languages",
+		"Other"
+	],
+	"keywords": [
+		"ai",
+		"documentation",
+		"comments",
+		"explain"
+	],
 	"main": "./dist/extension.js",
 	"activationEvents": [],
 	"breezell": {
 		"apiVersion": 1,
-		"permissions": ["models.request"],
+		"permissions": [
+			"models.request"
+		],
 		"source": "open"
 	},
 	"contributes": {
 		"commands": [
-			{ "command": "docWriter.writeDoc", "title": "Write Doc Comment", "category": "Doc Writer" },
-			{ "command": "docWriter.explain", "title": "Explain Selection", "category": "Doc Writer" }
+			{
+				"command": "docWriter.writeDoc",
+				"title": "Write Doc Comment",
+				"category": "Doc Writer"
+			},
+			{
+				"command": "docWriter.explain",
+				"title": "Explain Selection",
+				"category": "Doc Writer"
+			}
 		],
 		"menus": {
 			"editor/context": [
-				{ "command": "docWriter.writeDoc", "when": "editorHasSelection && !editorReadonly", "group": "1_modification@90" },
-				{ "command": "docWriter.explain", "when": "editorHasSelection", "group": "navigation@90" }
+				{
+					"command": "docWriter.writeDoc",
+					"when": "editorHasSelection && !editorReadonly",
+					"group": "1_modification@90"
+				},
+				{
+					"command": "docWriter.explain",
+					"when": "editorHasSelection",
+					"group": "navigation@90"
+				}
 			]
 		},
 		"configuration": {
