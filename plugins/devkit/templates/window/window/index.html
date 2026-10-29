@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>{{displayName}}</title>
+	<link rel="stylesheet" href="style.css">
+	<!-- Breezell's bridge: window.breezell.postMessage / onMessage / connected -->
+	<script src="/__breezell/api.js"></script>
+</head>
+<body>
+	<main>
+		<h1>{{displayName}}</h1>
+		<p id="status">…</p>
+		<button id="hello">Say hello to the plugin</button>
+		<ul id="log"></ul>
+	</main>
+	<script src="app.js"></script>
+</body>
+</html>

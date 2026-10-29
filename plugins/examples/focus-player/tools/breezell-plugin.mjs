@@ -235,8 +235,29 @@ function checkPackage(pkg, { forMarket = false } = {}) {
 	if (typeof pkg.engines?.vscode !== 'string') {
 		errors.push('"engines.vscode" is required (e.g. "^1.90.0")');
 	}
-	if (typeof pkg.main !== 'string') {
-		errors.push('"main" is required (e.g. "./dist/extension.js")');
+	if (pkg.main !== undefined && typeof pkg.main !== 'string') {
+		errors.push('"main" must be a path (e.g. "./dist/extension.js"), or left out for a pack without code');
+	}
+	const declared = pkg.contributes?.breezell;
+	if (declared !== undefined) {
+		for (const w of declared.windows ?? []) {
+			if (typeof w?.id !== 'string' || !/^[a-z0-9][a-z0-9-]{0,31}$/.test(w.id) || typeof w.entry !== 'string' || !/\.html?$/i.test(w.entry) || w.entry.startsWith('/') || w.entry.split(/[\\/]/).includes('..')) {
+				errors.push('"contributes.breezell.windows": each window needs an "id" (lowercase, digits, dashes) and an .html "entry" inside the plugin');
+			}
+		}
+		for (const key of ['skills', 'rules']) {
+			const list = declared[key] ?? [];
+			if (!Array.isArray(list) || list.some(p => typeof p !== 'string' || p.startsWith('/') || p.split(/[\\/]/).includes('..'))) {
+				errors.push(`"contributes.breezell.${key}" must be an array of paths inside the plugin`);
+			}
+		}
+		const servers = declared.mcpServers ?? {};
+		if (typeof servers !== 'object' || Array.isArray(servers) || Object.values(servers).some(s => typeof s !== 'object' || s === null || (typeof s.command !== 'string' && typeof s.url !== 'string'))) {
+			errors.push('"contributes.breezell.mcpServers" maps a name to { "command", "args", "env" } or { "url" }');
+		}
+	}
+	if (typeof pkg.main !== 'string' && declared === undefined && !pkg.contributes?.themes) {
+		errors.push('a plugin needs code ("main") or declared contents ("contributes.breezell" skills, rules or MCP servers, or "contributes.themes")');
 	}
 	const bz = pkg.breezell;
 	if (typeof bz !== 'object' || bz === null || Array.isArray(bz)) {
@@ -290,6 +311,11 @@ function loadEsbuild(dir) {
 
 async function build(dir, { closed = false, watch = false } = {}) {
 	const pkg = readJson(path.join(dir, 'package.json'));
+	if (typeof pkg.main !== 'string') {
+		// A pack without code (skills, rules, MCP servers, themes, window pages) has nothing to bundle.
+		log('nothing to build: package.json has no "main"');
+		return;
+	}
 	const entry = ['src/extension.ts', 'src/extension.js'].map(p => path.join(dir, p)).find(p => fs.existsSync(p));
 	if (!entry) {
 		fail('no src/extension.ts or src/extension.js');
@@ -345,8 +371,18 @@ function packageFiles(dir, pkg, open) {
 	for (const name of top) {
 		walk(name);
 	}
-	walk(path.posix.dirname((pkg.main ?? './dist/extension.js').replace(/^\.\//, '')));
+	if (typeof pkg.main === 'string') {
+		walk(path.posix.dirname(pkg.main.replace(/^\.\//, '')));
+	}
 	walk('media');
+	// What a pack declares: skills, rules and themes ship as they are, and each window's folder.
+	const windowFolders = (pkg.contributes?.breezell?.windows ?? []).map(w => typeof w?.entry === 'string' ? w.entry.replace(/^\.\//, '') : undefined).filter(Boolean)
+		.map(entry => path.posix.dirname(entry) === '.' ? entry : path.posix.dirname(entry));
+	for (const rel of [...(pkg.contributes?.breezell?.skills ?? []), ...(pkg.contributes?.breezell?.rules ?? []), ...(pkg.contributes?.themes ?? []).map(t => t.path), ...windowFolders]) {
+		if (typeof rel === 'string') {
+			walk(rel.replace(/^\.\//, '').replace(/\/$/, ''));
+		}
+	}
 	if (typeof pkg.icon === 'string') {
 		walk(pkg.icon.replace(/^\.\//, ''));
 	}
@@ -403,7 +439,9 @@ async function pack(dir, flags) {
 	if (errors.length) {
 		fail(`package.json:\n  - ${errors.join('\n  - ')}`);
 	}
-	await build(dir, { closed: mode === 'closed' });
+	if (typeof pkg.main === 'string') {
+		await build(dir, { closed: mode === 'closed' });
+	}
 	const files = packageFiles(dir, pkg, mode === 'open');
 	if (mode === 'closed' && files.some(f => f.startsWith('src/'))) {
 		fail('internal: closed package would contain src/');
@@ -418,11 +456,12 @@ async function pack(dir, flags) {
 		})),
 	];
 	if (mode === 'closed') {
-		// Closed source: the webview scripts and styles ship minified too, not only the bundle.
-		const esbuild = loadEsbuild(dir);
+		// Closed source: every script and style ships minified (webview and window pages), not only the bundle.
+		let esbuild;
 		for (const entry of entries) {
-			const loader = entry.name.startsWith('extension/media/') && (entry.name.endsWith('.js') ? 'js' : entry.name.endsWith('.css') ? 'css' : undefined);
+			const loader = entry.name.startsWith('extension/') && !entry.name.startsWith('extension/dist/') && (entry.name.endsWith('.js') ? 'js' : entry.name.endsWith('.css') ? 'css' : undefined);
 			if (loader) {
+				esbuild ??= loadEsbuild(dir);
 				entry.data = Buffer.from(esbuild.transformSync(entry.data.toString('utf8'), { loader, minify: true, legalComments: 'none' }).code);
 			}
 		}
@@ -615,7 +654,7 @@ function checkMarket(marketRoot) {
 		if (entry.source === 'closed' && [...files.keys()].some(f => f.startsWith('extension/src/'))) {
 			problems.push(`${where}: a closed source package contains src/`);
 		}
-		if (entry.source === 'open' && ![...files.keys()].some(f => f.startsWith('extension/src/'))) {
+		if (entry.source === 'open' && pkg.main && ![...files.keys()].some(f => f.startsWith('extension/src/'))) {
 			problems.push(`${where}: an open source package has no src/`);
 		}
 	}

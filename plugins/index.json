@@ -1,7 +1,41 @@
 {
 	"schemaVersion": 1,
-	"updatedAt": "2026-10-29T20:15:46.500Z",
+	"updatedAt": "2026-10-29T20:40:12.596Z",
 	"plugins": [
+		{
+			"id": "breezell.doc-writer",
+			"displayName": "Doc Writer",
+			"description": "Writes doc comments and explains code with your Breezell chat model.",
+			"version": "1.0.0",
+			"apiVersion": 1,
+			"categories": [
+				"Programming Languages"
+			],
+			"tags": [
+				"ai",
+				"documentation",
+				"comments",
+				"explain"
+			],
+			"permissions": [
+				"models.request"
+			],
+			"source": "open",
+			"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/doc-writer",
+			"author": {
+				"name": "Breezell",
+				"url": "https://breezell.com"
+			},
+			"license": "MIT",
+			"icon": "packages/breezell.doc-writer/icon.png",
+			"readme": "packages/breezell.doc-writer/README.md",
+			"package": {
+				"path": "packages/breezell.doc-writer/1.0.0/breezell.doc-writer-1.0.0.vsix",
+				"sha256": "40930e617a0d2dff60a9ce25eae251de113a648f92ee8b63550f9ebc362fd02d",
+				"size": 13282
+			},
+			"updatedAt": "2026-10-29T20:40:12.483Z"
+		},
 		{
 			"id": "breezell.focus-player",
 			"displayName": "Focus Player",
@@ -36,6 +70,74 @@
 				"size": 23294
 			},
 			"updatedAt": "2026-10-29T20:15:46.500Z"
+		},
+		{
+			"id": "breezell.focus-timer",
+			"displayName": "Focus Timer",
+			"description": "A Pomodoro timer in a window of its own, also from the Start menu without opening the editor.",
+			"version": "1.0.0",
+			"apiVersion": 1,
+			"categories": [
+				"Productivity"
+			],
+			"tags": [
+				"pomodoro",
+				"timer",
+				"focus",
+				"window"
+			],
+			"permissions": [
+				"chat.events"
+			],
+			"source": "open",
+			"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/focus-timer",
+			"author": {
+				"name": "Breezell",
+				"url": "https://breezell.com"
+			},
+			"license": "MIT",
+			"icon": "packages/breezell.focus-timer/icon.png",
+			"readme": "packages/breezell.focus-timer/README.md",
+			"package": {
+				"path": "packages/breezell.focus-timer/1.0.0/breezell.focus-timer-1.0.0.vsix",
+				"sha256": "0c86c08ec63203cef6bac84f55e5d10ea14667c81f70c33561e1e297563c31f6",
+				"size": 13274
+			},
+			"updatedAt": "2026-10-29T20:40:12.596Z"
+		},
+		{
+			"id": "breezell.starter-pack",
+			"displayName": "Starter Pack",
+			"description": "Code review and testing skills, short house rules, a thinking MCP server and a calm dark theme: no code.",
+			"version": "1.0.0",
+			"apiVersion": 1,
+			"categories": [
+				"Themes"
+			],
+			"tags": [
+				"skills",
+				"rules",
+				"mcp",
+				"theme",
+				"review",
+				"testing"
+			],
+			"permissions": [],
+			"source": "open",
+			"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/starter-pack",
+			"author": {
+				"name": "Breezell",
+				"url": "https://breezell.com"
+			},
+			"license": "MIT",
+			"icon": "packages/breezell.starter-pack/icon.png",
+			"readme": "packages/breezell.starter-pack/README.md",
+			"package": {
+				"path": "packages/breezell.starter-pack/1.0.0/breezell.starter-pack-1.0.0.vsix",
+				"sha256": "440271bd02053b55e4b889b615e6fd22caa6182938becbd85810d6882407eeda",
+				"size": 6924
+			},
+			"updatedAt": "2026-10-29T20:40:12.534Z"
 		}
 	]
 }

@@ -1,0 +1,124 @@
+{
+	"$schema": "vscode://schemas/color-theme",
+	"name": "Breezell Calm Dark",
+	"type": "dark",
+	"colors": {
+		"editor.background": "#1b1f24",
+		"editor.foreground": "#c9d1d9",
+		"editorLineNumber.foreground": "#4b5563",
+		"editorLineNumber.activeForeground": "#9ca3af",
+		"editor.selectionBackground": "#2f4f4f99",
+		"editor.lineHighlightBackground": "#22272e",
+		"editorCursor.foreground": "#5fb3a1",
+		"sideBar.background": "#171a1f",
+		"sideBar.foreground": "#aab4be",
+		"activityBar.background": "#15181c",
+		"activityBar.foreground": "#c9d1d9",
+		"statusBar.background": "#15181c",
+		"statusBar.foreground": "#9aa5b1",
+		"titleBar.activeBackground": "#15181c",
+		"titleBar.activeForeground": "#c9d1d9",
+		"tab.activeBackground": "#1b1f24",
+		"tab.inactiveBackground": "#171a1f",
+		"tab.activeBorderTop": "#5fb3a1",
+		"panel.background": "#171a1f",
+		"terminal.background": "#171a1f",
+		"button.background": "#2e7d6f",
+		"button.foreground": "#ffffff",
+		"focusBorder": "#5fb3a1",
+		"textLink.foreground": "#7cc7b6",
+		"badge.background": "#2e7d6f"
+	},
+	"tokenColors": [
+		{
+			"scope": [
+				"comment",
+				"punctuation.definition.comment"
+			],
+			"settings": {
+				"foreground": "#6b7785",
+				"fontStyle": "italic"
+			}
+		},
+		{
+			"scope": [
+				"keyword",
+				"storage",
+				"storage.type"
+			],
+			"settings": {
+				"foreground": "#8fb8de"
+			}
+		},
+		{
+			"scope": [
+				"string",
+				"string.quoted"
+			],
+			"settings": {
+				"foreground": "#a8cc8c"
+			}
+		},
+		{
+			"scope": [
+				"constant.numeric",
+				"constant.language"
+			],
+			"settings": {
+				"foreground": "#e5c07b"
+			}
+		},
+		{
+			"scope": [
+				"entity.name.function",
+				"support.function"
+			],
+			"settings": {
+				"foreground": "#7cc7b6"
+			}
+		},
+		{
+			"scope": [
+				"entity.name.type",
+				"entity.name.class",
+				"support.class"
+			],
+			"settings": {
+				"foreground": "#d4a6e0"
+			}
+		},
+		{
+			"scope": [
+				"variable",
+				"variable.other"
+			],
+			"settings": {
+				"foreground": "#c9d1d9"
+			}
+		},
+		{
+			"scope": [
+				"variable.parameter"
+			],
+			"settings": {
+				"foreground": "#e0b088"
+			}
+		},
+		{
+			"scope": [
+				"entity.name.tag"
+			],
+			"settings": {
+				"foreground": "#8fb8de"
+			}
+		},
+		{
+			"scope": [
+				"entity.other.attribute-name"
+			],
+			"settings": {
+				"foreground": "#e5c07b"
+			}
+		}
+	]
+}

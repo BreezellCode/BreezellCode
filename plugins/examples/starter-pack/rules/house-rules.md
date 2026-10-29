@@ -1,0 +1,3 @@
+- Before changing several files, say in one sentence what you are going to change and why.
+- Prefer small, focused changes; do not reformat or rename code you were not asked to touch.
+- When you are not sure what the user wants, ask one short question instead of guessing.

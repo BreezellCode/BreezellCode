@@ -12,7 +12,7 @@ searched, filtered by category, browsed page by page, installed and updated.
 | `devkit/breezell-plugin.mjs` | The devkit: create, build, pack (open or closed source), submit, check |
 | `devkit/breezell.d.ts` | The plugin API typings |
 | `devkit/templates/`, `devkit/templates.json` | Templates for new plugins (Breezell's "Create a plugin" uses the same) |
-| `examples/focus-player/` | Source of the example plugin, Focus Player |
+| `examples/` | Source of the example plugins, one per kind of plugin (below) |
 
 ---
 
@@ -38,13 +38,24 @@ A Breezell plugin is a VS Code extension with a `breezell` object in its `packag
 - A plugin works the same whether or not it is in the market: install your own `.vsix` from
   **Plugins › Installed › Install local .vsix**.
 
+## Kinds of plugins
+
+| Kind | What it is | Example | Template |
+|---|---|---|---|
+| **Pack** | No code: skills, rules for the AI, MCP servers and themes declared in `package.json` | [Starter Pack](examples/starter-pack) | Pack |
+| **Panel** | A panel inside Breezell with your own page (a webview), following the conversation | [Focus Player](examples/focus-player) | Panel |
+| **AI** | Commands that use the user's chat model | [Doc Writer](examples/doc-writer) | AI command |
+| **Window** | A window of its own with your page and layout; it can also open without the editor | [Focus Timer](examples/focus-timer) | Window |
+
+The kinds combine: one plugin can bring skills, a panel, AI commands and a window.
+
 ## Getting started
 
 **In Breezell**
 
-Open **Breezell Console › Plugins › Develop**, fill in the id and name, choose a template (Panel,
-AI command or Minimal) and how to publish it (open or closed source), then pick a folder. Open the
-new folder in a new window.
+Open **Breezell Console › Plugins › Develop**, fill in the id and name, choose a template (Pack,
+Panel, AI command, Window or Minimal) and how to publish it (open or closed source), then pick a
+folder. Open the new folder in a new window.
 
 **From the command line** (Node.js 18 or later)
 
@@ -77,6 +88,7 @@ The typings are in [`devkit/breezell.d.ts`](devkit/breezell.d.ts); the templates
 | `breezell.account.isSignedIn`, `onDidChangeSignIn` | — | Whether the user is signed in to Breezell |
 | `breezell.chat.onDidStartTurn`, `onDidFinishTurn` | `chat.events` | A conversation turn started or finished: mode, outcome (completed, error, stopped) and duration, **never the content** |
 | `breezell.models.request({ messages, system, onText }, token)` | `models.request` | Send a request to the user's current chat model, optionally streaming |
+| `breezell.windows.open(id)` | — (the window is declared in `package.json`) | Open one of the plugin's windows; returns it with `postMessage`, `onDidReceiveMessage`, `onDidClose`, `close` |
 
 Rules of `models.request`:
 
@@ -90,6 +102,68 @@ Rules of `models.request`:
   messages and 200,000 characters.
 - Errors carry a `name`: `BreezellNotSignedIn`, `BreezellPermissionDenied`, `BreezellRateLimited`,
   `BreezellNoModel`, `BreezellInvalidRequest`, `BreezellModelError`, `BreezellCancelled`.
+
+## Packs: skills, rules, MCP servers
+
+Declare them in `package.json`; no code is needed:
+
+```json
+"contributes": {
+	"breezell": {
+		"skills": ["skills"],
+		"rules": ["rules/house-rules.md"],
+		"mcpServers": {
+			"sequential-thinking": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"] },
+			"docs": { "url": "https://example.com/mcp" }
+		}
+	},
+	"themes": [{ "label": "My Theme", "uiTheme": "vs-dark", "path": "./themes/my-theme.json" }]
+}
+```
+
+- `skills`: folders holding skill folders (`skills/<name>/SKILL.md`). They appear in Breezell's skill list
+  labelled with the plugin, and the agent loads them like any skill. A user's skill of the same name wins.
+- `rules`: Markdown files added to the AI's instructions while the plugin is on (at most 8,000 characters
+  per file and 24,000 for all plugins together). Keep them short: they count against every request.
+- `mcpServers`: a `command` (with `args` and `env`) or a `url` (with `headers`). They appear in the MCP list
+  labelled with the plugin; a user or project server of the same name wins. Users see each command before
+  they install.
+
+Everything a plugin declares goes away when it is turned off or removed, and while nobody is signed in.
+
+## Windows
+
+A window plugin declares its windows in `package.json`:
+
+```json
+"contributes": {
+	"breezell": {
+		"windows": [{
+			"id": "timer",
+			"title": "Focus Timer",
+			"entry": "window/index.html",
+			"width": 380, "height": 560, "minWidth": 320, "minHeight": 460,
+			"requiresEditor": false
+		}]
+	}
+}
+```
+
+- The page is the plugin's own HTML, CSS and JavaScript, loaded from `breezell-plugin://<publisher.name>/`.
+  It loads `/__breezell/api.js` for `window.breezell`: `postMessage(message)` (to the plugin's code),
+  `onMessage(listener)` and `connected`.
+- In the plugin's code, `vscode.breezell.windows.open('timer')` opens it (or brings it to the front) and
+  returns an object to `postMessage` to the page, listen to `onDidReceiveMessage`, `onDidClose`, and `close()`.
+- The window is sandboxed: no Node, no network (`connect-src 'self'`), only the plugin's files, no popups,
+  no navigating away, and its own storage (`localStorage`, IndexedDB) separate from Breezell and other
+  plugins. The title always ends with the plugin's name.
+- Window plugins need `"extensionKind": ["ui", "workspace"]`: the window's files are read on the user's computer.
+
+**Opening without the editor**: with `"requiresEditor": false` a window can open on its own, with no editor
+window: from **Plugins › Installed › Add to Start menu** (Windows), with
+`breezell://plugin-window/<publisher.name>/<window id>`, or `Breezell --plugin-window <publisher.name>/<window id>`.
+It still needs a signed-in Breezell account; otherwise Breezell opens as usual. A window opened on its own
+has no editor to relay messages: `window.breezell.connected` is `false` and `postMessage` resolves to `false`.
 
 ### What plugins cannot reach
 

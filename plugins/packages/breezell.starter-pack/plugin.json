@@ -1,0 +1,36 @@
+{
+	"id": "breezell.starter-pack",
+	"displayName": "Starter Pack",
+	"description": "Code review and testing skills, short house rules, a thinking MCP server and a calm dark theme: no code.",
+	"categories": [
+		"Themes"
+	],
+	"tags": [
+		"skills",
+		"rules",
+		"mcp",
+		"theme",
+		"review",
+		"testing"
+	],
+	"source": "open",
+	"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/starter-pack",
+	"author": {
+		"name": "Breezell",
+		"url": "https://breezell.com"
+	},
+	"license": "MIT",
+	"icon": "packages/breezell.starter-pack/icon.png",
+	"readme": "packages/breezell.starter-pack/README.md",
+	"versions": [
+		{
+			"version": "1.0.0",
+			"path": "packages/breezell.starter-pack/1.0.0/breezell.starter-pack-1.0.0.vsix",
+			"sha256": "440271bd02053b55e4b889b615e6fd22caa6182938becbd85810d6882407eeda",
+			"size": 6924,
+			"apiVersion": 1,
+			"permissions": [],
+			"publishedAt": "2026-10-29T20:40:12.534Z"
+		}
+	]
+}

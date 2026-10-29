@@ -1,0 +1,55 @@
+{
+	"name": "focus-timer",
+	"publisher": "breezell",
+	"displayName": "Focus Timer",
+	"description": "A Pomodoro timer in a window of its own, also from the Start menu without opening the editor.",
+	"version": "1.0.0",
+	"license": "MIT",
+	"author": { "name": "Breezell", "url": "https://breezell.com" },
+	"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/focus-timer",
+	"icon": "media/icon.png",
+	"engines": { "vscode": "^1.90.0" },
+	"extensionKind": ["ui", "workspace"],
+	"categories": ["Productivity"],
+	"keywords": ["pomodoro", "timer", "focus", "window"],
+	"main": "./dist/extension.js",
+	"activationEvents": ["onStartupFinished"],
+	"breezell": {
+		"apiVersion": 1,
+		"permissions": ["chat.events"],
+		"source": "open"
+	},
+	"contributes": {
+		"breezell": {
+			"windows": [
+				{
+					"id": "timer",
+					"title": "Focus Timer",
+					"entry": "window/index.html",
+					"width": 380,
+					"height": 560,
+					"minWidth": 320,
+					"minHeight": 460,
+					"requiresEditor": false
+				}
+			]
+		},
+		"commands": [
+			{ "command": "focusTimer.open", "title": "Open", "category": "Focus Timer" }
+		]
+	},
+	"scripts": {
+		"build": "node tools/breezell-plugin.mjs build",
+		"watch": "node tools/breezell-plugin.mjs build --watch",
+		"typecheck": "tsc -p .",
+		"validate": "node tools/breezell-plugin.mjs validate",
+		"package:open": "node tools/breezell-plugin.mjs pack --open",
+		"package:closed": "node tools/breezell-plugin.mjs pack --closed",
+		"submit": "node tools/breezell-plugin.mjs submit"
+	},
+	"devDependencies": {
+		"@types/vscode": "^1.90.0",
+		"esbuild": "^0.28.0",
+		"typescript": "^5.6.0"
+	}
+}

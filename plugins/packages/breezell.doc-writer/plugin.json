@@ -1,0 +1,36 @@
+{
+	"id": "breezell.doc-writer",
+	"displayName": "Doc Writer",
+	"description": "Writes doc comments and explains code with your Breezell chat model.",
+	"categories": [
+		"Programming Languages"
+	],
+	"tags": [
+		"ai",
+		"documentation",
+		"comments",
+		"explain"
+	],
+	"source": "open",
+	"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/doc-writer",
+	"author": {
+		"name": "Breezell",
+		"url": "https://breezell.com"
+	},
+	"license": "MIT",
+	"icon": "packages/breezell.doc-writer/icon.png",
+	"readme": "packages/breezell.doc-writer/README.md",
+	"versions": [
+		{
+			"version": "1.0.0",
+			"path": "packages/breezell.doc-writer/1.0.0/breezell.doc-writer-1.0.0.vsix",
+			"sha256": "40930e617a0d2dff60a9ce25eae251de113a648f92ee8b63550f9ebc362fd02d",
+			"size": 13282,
+			"apiVersion": 1,
+			"permissions": [
+				"models.request"
+			],
+			"publishedAt": "2026-10-29T20:40:12.483Z"
+		}
+	]
+}

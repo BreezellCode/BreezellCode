@@ -1,0 +1,7 @@
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+body { margin: 0; }
+main { padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+h1 { margin: 0; font-size: 20px; }
+#status { margin: 0; opacity: .7; }
+button { align-self: flex-start; padding: 6px 14px; border-radius: 8px; border: 1px solid #8884; background: transparent; color: inherit; cursor: pointer; }
+ul { margin: 0; padding-left: 18px; }

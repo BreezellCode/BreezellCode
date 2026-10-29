@@ -1,0 +1,32 @@
+:root {
+	color-scheme: light dark;
+	--bg: #f7f7f5; --fg: #1f2328; --muted: #6b7280; --line: #e5e7eb; --focus: #e8590c; --break: #2b8a3e; --card: #ffffff;
+	font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+	:root { --bg: #17191c; --fg: #e6e6e6; --muted: #9aa0a6; --line: #2c3036; --focus: #ff8a4c; --break: #51cf66; --card: #1f2226; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); }
+main { padding: 18px 20px 24px; display: flex; flex-direction: column; gap: 18px; }
+header { display: flex; justify-content: space-between; align-items: center; }
+.phase { font-weight: 700; letter-spacing: .3px; }
+.link { font-size: 12px; color: var(--muted); }
+.dial { position: relative; display: grid; place-items: center; }
+svg { width: 230px; height: 230px; transform: rotate(-90deg); }
+circle { fill: none; stroke-width: 10; }
+.track { stroke: var(--line); }
+.progress { stroke: var(--focus); stroke-linecap: round; stroke-dasharray: 552.92; stroke-dashoffset: 552.92; transition: stroke-dashoffset .25s linear; }
+body[data-phase="break"] .progress { stroke: var(--break); }
+.time { position: absolute; font-size: 46px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sessions { position: absolute; margin-top: 78px; font-size: 12px; color: var(--muted); }
+.controls { display: flex; gap: 8px; justify-content: center; }
+button { padding: 8px 16px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--fg); font: inherit; cursor: pointer; }
+button.primary { background: var(--focus); border-color: transparent; color: #fff; min-width: 96px; }
+body[data-phase="break"] button.primary { background: var(--break); }
+.settings { display: flex; flex-wrap: wrap; gap: 10px 16px; justify-content: center; font-size: 13px; color: var(--muted); }
+.settings input[type="number"] { width: 52px; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--fg); font: inherit; }
+.check { display: flex; align-items: center; gap: 6px; }
+.activity h2 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+.activity ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.muted { color: var(--muted); }

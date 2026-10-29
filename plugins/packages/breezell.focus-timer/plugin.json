@@ -1,0 +1,36 @@
+{
+	"id": "breezell.focus-timer",
+	"displayName": "Focus Timer",
+	"description": "A Pomodoro timer in a window of its own, also from the Start menu without opening the editor.",
+	"categories": [
+		"Productivity"
+	],
+	"tags": [
+		"pomodoro",
+		"timer",
+		"focus",
+		"window"
+	],
+	"source": "open",
+	"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/focus-timer",
+	"author": {
+		"name": "Breezell",
+		"url": "https://breezell.com"
+	},
+	"license": "MIT",
+	"icon": "packages/breezell.focus-timer/icon.png",
+	"readme": "packages/breezell.focus-timer/README.md",
+	"versions": [
+		{
+			"version": "1.0.0",
+			"path": "packages/breezell.focus-timer/1.0.0/breezell.focus-timer-1.0.0.vsix",
+			"sha256": "0c86c08ec63203cef6bac84f55e5d10ea14667c81f70c33561e1e297563c31f6",
+			"size": 13274,
+			"apiVersion": 1,
+			"permissions": [
+				"chat.events"
+			],
+			"publishedAt": "2026-10-29T20:40:12.596Z"
+		}
+	]
+}

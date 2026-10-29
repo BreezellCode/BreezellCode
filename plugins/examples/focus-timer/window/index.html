@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Focus Timer</title>
+	<link rel="stylesheet" href="style.css">
+	<!-- Breezell's bridge: window.breezell.postMessage / onMessage / connected -->
+	<script src="/__breezell/api.js"></script>
+</head>
+<body>
+	<main>
+		<header>
+			<span class="phase" id="phase">Ready</span>
+			<span class="link" id="link"></span>
+		</header>
+
+		<section class="dial">
+			<svg viewBox="0 0 200 200" aria-hidden="true">
+				<circle class="track" cx="100" cy="100" r="88"></circle>
+				<circle class="progress" id="progress" cx="100" cy="100" r="88"></circle>
+			</svg>
+			<div class="time" id="time">25:00</div>
+			<div class="sessions" id="sessions">0 sessions today</div>
+		</section>
+
+		<section class="controls">
+			<button class="primary" id="start">Start</button>
+			<button id="reset">Reset</button>
+			<button id="skip">Skip</button>
+		</section>
+
+		<section class="settings">
+			<label>Focus <input type="number" id="focusMinutes" min="1" max="120" value="25"> min</label>
+			<label>Break <input type="number" id="breakMinutes" min="1" max="60" value="5"> min</label>
+			<label class="check"><input type="checkbox" id="sound" checked> Sound at the end</label>
+		</section>
+
+		<section class="activity">
+			<h2>Breezell AI</h2>
+			<ul id="activity"><li class="muted" id="activityHint"></li></ul>
+		</section>
+	</main>
+	<script src="app.js"></script>
+</body>
+</html>

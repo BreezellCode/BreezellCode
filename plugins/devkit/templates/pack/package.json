@@ -1,0 +1,31 @@
+{
+	"name": "{{name}}",
+	"publisher": "{{publisher}}",
+	"displayName": "{{displayName}}",
+	"description": "{{description}}",
+	"version": "0.1.0",
+	"license": "MIT",
+	"engines": { "vscode": "^1.90.0" },
+	"extensionKind": ["ui", "workspace"],
+	"categories": ["Other"],
+	"keywords": [],
+	"breezell": {
+		"apiVersion": {{apiVersion}},
+		"permissions": [],
+		"source": "{{source}}"
+	},
+	"contributes": {
+		"breezell": {
+			"skills": ["skills"],
+			"rules": ["rules/rules.md"],
+			"mcpServers": {}
+		}
+	},
+	"scripts": {
+		"build": "node tools/breezell-plugin.mjs build",
+		"validate": "node tools/breezell-plugin.mjs validate",
+		"package:open": "node tools/breezell-plugin.mjs pack --open",
+		"package:closed": "node tools/breezell-plugin.mjs pack --closed",
+		"submit": "node tools/breezell-plugin.mjs submit"
+	}
+}
