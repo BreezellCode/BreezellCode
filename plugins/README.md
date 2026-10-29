@@ -29,6 +29,9 @@ A Breezell plugin is a VS Code extension with a `breezell` object in its `packag
 ```
 
 - It can use the whole VS Code extension API: commands, webview panels, the status bar, settings and so on.
+- Give it `"extensionKind": ["ui", "workspace"]` (the templates do). In a remote (WSL, SSH) window it then
+  runs on the user's computer, next to Breezell, so `vscode.breezell` is there even when the remote server
+  is an older build.
 - It also gets `vscode.breezell` to work with Breezell, limited to the permissions it declares.
 - Plugins run only while the user is **signed in to Breezell**. Signing out turns them off, and
   `vscode.breezell` refuses every call.

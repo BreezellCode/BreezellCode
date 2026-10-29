@@ -6,6 +6,7 @@
 	"version": "0.1.0",
 	"license": "MIT",
 	"engines": { "vscode": "^1.90.0" },
+	"extensionKind": ["ui", "workspace"],
 	"categories": ["Other"],
 	"keywords": [],
 	"main": "./dist/extension.js",

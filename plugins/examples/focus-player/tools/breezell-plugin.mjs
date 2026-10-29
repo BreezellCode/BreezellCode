@@ -254,6 +254,10 @@ function checkPackage(pkg, { forMarket = false } = {}) {
 			errors.push('"breezell.source" must be "open" or "closed"');
 		}
 	}
+	const kinds = Array.isArray(pkg.extensionKind) ? pkg.extensionKind : pkg.extensionKind ? [pkg.extensionKind] : [];
+	if (kinds[0] !== 'ui') {
+		warnings.push('"extensionKind" should start with "ui" (e.g. ["ui", "workspace"]): in a remote (WSL, SSH) window the plugin then runs on the local side, where vscode.breezell is always current');
+	}
 	if (!pkg.displayName) {
 		(forMarket ? errors : warnings).push('"displayName" is missing');
 	}

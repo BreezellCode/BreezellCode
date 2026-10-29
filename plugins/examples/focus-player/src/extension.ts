@@ -1,3 +1,4 @@
+import * as os from 'os';
 import * as vscode from 'vscode';
 
 /**
@@ -128,7 +129,9 @@ export function activate(context: vscode.ExtensionContext) {
 			post({ type: 'toggle' });
 		}),
 		vscode.commands.registerCommand('focusPlayer.chooseFolder', async () => {
-			const picked = await vscode.window.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false, openLabel: 'Use this folder' });
+			// The plugin runs on the local side ("extensionKind": ui), so the folder is on this computer
+			// even in a remote window: start the dialog there.
+			const picked = await vscode.window.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false, openLabel: 'Use this folder', defaultUri: musicFolder() ?? vscode.Uri.file(os.homedir()) });
 			if (!picked?.[0]) {
 				return;
 			}

@@ -23,6 +23,17 @@
 	"readme": "packages/breezell.focus-player/README.md",
 	"versions": [
 		{
+			"version": "1.0.1",
+			"path": "packages/breezell.focus-player/1.0.1/breezell.focus-player-1.0.1.vsix",
+			"sha256": "9080358881a479bd793b328e69cee6e7fe155652d2cbc0b78b9012d8ce72872f",
+			"size": 23294,
+			"apiVersion": 1,
+			"permissions": [
+				"chat.events"
+			],
+			"publishedAt": "2026-10-29T20:15:46.500Z"
+		},
+		{
 			"version": "1.0.0",
 			"path": "packages/breezell.focus-player/1.0.0/breezell.focus-player-1.0.0.vsix",
 			"sha256": "4088772971131b187ad423527d267ac24a17a96888051186a0130699668a1e9f",
