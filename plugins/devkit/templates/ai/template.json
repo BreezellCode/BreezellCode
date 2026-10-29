@@ -1,0 +1,4 @@
+{
+	"label": "AI command",
+	"description": "A command that sends the selection to the user's chat model and streams the answer (models.request)."
+}

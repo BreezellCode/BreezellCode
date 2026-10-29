@@ -1,0 +1,59 @@
+name: Plugin market
+
+on:
+  pull_request:
+    paths:
+      - 'plugins/**'
+      - '.github/workflows/plugin-market.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'plugins/**'
+      - '.github/workflows/plugin-market.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the change
+        uses: actions/checkout@v4
+        with:
+          path: change
+
+      # The packages are checked with the devkit of the base branch, so a pull request
+      # cannot loosen the check that judges it.
+      - name: Check out the base devkit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          path: base
+          sparse-checkout: plugins/devkit
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Packages match the market entries
+        run: node base/plugins/devkit/breezell-plugin.mjs index change/plugins --check
+
+      - name: templates.json is current
+        working-directory: change
+        run: node plugins/devkit/breezell-plugin.mjs templates-json --check plugins/devkit/templates.json
+
+  # jsDelivr keeps files of a branch cached for a while. Packages have versioned paths;
+  # the files that keep their path are refreshed after every change on main.
+  purge-mirror:
+    needs: check
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Purge jsDelivr
+        run: |
+          for file in plugins/index.json plugins/devkit/templates.json plugins/devkit/breezell.d.ts plugins/devkit/breezell-plugin.mjs plugins/packages/*/README.md plugins/packages/*/icon.*; do
+            [ -f "$file" ] || continue
+            curl -fsS --retry 2 "https://purge.jsdelivr.net/gh/${GITHUB_REPOSITORY}@main/${file}" > /dev/null && echo "purged $file" || echo "could not purge $file"
+          done

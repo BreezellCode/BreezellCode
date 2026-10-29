@@ -1,0 +1,4 @@
+{
+	"label": "Panel",
+	"description": "A panel with your own layout that follows conversation turns (chat.events)."
+}

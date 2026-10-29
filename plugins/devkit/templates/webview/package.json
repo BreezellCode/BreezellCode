@@ -1,0 +1,37 @@
+{
+	"name": "{{name}}",
+	"publisher": "{{publisher}}",
+	"displayName": "{{displayName}}",
+	"description": "{{description}}",
+	"version": "0.1.0",
+	"license": "MIT",
+	"engines": { "vscode": "^1.90.0" },
+	"categories": ["Other"],
+	"keywords": [],
+	"main": "./dist/extension.js",
+	"activationEvents": ["onStartupFinished"],
+	"breezell": {
+		"apiVersion": {{apiVersion}},
+		"permissions": ["chat.events"],
+		"source": "{{source}}"
+	},
+	"contributes": {
+		"commands": [
+			{ "command": "{{name}}.open", "title": "{{displayName}}: Open" }
+		]
+	},
+	"scripts": {
+		"build": "node tools/breezell-plugin.mjs build",
+		"watch": "node tools/breezell-plugin.mjs build --watch",
+		"typecheck": "tsc -p .",
+		"validate": "node tools/breezell-plugin.mjs validate",
+		"package:open": "node tools/breezell-plugin.mjs pack --open",
+		"package:closed": "node tools/breezell-plugin.mjs pack --closed",
+		"submit": "node tools/breezell-plugin.mjs submit"
+	},
+	"devDependencies": {
+		"@types/vscode": "^1.90.0",
+		"esbuild": "^0.28.0",
+		"typescript": "^5.6.0"
+	}
+}
