@@ -84,8 +84,9 @@ declare module 'vscode' {
 		 * billed to the user's account, a custom provider needs a plan that includes Custom
 		 * API. Errors carry a `name`: `BreezellNotSignedIn`, `BreezellPermissionDenied`,
 		 * `BreezellRateLimited`, `BreezellNoModel`, `BreezellInvalidRequest`, `BreezellModelError`,
-		 * `BreezellCancelled`, `BreezellBlocked` (the plugin is on the market's blocklist). A request
-		 * whose model sends nothing at all for two minutes fails with `BreezellModelError`.
+		 * `BreezellCancelled`, `BreezellBlocked` (the plugin is on the market's blocklist). While a
+		 * reply is silent Breezell checks that the API still answers: the request fails with
+		 * `BreezellModelError` when it does not, and after five minutes in all.
 		 */
 		export namespace models {
 			export function request(request: ModelRequest, token?: CancellationToken): Thenable<ModelResponse>;

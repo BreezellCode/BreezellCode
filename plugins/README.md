@@ -103,8 +103,9 @@ Rules of `models.request`:
   messages and 200,000 characters.
 - `onText` gets the whole text so far while the reply streams, `onReasoning` the model's reasoning so
   far while it thinks (models that reason and relays that pass it on), so a plugin can show it is
-  working before any text. A model that sends nothing at all for two minutes fails the request with
-  `BreezellModelError`.
+  working before any text. While a reply is silent Breezell checks that the API still answers (as it
+  does for its own background requests): the request fails with `BreezellModelError` when the API
+  stopped answering, and after five minutes in all.
 - Errors carry a `name`: `BreezellNotSignedIn`, `BreezellPermissionDenied`, `BreezellRateLimited`,
   `BreezellNoModel`, `BreezellInvalidRequest`, `BreezellModelError`, `BreezellCancelled`,
   `BreezellBlocked` (the plugin is on the [blocklist](#blocklist)).
