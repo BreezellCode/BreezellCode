@@ -31,6 +31,7 @@ const PERMISSION_HINT = {
 	send: 'Chat Mirror may not send messages.',
 	approve: 'Chat Mirror may not approve tool calls.',
 	reject: 'Chat Mirror may not approve tool calls.',
+	selectModel: 'Chat Mirror may not switch the model.',
 };
 
 let conversations = [];
@@ -165,6 +166,46 @@ function drawConversation() {
 	drawStreaming(current.streaming);
 }
 
+// Breezell's model picker, as Breezell lists it ("model (provider)"), the current one chosen.
+// An option's value is its index into `models`.
+let models = [];
+
+function drawModels(items, allowed = true) {
+	const box = $('modelBox');
+	const select = $('model');
+	if (items === undefined && allowed) {
+		box.hidden = true; // a Breezell without models.list
+		return;
+	}
+	box.hidden = false;
+	models = items ?? [];
+	if (!allowed || !models.length) {
+		const option = el('option', '', allowed ? 'No models' : 'Not allowed');
+		option.value = '';
+		select.replaceChildren(option);
+	} else {
+		select.replaceChildren(...models.map((m, i) => {
+			const option = el('option', '', m.name);
+			option.value = String(i);
+			return option;
+		}));
+		// Chosen by index: an option marked selected before it is inserted loses to a later one.
+		const current = models.findIndex(m => m.current);
+		if (current < 0) {
+			// The chosen model is not in the picker (turned off since): say so instead of showing another one.
+			const option = el('option', '', 'Choose a model');
+			option.value = '';
+			option.disabled = true;
+			select.prepend(option);
+			select.selectedIndex = 0;
+		} else {
+			select.selectedIndex = current;
+		}
+	}
+	select.disabled = !allowed || !models.length;
+	box.title = allowed ? "Breezell's chat model: switching it here switches it in Breezell too" : 'Chat Mirror may not see the models. You can allow it under Plugins › Installed › Chat Mirror.';
+}
+
 function drawStreaming(streaming) {
 	const box = $('streaming');
 	const text = streaming ? (streaming.text || (streaming.tool ? `Using ${streaming.tool}…` : streaming.reasoning ? `Thinking… (${streaming.reasoning.length} characters)` : '')) : '';
@@ -194,6 +235,9 @@ window.breezell.onMessage(message => {
 				drawStreaming(current.streaming);
 			}
 			return;
+		case 'models':
+			drawModels(message.items);
+			return;
 		case 'sent':
 			$('text').value = '';
 			$('send').disabled = false;
@@ -201,6 +245,13 @@ window.breezell.onMessage(message => {
 			return;
 		case 'error': {
 			$('send').disabled = false;
+			if (message.action === 'models') {
+				// Turned off by the user: a disabled picker says so; no banner each time the window opens.
+				drawModels([], message.name !== 'BreezellPermissionDenied');
+				if (message.name === 'BreezellPermissionDenied') {
+					return;
+				}
+			}
 			const hint = message.name === 'BreezellPermissionDenied'
 				? `${PERMISSION_HINT[message.action] ?? 'Chat Mirror may not do that.'} You can allow it under Plugins › Installed › Chat Mirror.`
 				: message.message;
@@ -231,6 +282,16 @@ $('composer').addEventListener('submit', e => {
 	$('send').disabled = true;
 	window.breezell.postMessage({ type: 'send', text });
 });
+$('model').addEventListener('change', () => {
+	const choice = models[Number($('model').value)];
+	if (!choice) {
+		return;
+	}
+	showError('');
+	$('model').disabled = true; // until Breezell answers with the list again
+	window.breezell.postMessage({ type: 'selectModel', provider: choice.provider, model: choice.model });
+});
+window.addEventListener('focus', () => window.breezell.postMessage({ type: 'models' }));
 $('text').addEventListener('keydown', e => {
 	if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
 		e.preventDefault();

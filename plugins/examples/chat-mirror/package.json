@@ -3,7 +3,7 @@
 	"publisher": "breezell",
 	"displayName": "%displayName%",
 	"description": "%description%",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"license": "MIT",
 	"author": {
 		"name": "Breezell",
@@ -27,6 +27,7 @@
 		"conversation",
 		"agent",
 		"approve",
+		"model",
 		"window"
 	],
 	"main": "./dist/extension.js",
@@ -38,7 +39,8 @@
 		"permissions": [
 			"chat.read",
 			"chat.send",
-			"chat.approve"
+			"chat.approve",
+			"models.select"
 		],
 		"source": "open"
 	},

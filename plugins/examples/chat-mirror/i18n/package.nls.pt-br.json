@@ -1,5 +1,5 @@
 {
 	"displayName": "Chat Mirror",
-	"description": "Suas conversas do Breezell numa janela própria: escolha uma, leia com as chamadas de ferramentas e as memórias recuperadas, responda e aprove chamadas de ferramentas.",
+	"description": "Suas conversas do Breezell numa janela própria: escolha uma, leia com as chamadas de ferramentas e as memórias recuperadas, responda, aprove chamadas de ferramentas e troque o modelo do chat.",
 	"command.open": "Abrir"
 }

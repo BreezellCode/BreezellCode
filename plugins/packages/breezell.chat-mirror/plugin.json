@@ -1,7 +1,7 @@
 {
 	"id": "breezell.chat-mirror",
 	"displayName": "Chat Mirror",
-	"description": "Your Breezell conversations in a window of their own: pick one, read it with its tool calls and recalled memories, reply, and approve tool calls.",
+	"description": "Your Breezell conversations in a window of their own: pick one, read it with its tool calls and recalled memories, reply, approve tool calls, and switch the chat model.",
 	"categories": [
 		"Chat",
 		"AI"
@@ -11,6 +11,7 @@
 		"conversation",
 		"agent",
 		"approve",
+		"model",
 		"window"
 	],
 	"source": "open",
@@ -34,34 +35,48 @@
 	"l10n": {
 		"zh-CN": {
 			"displayName": "Chat Mirror",
-			"description": "在独立窗口中查看你的 Breezell 对话：选择一则对话，阅读其中的工具调用和召回的记忆、回复，并批准工具调用。"
+			"description": "在独立窗口中查看你的 Breezell 对话：选择一则对话，阅读其中的工具调用和召回的记忆、回复、批准工具调用，并切换对话模型。"
 		},
 		"zh-TW": {
 			"displayName": "Chat Mirror",
-			"description": "在獨立視窗中查看你的 Breezell 對話：選擇一則對話，閱讀其中的工具呼叫和召回的記憶、回覆，並批准工具呼叫。"
+			"description": "在獨立視窗中查看你的 Breezell 對話：選擇一則對話，閱讀其中的工具呼叫和召回的記憶、回覆、批准工具呼叫，並切換對話模型。"
 		},
 		"ja": {
 			"displayName": "Chat Mirror",
-			"description": "Breezell の会話を専用のウィンドウで：会話を選び、ツール呼び出しや呼び出されたメモリーと一緒に読み、返信し、ツール呼び出しを承認します。"
+			"description": "Breezell の会話を専用のウィンドウで：会話を選び、ツール呼び出しや呼び出されたメモリーと一緒に読み、返信し、ツール呼び出しを承認し、チャットのモデルを切り替えます。"
 		},
 		"ko": {
 			"displayName": "Chat Mirror",
-			"description": "Breezell 대화를 별도 창에서: 대화를 골라 도구 호출과 불러온 메모리와 함께 읽고, 답장하고, 도구 호출을 승인합니다."
+			"description": "Breezell 대화를 별도 창에서: 대화를 골라 도구 호출과 불러온 메모리와 함께 읽고, 답장하고, 도구 호출을 승인하고, 채팅 모델을 바꿉니다."
 		},
 		"ru": {
 			"displayName": "Chat Mirror",
-			"description": "Ваши разговоры в Breezell в отдельном окне: выберите разговор, читайте его вместе с вызовами инструментов и извлечёнными записями памяти, отвечайте и одобряйте вызовы инструментов."
+			"description": "Ваши разговоры в Breezell в отдельном окне: выберите разговор, читайте его вместе с вызовами инструментов и извлечёнными записями памяти, отвечайте, одобряйте вызовы инструментов и меняйте модель чата."
 		},
 		"es": {
 			"displayName": "Chat Mirror",
-			"description": "Tus conversaciones de Breezell en una ventana propia: elige una, léela con sus llamadas a herramientas y los recuerdos recuperados, responde y aprueba llamadas a herramientas."
+			"description": "Tus conversaciones de Breezell en una ventana propia: elige una, léela con sus llamadas a herramientas y los recuerdos recuperados, responde, aprueba llamadas a herramientas y cambia el modelo del chat."
 		},
 		"pt-BR": {
 			"displayName": "Chat Mirror",
-			"description": "Suas conversas do Breezell numa janela própria: escolha uma, leia com as chamadas de ferramentas e as memórias recuperadas, responda e aprove chamadas de ferramentas."
+			"description": "Suas conversas do Breezell numa janela própria: escolha uma, leia com as chamadas de ferramentas e as memórias recuperadas, responda, aprove chamadas de ferramentas e troque o modelo do chat."
 		}
 	},
 	"versions": [
+		{
+			"version": "1.0.1",
+			"path": "packages/breezell.chat-mirror/1.0.1/breezell.chat-mirror-1.0.1.vsix",
+			"sha256": "8af985e66ee68b9c6d79b6c56262e6a4ed455f9c333642519eecfc521e1b75cd",
+			"size": 38187,
+			"apiVersion": 1,
+			"permissions": [
+				"chat.read",
+				"chat.send",
+				"chat.approve",
+				"models.select"
+			],
+			"publishedAt": "2026-10-30T12:12:30.655Z"
+		},
 		{
 			"version": "1.0.0",
 			"path": "packages/breezell.chat-mirror/1.0.0/breezell.chat-mirror-1.0.0.vsix",

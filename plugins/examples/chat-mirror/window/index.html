@@ -33,7 +33,13 @@
 
 		<form id="composer">
 			<textarea id="text" rows="3" placeholder="Message (Ctrl+Enter to send)"></textarea>
-			<button class="primary" id="send" type="submit">Send</button>
+			<div class="bar">
+				<label class="model" id="modelBox" hidden title="Breezell's chat model: switching it here switches it in Breezell too">
+					<span>Model</span>
+					<select id="model" disabled></select>
+				</label>
+				<button class="primary" id="send" type="submit">Send</button>
+			</div>
 		</form>
 	</main>
 

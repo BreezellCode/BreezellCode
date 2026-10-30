@@ -1,6 +1,6 @@
 # Chat Mirror
 
-Breezell の会話を専用のウィンドウで：会話を選び、ツール呼び出しや呼び出されたメモリーと一緒に読み、返信し、ツール呼び出しを承認します。
+Breezell の会話を専用のウィンドウで：会話を選び、ツール呼び出しや呼び出されたメモリーと一緒に読み、返信し、ツール呼び出しを承認し、チャットのモデルを切り替えます。
 
 会話を読み取り、会話に参加する Breezell プラグインの公式サンプルです。ソース：[`plugins/examples/chat-mirror`](https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/chat-mirror)。
 
@@ -12,6 +12,7 @@ Breezell の会話を専用のウィンドウで：会話を選び、ツール�
 - メッセージを書いて **Send**（Ctrl+Enter）で返信、**New conversation** で新しい会話を始めます。AI は Breezell であなたが入力したのと同じように答えます。
 - ツール呼び出しが承認を待っているときは、ここで **Approve**（承認）または **Reject**（拒否）できます。
 - **Open in Breezell** で Breezell のチャットにその会話を表示します。
+- **Send** の横の **Model** で Breezell のチャットのモデルを切り替えます。Breezell のチャットのモデル選択と同じ設定なので、どちらで変えてももう一方に反映されます（このウィンドウではフォーカスが戻ったときに更新）。
 
 ウィンドウ自体の表示は英語です。
 
@@ -22,12 +23,14 @@ Breezell の会話を専用のウィンドウで：会話を選び、ツール�
 | `chat.read` | 会話の一覧、会話とその変化、Open in Breezell |
 | `chat.send` | Send と New conversation |
 | `chat.approve` | Approve と Reject |
+| `models.select` | Model（モデルの一覧と切り替え） |
 
-Chat Mirror が各権限を初めて使うとき、Breezell が確認します。どれかを拒否すると、Chat Mirror はできないことを表示し、ほかの機能はそのまま動きます。Breezell Console › プラグイン › インストール済み › Chat Mirror で、それぞれ、またはすべてをまとめてオン・オフできます。送ったメッセージはあなた自身のメッセージと同じように課金されます。
+Chat Mirror が各 `chat.*` 権限を初めて使うとき、Breezell が確認します。`models.select` はリスクがないため確認せず、オフにしない限りオンのままです。どれかを拒否すると、Chat Mirror はできないことを表示し、ほかの機能はそのまま動きます。Breezell Console › プラグイン › インストール済み › Chat Mirror で、それぞれ、またはすべてをまとめてオン・オフできます。送ったメッセージはあなた自身のメッセージと同じように課金されます。
 
 ## しくみ
 
 - `window/` はページです。表示だけを担当し、すべてのテキストを HTML ではなく `textContent` で表示します：メッセージには何が含まれていてもおかしくないからです。
 - `src/extension.ts` はウィンドウを開き、ウィンドウと `vscode.breezell.chat`（`listConversations`、`getConversation`、`onDidChangeConversation`、`send`、`approve`/`reject`、`show`）の間を中継します。
+- Model は `vscode.breezell.models` を使います。ウィンドウを開いたときとフォーカスが戻ったときに `list`、切り替えるときに `select`。
 - 返信が書かれている間は変化が届きます（多くても 1 秒に数回）。ひとつのステップが終わると、プラグインは会話を読み直します。
 - 拒否された権限の呼び出しは `BreezellPermissionDenied` で失敗し、ページがそれを文章にして表示します。

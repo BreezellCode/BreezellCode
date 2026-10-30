@@ -2,7 +2,8 @@ import * as vscode from 'vscode';
 
 /**
  * Chat Mirror — an example Breezell plugin that reads and takes part in the user's
- * conversations (permissions "chat.read", "chat.send", "chat.approve"), in a window of its own.
+ * conversations (permissions "chat.read", "chat.send", "chat.approve"), in a window of its own,
+ * and switches Breezell's chat model ("models.select").
  *
  * The page in window/ draws the list and the conversation; this code relays between it and
  * vscode.breezell.chat. Breezell asks the user for each permission the first time the plugin
@@ -21,7 +22,9 @@ type PageMessage =
 	| { type: 'send'; text: string }
 	| { type: 'approve' }
 	| { type: 'reject' }
-	| { type: 'show' };
+	| { type: 'show' }
+	| { type: 'models' }
+	| { type: 'selectModel'; provider: string; model: string };
 
 export function activate(context: vscode.ExtensionContext) {
 	const breezell = vscode.breezell as Breezell | undefined;
@@ -72,6 +75,19 @@ async function openMirror(breezell: Breezell, context: vscode.ExtensionContext):
 			fail('open', err);
 		}
 	};
+	// The models of Breezell's picker. `items: undefined` hides the page's picker: a Breezell
+	// from before models.list has none to offer.
+	const sendModels = async () => {
+		if (typeof breezell.models.list !== 'function') {
+			post({ type: 'models', items: undefined });
+			return;
+		}
+		try {
+			post({ type: 'models', items: await breezell.models.list() });
+		} catch (err) {
+			fail('models', err);
+		}
+	};
 	const watch = () => {
 		watching ??= breezell.chat.onDidChangeConversation(change => {
 			if (change.conversationId === selected) {
@@ -100,13 +116,24 @@ async function openMirror(breezell: Breezell, context: vscode.ExtensionContext):
 		switch (message?.type) {
 			case 'ready':
 				await sendList();
+				await sendModels();
 				watch();
 				return;
 			case 'refresh':
 				await sendList();
+				await sendModels();
 				if (selected) {
 					await sendConversation(selected);
 				}
+				return;
+			case 'models':
+				// The window got the focus: the model may have been switched in Breezell meanwhile.
+				await sendModels();
+				return;
+			case 'selectModel':
+				await run('selectModel', () => breezell.models.select({ provider: message.provider, model: message.model }));
+				// Also after a failure: the page shows the model that is really chosen.
+				await sendModels();
 				return;
 			case 'select':
 				selected = message.id;

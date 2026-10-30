@@ -19,9 +19,10 @@ declare module 'vscode' {
 
 		/**
 		 * The permissions this plugin declared in `breezell.permissions`, as an Android app declares
-		 * its permissions: nothing undeclared is ever usable. A `normal` permission (`chat.events`) is
-		 * on unless the user turns it off. A `dangerous` one (`models.request`, `chat.read`,
-		 * `chat.send`, `chat.approve`) is asked for the first time the plugin uses it; while the user
+		 * its permissions: nothing undeclared is ever usable. A `normal` permission is
+		 * on unless the user turns it off (`chat.events`, `models.select`). A `dangerous` one
+		 * (`models.request`, `chat.read`, `chat.send`, `chat.approve`, `providers.read`) is asked for
+		 * the first time the plugin uses it; while the user
 		 * has not allowed it, its calls fail with `BreezellPermissionDenied`. The user can switch each
 		 * permission on and off, or all at once, on the plugin's page in Plugins › Installed.
 		 */
@@ -173,7 +174,21 @@ declare module 'vscode' {
 		 * reply is silent Breezell checks that the API still answers: the request fails with
 		 * `BreezellModelError` when it does not, and after five minutes in all.
 		 */
+		/** A model of Breezell's model picker. */
+		export interface ModelChoice {
+			readonly provider: string;
+			readonly model: string;
+			/** As the picker shows it. */
+			readonly name: string;
+			/** It is the chat model now. */
+			readonly current: boolean;
+		}
+
 		export namespace models {
+			/** The models of Breezell's model picker (`models.select`, normal: on unless the user turns it off). */
+			export function list(): Thenable<ModelChoice[]>;
+			/** Switches Breezell's chat model to one of the picker's models (`models.select`). */
+			export function select(choice: { readonly provider: string; readonly model: string }): Thenable<void>;
 			export function request(request: ModelRequest, token?: CancellationToken): Thenable<ModelResponse>;
 		}
 
@@ -197,6 +212,53 @@ declare module 'vscode' {
 		 * run on the user's computer ("extensionKind": ["ui", ...]). Opening an open window brings
 		 * it to the front and returns it again.
 		 */
+		export interface CustomApiAccount {
+			readonly name: string;
+			readonly enabled: boolean;
+			readonly baseUrl: string;
+			readonly apiKey: string;
+			readonly protocol: string;
+			readonly apiPath: string;
+			readonly requestUrl: string;
+			readonly headers: { readonly [name: string]: string };
+			readonly model?: string;
+		}
+
+		/** One custom API (an OpenAI-compatible slot of Box › Models), as its settings page shows it. */
+		export interface CustomApi {
+			/** The slot: `openAICompatible`, `openAICompatible2`, ... */
+			readonly id: string;
+			readonly name: string;
+			readonly baseUrl: string;
+			readonly apiKey: string;
+			/** `openai` (Chat Completions), `openai-responses` or `anthropic`. */
+			readonly protocol: string;
+			readonly apiPath: string;
+			/** The address requests go to. */
+			readonly requestUrl: string;
+			readonly headers: { readonly [name: string]: string };
+			/** `direct`, `system`, `global` or `custom` (proxy); absent: Breezell's default. */
+			readonly network?: string;
+			readonly models: readonly {
+				readonly id: string;
+				readonly enabled: boolean;
+				readonly current: boolean;
+				/** Per million tokens. */
+				readonly price?: { readonly input: number; readonly output: number; readonly cacheRead?: number };
+			}[];
+			readonly accountPool?: { readonly enabled: boolean; readonly strategy: string; readonly accounts: readonly CustomApiAccount[] };
+		}
+
+		/**
+		 * The user's custom APIs with their keys (`providers.read`, dangerous: asked the first time).
+		 * Only for an account whose Breezell plan includes Custom API; otherwise the call fails with
+		 * `BreezellPlanRequired` and nobody is asked. Requests a plugin sends with these keys go to
+		 * the provider directly and are billed to the user by it.
+		 */
+		export namespace providers {
+			export function listCustom(): Thenable<CustomApi[]>;
+		}
+
 		export namespace windows {
 			export function open(windowId: string): Thenable<PluginWindow>;
 		}

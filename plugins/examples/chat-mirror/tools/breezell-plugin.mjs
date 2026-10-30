@@ -29,7 +29,7 @@ import { fileURLToPath } from 'node:url';
 
 const DEVKIT_VERSION = '1.0.0';
 const API_VERSION = 1;
-const PERMISSIONS = ['chat.events', 'models.request', 'chat.read', 'chat.send', 'chat.approve'];
+const PERMISSIONS = ['chat.events', 'models.request', 'models.select', 'chat.read', 'chat.send', 'chat.approve', 'providers.read'];
 const MARKET_REPO = 'BreezellCode/BreezellCode';
 const MARKET_URLS = [
 	`https://raw.githubusercontent.com/${MARKET_REPO}/main/plugins/`,
