@@ -64,6 +64,20 @@
 	},
 	"versions": [
 		{
+			"version": "1.0.2",
+			"path": "packages/breezell.chat-mirror/1.0.2/breezell.chat-mirror-1.0.2.vsix",
+			"sha256": "fc274ffa8d8cf35f9aa4062b5496c6694ee462159273f80efbaaedb4c9516ed6",
+			"size": 41043,
+			"apiVersion": 1,
+			"permissions": [
+				"chat.read",
+				"chat.send",
+				"chat.approve",
+				"models.select"
+			],
+			"publishedAt": "2026-10-30T12:33:41.824Z"
+		},
+		{
 			"version": "1.0.1",
 			"path": "packages/breezell.chat-mirror/1.0.1/breezell.chat-mirror-1.0.1.vsix",
 			"sha256": "8af985e66ee68b9c6d79b6c56262e6a4ed455f9c333642519eecfc521e1b75cd",

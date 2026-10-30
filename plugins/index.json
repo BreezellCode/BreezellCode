@@ -1,12 +1,12 @@
 {
 	"schemaVersion": 1,
-	"updatedAt": "2026-10-30T12:12:30.655Z",
+	"updatedAt": "2026-10-30T12:33:41.824Z",
 	"plugins": [
 		{
 			"id": "breezell.chat-mirror",
 			"displayName": "Chat Mirror",
 			"description": "Your Breezell conversations in a window of their own: pick one, read it with its tool calls and recalled memories, reply, approve tool calls, and switch the chat model.",
-			"version": "1.0.1",
+			"version": "1.0.2",
 			"apiVersion": 1,
 			"categories": [
 				"Chat",
@@ -75,11 +75,11 @@
 				}
 			},
 			"package": {
-				"path": "packages/breezell.chat-mirror/1.0.1/breezell.chat-mirror-1.0.1.vsix",
-				"sha256": "8af985e66ee68b9c6d79b6c56262e6a4ed455f9c333642519eecfc521e1b75cd",
-				"size": 38187
+				"path": "packages/breezell.chat-mirror/1.0.2/breezell.chat-mirror-1.0.2.vsix",
+				"sha256": "fc274ffa8d8cf35f9aa4062b5496c6694ee462159273f80efbaaedb4c9516ed6",
+				"size": 41043
 			},
-			"updatedAt": "2026-10-30T12:12:30.655Z"
+			"updatedAt": "2026-10-30T12:33:41.824Z"
 		},
 		{
 			"id": "breezell.doc-writer",

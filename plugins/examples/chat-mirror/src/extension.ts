@@ -52,6 +52,8 @@ async function openMirror(breezell: Breezell, context: vscode.ExtensionContext):
 	}
 	mirror = { window: win };
 	let selected: string | undefined;
+	/** What the open conversation was doing at its last change. */
+	let lastActivity: string | undefined;
 	let watching: vscode.Disposable | undefined;
 	let reloadTimer: ReturnType<typeof setTimeout> | undefined;
 	let listTimer: ReturnType<typeof setTimeout> | undefined;
@@ -93,8 +95,11 @@ async function openMirror(breezell: Breezell, context: vscode.ExtensionContext):
 			if (change.conversationId === selected) {
 				// The reply being written goes to the page as it comes ...
 				post({ type: 'change', change });
-				// ... and when a step ends (a reply, a tool call, a wait for approval), the messages are read again.
-				if (change.activity === 'idle' || change.activity === 'awaitingApproval' || change.activity === 'runningTool') {
+				// ... and each time what it does changes (thinking, writing, a tool call, a wait for
+				// approval, done), the messages are read again: the message sent gets the memories
+				// used for it, a tool call its result, the reply its final text.
+				if (change.activity !== lastActivity) {
+					lastActivity = change.activity;
 					clearTimeout(reloadTimer);
 					reloadTimer = setTimeout(() => void sendConversation(change.conversationId), 250);
 				}
@@ -137,16 +142,19 @@ async function openMirror(breezell: Breezell, context: vscode.ExtensionContext):
 				return;
 			case 'select':
 				selected = message.id;
+				lastActivity = undefined;
 				await sendConversation(message.id);
 				return;
 			case 'new':
 				selected = undefined;
+				lastActivity = undefined;
 				post({ type: 'conversation', conversation: undefined });
 				return;
 			case 'send':
 				await run('send', async () => {
 					const { conversationId } = await breezell.chat.send(message.text, selected ? { conversationId: selected } : undefined);
 					selected = conversationId;
+					lastActivity = undefined;
 					post({ type: 'sent', conversationId });
 					await sendList();
 					await sendConversation(conversationId);

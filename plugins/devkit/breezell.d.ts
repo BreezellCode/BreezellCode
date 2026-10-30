@@ -107,6 +107,22 @@ declare module 'vscode' {
 			readonly summary: string;
 			readonly detail?: string;
 			readonly priority?: string;
+			/** In every prompt (`resident`), or picked for this message (`relevant`). Absent on old turns. */
+			readonly source?: 'resident' | 'relevant';
+		}
+
+		/**
+		 * The memories put in the prompt for one of the user's messages, as the chat's memory row
+		 * counts them ("Injected 5 memories (3 resident · 2 relevant)"). `recalledMemories` lists
+		 * those it can show; it may list fewer. Absent on messages from before Breezell recorded it.
+		 */
+		export interface MemoryUse {
+			readonly resident: number;
+			readonly relevant: number;
+			/** False when finding memories failed partway and the turn went on with what it had. */
+			readonly complete: boolean;
+			/** The related memories were left out because they are in this conversation already. */
+			readonly inThisConversation: boolean;
 		}
 
 		export type ToolCallStatus = 'invalid' | 'awaitingApproval' | 'running' | 'done' | 'failed' | 'rejected';
@@ -116,7 +132,7 @@ declare module 'vscode' {
 		 * A tool's parameters and result are cut at 20,000 characters (`resultLength` is the full length).
 		 */
 		export type ConversationMessage =
-			| { readonly kind: 'user'; readonly index: number; readonly text: string; readonly time?: number; readonly attachments: readonly string[]; readonly recalledMemories: readonly RecalledMemory[] }
+			| { readonly kind: 'user'; readonly index: number; readonly text: string; readonly time?: number; readonly attachments: readonly string[]; readonly recalledMemories: readonly RecalledMemory[]; readonly memoryUse?: MemoryUse }
 			| { readonly kind: 'assistant'; readonly index: number; readonly text: string; readonly reasoning: string }
 			| { readonly kind: 'tool'; readonly index: number; readonly id: string; readonly name: string; readonly status: ToolCallStatus; readonly params: { readonly [key: string]: unknown }; readonly result: string; readonly resultLength: number; readonly mcpServer?: string }
 			| { readonly kind: 'error'; readonly index: number; readonly text: string };

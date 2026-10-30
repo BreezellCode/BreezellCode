@@ -81,6 +81,45 @@ function details(label, body) {
 	return box;
 }
 
+// The memories used for a message, worded like the memory row in Breezell's chat. `memoryUse`
+// counts them (a Breezell from before it lists the recalled ones only); the list may be shorter.
+function drawMemories(message) {
+	const use = message.memoryUse;
+	const entries = message.recalledMemories ?? [];
+	if (!use && !entries.length) {
+		return undefined;
+	}
+	let label;
+	if (!use) {
+		label = `Recalled ${entries.length} memories`;
+	} else if (use.resident + use.relevant === 0 && !entries.length) {
+		label = use.inThisConversation ? 'The related memories are in this conversation above' : 'No memories used this turn';
+	} else {
+		label = `Injected ${use.resident + use.relevant} memories (${use.resident} resident · ${use.relevant} relevant)`;
+	}
+	const list = el('div');
+	for (const memory of entries) {
+		const row = el('div', 'memory');
+		if (memory.source) {
+			row.append(el('span', 'tag', memory.source === 'resident' ? 'Resident' : 'Relevant'));
+		}
+		if (memory.priority) {
+			row.append(el('span', 'tag', memory.priority));
+		}
+		row.append(el('b', '', memory.summary));
+		if (memory.detail) {
+			row.append(el('div', 'detail', memory.detail));
+		}
+		list.append(row);
+	}
+	if (!entries.length) {
+		list.append(el('div', 'note', use?.complete === false ? 'Memory retrieval was incomplete; the turn continued with available context.' : 'No relevant context was injected in this turn'));
+	}
+	const box = details(label, list);
+	box.classList.add('memories');
+	return box;
+}
+
 function drawMessage(message, isLatestTool) {
 	switch (message.kind) {
 		case 'user': {
@@ -90,17 +129,9 @@ function drawMessage(message, isLatestTool) {
 				chips.append(...message.attachments.map(name => el('span', 'chip', name)));
 				bubble.append(chips);
 			}
-			if (message.recalledMemories.length) {
-				const list = el('div');
-				for (const memory of message.recalledMemories) {
-					const row = el('div', 'memory');
-					row.append(el('b', '', memory.summary));
-					if (memory.detail) {
-						row.append(el('div', '', memory.detail));
-					}
-					list.append(row);
-				}
-				bubble.append(details(`${message.recalledMemories.length} memories recalled`, list));
+			const memories = drawMemories(message);
+			if (memories) {
+				bubble.append(memories);
 			}
 			return bubble;
 		}
@@ -149,7 +180,7 @@ function drawConversation() {
 		$('title').textContent = selectedId ? 'Loading…' : 'New conversation';
 		$('activity').textContent = '';
 		box.replaceChildren(el('p', 'empty', selectedId ? '' : 'Write a message below to start a conversation in Breezell, or pick one on the left.'));
-		drawStreaming(undefined);
+		drawLive();
 		return;
 	}
 	$('title').textContent = current.title || 'Untitled conversation';
@@ -157,13 +188,13 @@ function drawConversation() {
 	const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
 	const lastTool = [...current.messages].reverse().find(m => m.kind === 'tool');
 	box.replaceChildren(...current.messages.map(m => drawMessage(m, m === lastTool)));
-	if (!current.messages.length) {
+	if (!current.messages.length && current.activity === 'idle') {
 		box.append(el('p', 'empty', 'No messages yet.'));
 	}
 	if (nearBottom) {
 		box.scrollTop = box.scrollHeight;
 	}
-	drawStreaming(current.streaming);
+	drawLive(nearBottom);
 }
 
 // Breezell's model picker, as Breezell lists it ("model (provider)"), the current one chosen.
@@ -206,12 +237,49 @@ function drawModels(items, allowed = true) {
 	box.title = allowed ? "Breezell's chat model: switching it here switches it in Breezell too" : 'Chat Mirror may not see the models. You can allow it under Plugins › Installed › Chat Mirror.';
 }
 
-function drawStreaming(streaming) {
-	const box = $('streaming');
-	const text = streaming ? (streaming.text || (streaming.tool ? `Using ${streaming.tool}…` : streaming.reasoning ? `Thinking… (${streaming.reasoning.length} characters)` : '')) : '';
-	box.hidden = !text;
-	box.textContent = text;
-	box.scrollTop = box.scrollHeight;
+// The reply on its way, last in the conversation from the moment Breezell starts until it is
+// done: what it is doing and for how long, the tail of its reasoning, and the text so far.
+const live = el('div', 'msg assistant live');
+const liveLabel = el('span', 'label');
+const liveElapsed = el('span', 'elapsed');
+const liveReasoning = el('div', 'reasoning');
+const liveText = el('div', 'text');
+live.append((() => {
+	const head = el('div', 'head');
+	head.append(el('span', 'pulse'), liveLabel, liveElapsed);
+	return head;
+})(), liveReasoning, liveText);
+let busySince;
+let clock;
+
+function drawLive(stickToBottom) {
+	const box = $('messages');
+	const activity = current?.activity ?? 'idle';
+	live.classList.remove('done');
+	if (!current || activity === 'idle') {
+		live.remove();
+		busySince = undefined;
+		clearInterval(clock);
+		clock = undefined;
+		return;
+	}
+	const follow = stickToBottom ?? box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+	const streaming = current.streaming;
+	liveLabel.textContent = streaming?.tool && activity === 'runningTool' ? `Running ${streaming.tool}…` : ACTIVITY[activity] || 'Working…';
+	live.classList.toggle('waiting', activity === 'awaitingApproval');
+	// The last lines are enough to see it think; the whole reasoning comes with the reply.
+	liveReasoning.textContent = streaming?.reasoning ? streaming.reasoning.slice(-600) : '';
+	liveText.textContent = streaming?.text ?? '';
+	if (box.lastElementChild !== live) {
+		box.append(live);
+	}
+	busySince ??= Date.now();
+	const tick = () => { liveElapsed.textContent = `${Math.round((Date.now() - busySince) / 1000)}s`; };
+	tick();
+	clock ??= setInterval(tick, 1000);
+	if (follow) {
+		box.scrollTop = box.scrollHeight;
+	}
 }
 
 window.breezell.onMessage(message => {
@@ -232,7 +300,15 @@ window.breezell.onMessage(message => {
 			if (current && message.change.conversationId === current.id) {
 				current = { ...current, activity: message.change.activity, streaming: message.change.streaming };
 				$('activity').textContent = ACTIVITY[current.activity] ?? '';
-				drawStreaming(current.streaming);
+				if (current.activity === 'idle' && live.isConnected && liveText.textContent) {
+					// Done: the reply stays as it is until the conversation, read again, brings it.
+					live.classList.add('done');
+					clearInterval(clock);
+					clock = undefined;
+					busySince = undefined;
+					return;
+				}
+				drawLive();
 			}
 			return;
 		case 'models':

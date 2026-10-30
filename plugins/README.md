@@ -89,7 +89,7 @@ The typings are in [`devkit/breezell.d.ts`](devkit/breezell.d.ts); the templates
 | `breezell.apiVersion`, `breezell.permissions` | — | The API version and the permissions this plugin declared |
 | `breezell.account.isSignedIn`, `onDidChangeSignIn` | — | Whether the user is signed in to Breezell |
 | `breezell.chat.onDidStartTurn`, `onDidFinishTurn` | `chat.events` | A conversation turn started or finished: mode, outcome (completed, error, stopped) and duration, **never the content** |
-| `breezell.chat.listConversations()`, `getConversation(id)`, `onDidChangeConversation`, `show(id)` | `chat.read` | The conversations of this workspace as the user sees them: messages, replies (with reasoning), tool calls with their parameters, status and result, and the memories recalled for each message; the reply being written; open one in Breezell's chat |
+| `breezell.chat.listConversations()`, `getConversation(id)`, `onDidChangeConversation`, `show(id)` | `chat.read` | The conversations of this workspace as the user sees them: messages, replies (with reasoning), tool calls with their parameters, status and result, and the memories used for each message (`recalledMemories`, and `memoryUse` with the chat's resident and relevant counts); the reply being written; open one in Breezell's chat |
 | `breezell.chat.send(text, { conversationId })` | `chat.send` | Send a message as the user would, or start a conversation; the AI answers it like the user's own |
 | `breezell.chat.approve(id)`, `reject(id)` | `chat.approve` | Approve or reject the tool call a conversation waits for |
 | `breezell.models.request({ messages, system, onText, onReasoning }, token)` | `models.request` | Send a request to the user's current chat model, optionally streaming |

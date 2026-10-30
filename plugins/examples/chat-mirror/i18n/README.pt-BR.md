@@ -8,7 +8,8 @@ O exemplo oficial de um plugin do Breezell que lê conversas e participa delas. 
 
 - Abra pelo item **Plugins** na barra lateral do Box ou com **Abrir** em Breezell Console › Plugins.
 - À esquerda ficam as conversas deste workspace, as mais recentes primeiro. Um ponto marca a que está trabalhando (âmbar: aguardando sua aprovação).
-- Escolha uma para ler: suas mensagens com as memórias recuperadas para elas, as respostas com o raciocínio e cada chamada de ferramenta com seus parâmetros e resultado. A resposta que está sendo escrita aparece embaixo conforme chega.
+- Escolha uma para ler: suas mensagens com as memórias usadas para elas (contadas como no chat do Breezell: residentes e relevantes), as respostas com o raciocínio e cada chamada de ferramenta com seus parâmetros e resultado.
+- Enquanto o Breezell prepara uma resposta, o último balão mostra o que ele está fazendo e há quanto tempo (pensando, executando uma ferramenta, esperando sua aprovação), o raciocínio e o texto conforme chega.
 - Escreva uma mensagem e clique em **Send** (Ctrl+Enter) para responder, ou em **New conversation** para começar uma. A IA responde como se você tivesse digitado no Breezell.
 - Quando uma chamada de ferramenta aguarda aprovação, clique aqui em **Approve** (aprovar) ou **Reject** (recusar).
 - **Open in Breezell** mostra a conversa no chat do Breezell.
@@ -32,5 +33,5 @@ O Breezell pergunta por cada permissão `chat.*` na primeira vez que o Chat Mirr
 - `window/` é a página. Ela só desenha e mostra todo texto com `textContent`, nunca como HTML: uma mensagem pode conter qualquer coisa.
 - `src/extension.ts` abre a janela e repassa os dados entre ela e `vscode.breezell.chat`: `listConversations`, `getConversation`, `onDidChangeConversation`, `send`, `approve`/`reject` e `show`.
 - Model usa `vscode.breezell.models`: `list` ao abrir a janela ou quando ela recebe o foco, e `select` ao trocar.
-- Enquanto uma resposta é escrita chegam mudanças, no máximo algumas por segundo; quando um passo termina, o plugin lê a conversa de novo.
+- Enquanto uma resposta é escrita chegam mudanças, no máximo algumas por segundo; cada vez que o Breezell passa a fazer outra coisa (pensar, escrever, chamar uma ferramenta, terminar), o plugin lê a conversa de novo. As memórias vêm de `recalledMemories` e `memoryUse` de cada mensagem.
 - Uma permissão recusada faz a chamada falhar com `BreezellPermissionDenied`, e a página transforma isso numa frase.
