@@ -20,7 +20,7 @@ Doc Writer が求める権限は `models.request` の 1 つだけです。最初
 ## このサンプルで示していること
 
 - `vscode.breezell` の確認（Breezell 以外では undefined）。
-- 通常のリクエスト（`writeDoc`）と `onText` を使うストリーミング（`explain`）。
+- `onText` を使うストリーミング：コードの横のドキュメントへ逐次表示（`explain`）と、進行状況の通知にリアルタイム表示し、全体を確認してから挿入するコメント（`writeDoc`）。
 - 進捗通知のキャンセルトークンによるキャンセル。
 - エラーの `name` ごとの処理：`BreezellNotSignedIn`、`BreezellPermissionDenied`、`BreezellNoModel`、`BreezellRateLimited`、`BreezellCancelled`。
 - コードに入れる前に、回答が本当にコメントかを確認（`src/comment.ts`）：モデルは指示どおりに答えるとは限らず、コメントでない回答はコードに入れずに横に表示します。

@@ -51,7 +51,7 @@ async function writeDoc(breezell: Breezell) {
 	const startLine = editor.document.lineAt(editor.selection.start.line);
 	const indent = startLine.text.slice(0, startLine.firstNonWhitespaceCharacterIndex);
 
-	await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'Doc Writer: writing a doc comment…', cancellable: true }, async (_progress, token) => {
+	await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'Doc Writer: writing a doc comment…', cancellable: true }, async (progress, token) => {
 		try {
 			const response = await breezell.models.request({
 				system: [
@@ -64,6 +64,9 @@ async function writeDoc(breezell: Breezell) {
 				// The instruction is repeated with the code: some models follow the last user message
 				// rather than the system text, and take bare code for a question about it.
 				messages: [{ role: 'user', content: `Write the doc comment for this ${languageId} code. Reply with the comment only.\n\n${fence(code, languageId)}` }],
+				// The comment goes into the code only once it is complete and checked; while it
+				// streams, the notification shows the line being written.
+				onText: text => progress.report({ message: lastLine(text) }),
 			}, token);
 			const comment = commentFromAnswer(stripFence(response.text), languageId, code);
 			if (!comment) {
@@ -125,6 +128,12 @@ async function explain(breezell: Breezell) {
 			explainError(err);
 		}
 	});
+}
+
+/** The last non-empty line of the text so far, shortened for a notification. */
+function lastLine(text: string): string {
+	const line = text.trimEnd().split('\n').pop()?.trim() ?? '';
+	return line.length > 80 ? `…${line.slice(-79)}` : line;
 }
 
 /** The code in a Markdown fence longer than any run of backticks inside it. */

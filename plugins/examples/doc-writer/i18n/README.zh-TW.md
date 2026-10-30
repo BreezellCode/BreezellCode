@@ -20,7 +20,7 @@ Doc Writer 只要求一個權限：`models.request`。第一次請求前 Breezel
 ## 這個範例示範了什麼
 
 - 檢查 `vscode.breezell`（Breezell 以外的編輯器中為 undefined）。
-- 一般請求（`writeDoc`）和使用 `onText` 的串流請求（`explain`）。
+- 使用 `onText` 的串流請求：逐字寫進程式碼旁的文件（`explain`），以及在進度通知裡即時顯示、整段檢查過才插入的註解（`writeDoc`）。
 - 透過進度通知的取消權杖取消請求。
 - 處理每一種錯誤 `name`：`BreezellNotSignedIn`、`BreezellPermissionDenied`、`BreezellNoModel`、`BreezellRateLimited`、`BreezellCancelled`。
 - 插入前先檢查回覆真的是註解（`src/comment.ts`）：模型不一定照指示回答，不是註解的回覆不會插進程式碼，而是顯示在旁邊。
