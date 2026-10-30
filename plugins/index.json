@@ -1,7 +1,84 @@
 {
 	"schemaVersion": 1,
-	"updatedAt": "2026-10-30T06:49:32.284Z",
+	"updatedAt": "2026-10-30T10:56:01.016Z",
 	"plugins": [
+		{
+			"id": "breezell.chat-mirror",
+			"displayName": "Chat Mirror",
+			"description": "Your Breezell conversations in a window of their own: pick one, read it with its tool calls and recalled memories, reply, and approve tool calls.",
+			"version": "1.0.0",
+			"apiVersion": 1,
+			"categories": [
+				"Chat",
+				"AI"
+			],
+			"tags": [
+				"chat",
+				"conversation",
+				"agent",
+				"approve",
+				"window"
+			],
+			"permissions": [
+				"chat.read",
+				"chat.send",
+				"chat.approve"
+			],
+			"source": "open",
+			"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/chat-mirror",
+			"author": {
+				"name": "Breezell",
+				"url": "https://breezell.com"
+			},
+			"license": "MIT",
+			"icon": "packages/breezell.chat-mirror/icon.png",
+			"readme": "packages/breezell.chat-mirror/README.md",
+			"readmes": {
+				"zh-CN": "packages/breezell.chat-mirror/i18n/README.zh-CN.md",
+				"zh-TW": "packages/breezell.chat-mirror/i18n/README.zh-TW.md",
+				"ja": "packages/breezell.chat-mirror/i18n/README.ja.md",
+				"ko": "packages/breezell.chat-mirror/i18n/README.ko.md",
+				"ru": "packages/breezell.chat-mirror/i18n/README.ru.md",
+				"es": "packages/breezell.chat-mirror/i18n/README.es.md",
+				"pt-BR": "packages/breezell.chat-mirror/i18n/README.pt-BR.md"
+			},
+			"l10n": {
+				"zh-CN": {
+					"displayName": "Chat Mirror",
+					"description": "在独立窗口中查看你的 Breezell 对话：选择一则对话，阅读其中的工具调用和召回的记忆、回复，并批准工具调用。"
+				},
+				"zh-TW": {
+					"displayName": "Chat Mirror",
+					"description": "在獨立視窗中查看你的 Breezell 對話：選擇一則對話，閱讀其中的工具呼叫和召回的記憶、回覆，並批准工具呼叫。"
+				},
+				"ja": {
+					"displayName": "Chat Mirror",
+					"description": "Breezell の会話を専用のウィンドウで：会話を選び、ツール呼び出しや呼び出されたメモリーと一緒に読み、返信し、ツール呼び出しを承認します。"
+				},
+				"ko": {
+					"displayName": "Chat Mirror",
+					"description": "Breezell 대화를 별도 창에서: 대화를 골라 도구 호출과 불러온 메모리와 함께 읽고, 답장하고, 도구 호출을 승인합니다."
+				},
+				"ru": {
+					"displayName": "Chat Mirror",
+					"description": "Ваши разговоры в Breezell в отдельном окне: выберите разговор, читайте его вместе с вызовами инструментов и извлечёнными записями памяти, отвечайте и одобряйте вызовы инструментов."
+				},
+				"es": {
+					"displayName": "Chat Mirror",
+					"description": "Tus conversaciones de Breezell en una ventana propia: elige una, léela con sus llamadas a herramientas y los recuerdos recuperados, responde y aprueba llamadas a herramientas."
+				},
+				"pt-BR": {
+					"displayName": "Chat Mirror",
+					"description": "Suas conversas do Breezell numa janela própria: escolha uma, leia com as chamadas de ferramentas e as memórias recuperadas, responda e aprove chamadas de ferramentas."
+				}
+			},
+			"package": {
+				"path": "packages/breezell.chat-mirror/1.0.0/breezell.chat-mirror-1.0.0.vsix",
+				"sha256": "0c2006e1bafca66a36d1c1b453d6dd2f28fc668c2b22ee6a472015ca02eb7c30",
+				"size": 34582
+			},
+			"updatedAt": "2026-10-30T10:56:01.016Z"
+		},
 		{
 			"id": "breezell.doc-writer",
 			"displayName": "Doc Writer",

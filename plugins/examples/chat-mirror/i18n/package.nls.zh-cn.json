@@ -1,0 +1,5 @@
+{
+	"displayName": "Chat Mirror",
+	"description": "在独立窗口中查看你的 Breezell 对话：选择一则对话，阅读其中的工具调用和召回的记忆、回复，并批准工具调用。",
+	"command.open": "打开"
+}

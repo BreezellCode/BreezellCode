@@ -1,0 +1,5 @@
+{
+	"displayName": "Chat Mirror",
+	"description": "Your Breezell conversations in a window of their own: pick one, read it with its tool calls and recalled memories, reply, and approve tool calls.",
+	"command.open": "Open"
+}

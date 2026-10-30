@@ -47,6 +47,7 @@ A Breezell plugin is a VS Code extension with a `breezell` object in its `packag
 | **Panel** | A panel inside Breezell with your own page (a webview), following the conversation | [Focus Player](examples/focus-player) | Panel |
 | **AI** | Commands that use the user's chat model | [Doc Writer](examples/doc-writer) | AI command |
 | **Window** | A window of its own with your page and layout; it can also open without the editor | [Focus Timer](examples/focus-timer) | Window |
+| **Conversation** | Reads the user's conversations, sends messages and approves tool calls, shown in its own window or panel | [Chat Mirror](examples/chat-mirror) | Window |
 
 The kinds combine: one plugin can bring skills, a panel, AI commands and a window.
 
@@ -88,8 +89,37 @@ The typings are in [`devkit/breezell.d.ts`](devkit/breezell.d.ts); the templates
 | `breezell.apiVersion`, `breezell.permissions` | — | The API version and the permissions this plugin declared |
 | `breezell.account.isSignedIn`, `onDidChangeSignIn` | — | Whether the user is signed in to Breezell |
 | `breezell.chat.onDidStartTurn`, `onDidFinishTurn` | `chat.events` | A conversation turn started or finished: mode, outcome (completed, error, stopped) and duration, **never the content** |
-| `breezell.models.request({ messages, system, onText }, token)` | `models.request` | Send a request to the user's current chat model, optionally streaming |
+| `breezell.chat.listConversations()`, `getConversation(id)`, `onDidChangeConversation`, `show(id)` | `chat.read` | The conversations of this workspace as the user sees them: messages, replies (with reasoning), tool calls with their parameters, status and result, and the memories recalled for each message; the reply being written; open one in Breezell's chat |
+| `breezell.chat.send(text, { conversationId })` | `chat.send` | Send a message as the user would, or start a conversation; the AI answers it like the user's own |
+| `breezell.chat.approve(id)`, `reject(id)` | `chat.approve` | Approve or reject the tool call a conversation waits for |
+| `breezell.models.request({ messages, system, onText, onReasoning }, token)` | `models.request` | Send a request to the user's current chat model, optionally streaming |
 | `breezell.windows.open(id)` | — (the window is declared in `package.json`) | Open one of the plugin's windows; returns it with `postMessage`, `onDidReceiveMessage`, `onDidClose`, `close` |
+
+### Permissions
+
+A plugin declares every permission it uses in `package.json` (`"breezell": { "permissions": [...] }`),
+as an Android app does in its manifest. Nothing undeclared is ever usable, and the market lists what
+each plugin declares before it is installed.
+
+| Permission | Kind | Granted |
+|---|---|---|
+| `chat.events` | normal | On from the start; the user can turn it off |
+| `models.request` | dangerous | Asked for the first time the plugin uses it |
+| `chat.read` | dangerous | Asked for the first time the plugin uses it |
+| `chat.send` | dangerous | Asked for the first time the plugin uses it |
+| `chat.approve` | dangerous | Asked for the first time the plugin uses it |
+
+- A dangerous permission is asked for once, when the plugin first uses it; the answer is kept. While
+  the user has not allowed it, its calls fail with `BreezellPermissionDenied` and the plugin should
+  say what it cannot do.
+- On the plugin's page (**Plugins › Installed**) the user switches each permission on and off, or
+  all of them at once. Turning one off stops it at once, including events the plugin listens to.
+- Ask only for what the plugin needs: review looks harder at plugins that read or send messages or
+  approve tool calls, and at closed source ones above all.
+- `chat.read` gives what the user sees in the chat: never Breezell's prompts, text only the model
+  sees, hidden messages or other workspaces' conversations. A tool's parameters and result are cut
+  at 20,000 characters. `chat.send` sends at most 10 messages a minute and refuses a busy
+  conversation; its messages are billed like the user's own.
 
 Rules of `models.request`:
 

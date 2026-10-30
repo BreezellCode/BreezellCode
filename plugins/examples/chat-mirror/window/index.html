@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Chat Mirror</title>
+	<link rel="stylesheet" href="style.css">
+	<!-- Breezell's bridge: window.breezell.postMessage / onMessage / connected -->
+	<script src="/__breezell/api.js"></script>
+</head>
+<body>
+	<aside>
+		<header>
+			<span class="brand">Conversations</span>
+			<button class="ghost" id="refresh" title="Refresh">Refresh</button>
+		</header>
+		<button class="new" id="new">New conversation</button>
+		<ul id="list" aria-label="Conversations"></ul>
+	</aside>
+
+	<main>
+		<header>
+			<div class="title">
+				<span id="title">Pick a conversation</span>
+				<span class="activity" id="activity"></span>
+			</div>
+			<button class="ghost" id="show" disabled>Open in Breezell</button>
+		</header>
+
+		<div class="error" id="error" hidden></div>
+		<section id="messages" aria-live="polite"></section>
+		<section class="streaming" id="streaming" hidden></section>
+
+		<form id="composer">
+			<textarea id="text" rows="3" placeholder="Message (Ctrl+Enter to send)"></textarea>
+			<button class="primary" id="send" type="submit">Send</button>
+		</form>
+	</main>
+
+	<script src="app.js"></script>
+</body>
+</html>

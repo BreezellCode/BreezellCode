@@ -1,0 +1,85 @@
+{
+	"name": "chat-mirror",
+	"publisher": "breezell",
+	"displayName": "%displayName%",
+	"description": "%description%",
+	"version": "1.0.0",
+	"license": "MIT",
+	"author": {
+		"name": "Breezell",
+		"url": "https://breezell.com"
+	},
+	"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/chat-mirror",
+	"icon": "media/icon.png",
+	"engines": {
+		"vscode": "^1.90.0"
+	},
+	"extensionKind": [
+		"ui",
+		"workspace"
+	],
+	"categories": [
+		"Chat",
+		"AI"
+	],
+	"keywords": [
+		"chat",
+		"conversation",
+		"agent",
+		"approve",
+		"window"
+	],
+	"main": "./dist/extension.js",
+	"activationEvents": [
+		"onCommand:chatMirror.open"
+	],
+	"breezell": {
+		"apiVersion": 1,
+		"permissions": [
+			"chat.read",
+			"chat.send",
+			"chat.approve"
+		],
+		"source": "open"
+	},
+	"contributes": {
+		"breezell": {
+			"windows": [
+				{
+					"id": "mirror",
+					"title": "Chat Mirror",
+					"entry": "window/index.html",
+					"width": 1000,
+					"height": 700,
+					"minWidth": 640,
+					"minHeight": 420
+				}
+			],
+			"launcher": {
+				"command": "chatMirror.open",
+				"sidebar": true
+			}
+		},
+		"commands": [
+			{
+				"command": "chatMirror.open",
+				"title": "%command.open%",
+				"category": "Chat Mirror"
+			}
+		]
+	},
+	"scripts": {
+		"build": "node tools/breezell-plugin.mjs build",
+		"watch": "node tools/breezell-plugin.mjs build --watch",
+		"typecheck": "tsc -p .",
+		"validate": "node tools/breezell-plugin.mjs validate",
+		"package:open": "node tools/breezell-plugin.mjs pack --open",
+		"package:closed": "node tools/breezell-plugin.mjs pack --closed",
+		"submit": "node tools/breezell-plugin.mjs submit"
+	},
+	"devDependencies": {
+		"@types/vscode": "^1.90.0",
+		"esbuild": "^0.28.0",
+		"typescript": "^5.6.0"
+	}
+}

@@ -18,7 +18,12 @@ declare module 'vscode' {
 		export const apiVersion: number;
 
 		/**
-		 * The permissions this plugin declared in `breezell.permissions`.
+		 * The permissions this plugin declared in `breezell.permissions`, as an Android app declares
+		 * its permissions: nothing undeclared is ever usable. A `normal` permission (`chat.events`) is
+		 * on unless the user turns it off. A `dangerous` one (`models.request`, `chat.read`,
+		 * `chat.send`, `chat.approve`) is asked for the first time the plugin uses it; while the user
+		 * has not allowed it, its calls fail with `BreezellPermissionDenied`. The user can switch each
+		 * permission on and off, or all at once, on the plugin's page in Plugins › Installed.
 		 */
 		export const permissions: readonly string[];
 
@@ -47,11 +52,91 @@ declare module 'vscode' {
 		}
 
 		/**
-		 * Conversation turns, without their content. Needs the `chat.events` permission.
+		 * The user's conversations in Breezell's chat.
+		 *
+		 * - `chat.events` (normal: on unless the user turns it off): when turns start and finish,
+		 *   without their content.
+		 * - `chat.read` (dangerous: asked the first time): the conversations of this workspace as the
+		 *   user sees them, including tool calls with their results and the memories recalled for
+		 *   each message; `show` opens one in Breezell's chat.
+		 * - `chat.send` (dangerous): send messages, and start conversations. The AI answers them like
+		 *   the user's own, and they are billed the same way. At most 10 a minute.
+		 * - `chat.approve` (dangerous): approve or reject the tool call a conversation waits for.
 		 */
 		export namespace chat {
 			export const onDidStartTurn: Event<TurnEvent>;
 			export const onDidFinishTurn: Event<TurnFinishEvent>;
+
+			/** The conversations, the most recently changed first (`chat.read`). */
+			export function listConversations(): Thenable<ConversationSummary[]>;
+			/** One conversation with its messages (`chat.read`). */
+			export function getConversation(id: string): Thenable<Conversation>;
+			/** A conversation changed: a message, a tool call's status, or the reply being written (`chat.read`). */
+			export const onDidChangeConversation: Event<ConversationChange>;
+			/** Opens the conversation in Breezell's chat (`chat.read`). */
+			export function show(id: string): Thenable<void>;
+			/**
+			 * Sends a message as the user would (`chat.send`); without `conversationId`, in a new
+			 * conversation. Resolves once the message is in the conversation; the reply follows
+			 * through onDidChangeConversation. Fails while the conversation is busy.
+			 */
+			export function send(text: string, options?: { readonly conversationId?: string }): Thenable<{ readonly conversationId: string }>;
+			/** Approves the tool call the conversation waits for (`chat.approve`). */
+			export function approve(conversationId: string): Thenable<void>;
+			/** Rejects the tool call the conversation waits for (`chat.approve`). */
+			export function reject(conversationId: string): Thenable<void>;
+		}
+
+		/** What a conversation is doing now. */
+		export type ConversationActivity = 'idle' | 'thinking' | 'writing' | 'runningTool' | 'awaitingApproval' | 'working';
+
+		export interface ConversationSummary {
+			readonly id: string;
+			readonly title: string;
+			readonly createdAt: string;
+			readonly updatedAt: string;
+			readonly messageCount: number;
+			/** It is the conversation open in Breezell's chat. */
+			readonly current: boolean;
+			readonly activity: ConversationActivity;
+		}
+
+		export interface RecalledMemory {
+			readonly id: string;
+			readonly summary: string;
+			readonly detail?: string;
+			readonly priority?: string;
+		}
+
+		export type ToolCallStatus = 'invalid' | 'awaitingApproval' | 'running' | 'done' | 'failed' | 'rejected';
+
+		/**
+		 * What the chat shows, in order. `index` is the message's position in the conversation.
+		 * A tool's parameters and result are cut at 20,000 characters (`resultLength` is the full length).
+		 */
+		export type ConversationMessage =
+			| { readonly kind: 'user'; readonly index: number; readonly text: string; readonly time?: number; readonly attachments: readonly string[]; readonly recalledMemories: readonly RecalledMemory[] }
+			| { readonly kind: 'assistant'; readonly index: number; readonly text: string; readonly reasoning: string }
+			| { readonly kind: 'tool'; readonly index: number; readonly id: string; readonly name: string; readonly status: ToolCallStatus; readonly params: { readonly [key: string]: unknown }; readonly result: string; readonly resultLength: number; readonly mcpServer?: string }
+			| { readonly kind: 'error'; readonly index: number; readonly text: string };
+
+		/** The reply being written now. */
+		export interface ConversationStream {
+			readonly text: string;
+			readonly reasoning: string;
+			/** The tool the model is calling or Breezell is running. */
+			readonly tool?: string;
+		}
+
+		export interface Conversation extends ConversationSummary {
+			readonly messages: readonly ConversationMessage[];
+			readonly streaming?: ConversationStream;
+		}
+
+		export interface ConversationChange {
+			readonly conversationId: string;
+			readonly activity: ConversationActivity;
+			readonly streaming?: ConversationStream;
 		}
 
 		export interface ModelMessage {
