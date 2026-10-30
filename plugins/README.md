@@ -229,7 +229,9 @@ A window plugin declares its windows in `package.json`:
 - Window plugins need `"extensionKind": ["ui", "workspace"]`: the window's files are read on the user's computer.
 
 **Opening without the editor**: with `"requiresEditor": false` a window can open on its own, with no editor
-window: from **Plugins › Installed › Add to Start menu** (Windows), with
+window: from a shortcut that **Plugins › Installed** adds (**Add to Start menu** on Windows, **Add to applications
+menu** on Linux: a `.desktop` file, **Add to Applications** on macOS: a small app in `~/Applications` that
+Launchpad and Spotlight find), with
 `breezell://plugin-window/<publisher.name>/<window id>`, or `Breezell --plugin-window <publisher.name>/<window id>`.
 It still needs a signed-in Breezell account; otherwise Breezell opens as usual. A window opened on its own
 has no editor to relay messages: `window.breezell.connected` is `false` and `postMessage` resolves to `false`.

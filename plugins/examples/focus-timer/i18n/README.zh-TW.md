@@ -1,13 +1,13 @@
 # Focus Timer
 
-一個擁有獨立視窗的番茄鐘，也能從開始選單直接開啟，不必開啟編輯器。
+一個擁有獨立視窗的番茄鐘，也能從捷徑直接開啟，不必開啟編輯器。
 
 Breezell 視窗插件的官方範例。原始碼：[`plugins/examples/focus-timer`](https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/focus-timer)。
 
 ## 使用
 
 - 從 Box 側邊欄的「**插件**」開啟、在 Breezell Console › 插件 按「**開啟**」，或點狀態列的 **⌚ Timer**。計時時，狀態列會顯示剩餘時間。
-- 不開編輯器：在 Breezell Console › 插件 › 已安裝 按「**加到開始選單**」（Windows），會加入一個只開啟這個視窗的捷徑。和所有插件一樣需要登入 Breezell，否則會照常開啟 Breezell。
+- 不開編輯器：在 Breezell Console › 插件 › 已安裝 按「**加到開始選單**」（Windows）、「**加到應用程式選單**」（Linux）或「**加到「應用程式」**」（macOS），會加入一個只開啟這個視窗的捷徑。和所有插件一樣需要登入 Breezell，否則會照常開啟 Breezell。
 
 專注與休息的長度、結束時的提示音和今天的完成次數，都存在視窗自己的儲存空間。由 Breezell 開啟視窗時，AI 的對話進度也會顯示在視窗裡（權限 `chat.events`）。
 

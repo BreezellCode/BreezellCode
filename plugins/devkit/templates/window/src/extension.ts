@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 /**
  * Opens the window declared in package.json (contributes.breezell.windows) and talks to its
  * page: the page sends with `breezell.postMessage`, the plugin answers with `window.postMessage`.
- * The window can also open on its own (Start menu, breezell://plugin-window/{{id}}/main); then
+ * The window can also open on its own (a shortcut, breezell://plugin-window/{{id}}/main); then
  * there is no editor and `breezell.connected` is false in the page.
  */
 export function activate(context: vscode.ExtensionContext) {
