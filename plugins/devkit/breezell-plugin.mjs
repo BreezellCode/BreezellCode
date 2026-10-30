@@ -12,6 +12,7 @@
  *                      copy the .vsix into the market, update its plugin.json and index.json
  *    index <market plugins folder> [--check]
  *                      rebuild index.json from packages/<id>/plugin.json; --check verifies every package
+ *                      and blocklist.json
  *    templates-json    print devkit/templates.json (what Breezell's "Create a plugin" uses)
  *    types             print the plugin API typings
  *
@@ -763,7 +764,78 @@ function checkMarket(marketRoot) {
 	if (!fs.existsSync(current) || JSON.stringify(readJson(current)) !== JSON.stringify(index)) {
 		problems.push('index.json is not up to date: run "node plugins/devkit/breezell-plugin.mjs index plugins"');
 	}
+	problems.push(...checkBlocklist(marketRoot).map(p => `blocklist.json: ${p}`));
 	return { problems, count: index.plugins.length };
+}
+
+// ---------------------------------------------------------------------------
+// Blocklist (blocklist.json, edited by the market's maintainers)
+// ---------------------------------------------------------------------------
+
+const BLOCK_ID = /^[a-z0-9][a-z0-9_-]{0,127}\.[a-z0-9][a-z0-9_-]{0,127}$/;
+const BLOCK_PUBLISHER = /^[a-z0-9][a-z0-9_-]{0,127}$/;
+const BLOCK_VERSION = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
+const BLOCK_REASON_CHARS = 500;
+const BLOCK_ENTRIES = 5000;
+
+/**
+ * The rules Breezell reads blocklist.json by (parsePluginBlocklist): every entry has "id"
+ * (publisher.name) or "publisher", optional "versions", a "reason" in English and optional
+ * "l10n" translations of it. Breezell leaves out an entry that breaks them; this says which.
+ */
+function checkBlocklist(marketRoot) {
+	const file = path.join(marketRoot, 'blocklist.json');
+	if (!fs.existsSync(file)) {
+		return [];
+	}
+	let list;
+	try {
+		list = JSON.parse(fs.readFileSync(file, 'utf8'));
+	} catch (err) {
+		return [`not JSON: ${err.message}`];
+	}
+	if (typeof list !== 'object' || list === null || Array.isArray(list) || !Array.isArray(list.plugins)) {
+		return ['must be an object with a "plugins" array'];
+	}
+	const problems = [];
+	const isReason = value => typeof value === 'string' && value.trim() !== '' && value.length <= BLOCK_REASON_CHARS;
+	if (list.plugins.length > BLOCK_ENTRIES) {
+		problems.push(`at most ${BLOCK_ENTRIES} entries are read`);
+	}
+	list.plugins.forEach((entry, i) => {
+		const where = `entry ${i + 1}`;
+		if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+			problems.push(`${where}: not an object`);
+			return;
+		}
+		const hasId = typeof entry.id === 'string';
+		const hasPublisher = typeof entry.publisher === 'string';
+		if (hasId === hasPublisher) {
+			problems.push(`${where}: needs either "id" or "publisher"`);
+		} else if (hasId && !BLOCK_ID.test(entry.id.trim().toLowerCase())) {
+			problems.push(`${where}: "${entry.id}" is not publisher.name`);
+		} else if (hasPublisher && !BLOCK_PUBLISHER.test(entry.publisher.trim().toLowerCase())) {
+			problems.push(`${where}: "${entry.publisher}" is not a publisher`);
+		}
+		if (entry.versions !== undefined && (!Array.isArray(entry.versions) || !entry.versions.length || !entry.versions.every(v => typeof v === 'string' && BLOCK_VERSION.test(v)))) {
+			problems.push(`${where}: "versions" must be a non-empty list of versions like "1.0.3"`);
+		}
+		if (!isReason(entry.reason)) {
+			problems.push(`${where}: needs a "reason" of at most ${BLOCK_REASON_CHARS} characters`);
+		}
+		if (entry.l10n !== undefined) {
+			if (typeof entry.l10n !== 'object' || entry.l10n === null || Array.isArray(entry.l10n)) {
+				problems.push(`${where}: "l10n" must be an object`);
+			} else {
+				for (const [locale, text] of Object.entries(entry.l10n)) {
+					if (!README_LOCALES.includes(locale) || !isReason(text)) {
+						problems.push(`${where}: l10n "${locale}" must be one of ${README_LOCALES.join(', ')} with a reason of at most ${BLOCK_REASON_CHARS} characters`);
+					}
+				}
+			}
+		}
+	});
+	return problems;
 }
 
 // ---------------------------------------------------------------------------
