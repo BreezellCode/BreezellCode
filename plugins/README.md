@@ -93,6 +93,8 @@ The typings are in [`devkit/breezell.d.ts`](devkit/breezell.d.ts); the templates
 | `breezell.chat.send(text, { conversationId })` | `chat.send` | Send a message as the user would, or start a conversation; the AI answers it like the user's own |
 | `breezell.chat.approve(id)`, `reject(id)` | `chat.approve` | Approve or reject the tool call a conversation waits for |
 | `breezell.models.request({ messages, system, onText, onReasoning }, token)` | `models.request` | Send a request to the user's current chat model, optionally streaming |
+| `breezell.models.list()`, `select({ provider, model })` | `models.select` | The models of Breezell's model picker, and switching the chat model to one of them |
+| `breezell.providers.listCustom()` | `providers.read` | The user's custom APIs as their settings page shows them: base URL, protocol, request address, **API key**, request headers, account pool, models and prices |
 | `breezell.windows.open(id)` | — (the window is declared in `package.json`) | Open one of the plugin's windows; returns it with `postMessage`, `onDidReceiveMessage`, `onDidClose`, `close` |
 
 ### Permissions
@@ -105,9 +107,11 @@ each plugin declares before it is installed.
 |---|---|---|
 | `chat.events` | normal | On from the start; the user can turn it off |
 | `models.request` | dangerous | Asked for the first time the plugin uses it |
+| `models.select` | normal | On from the start; the user can turn it off |
 | `chat.read` | dangerous | Asked for the first time the plugin uses it |
 | `chat.send` | dangerous | Asked for the first time the plugin uses it |
 | `chat.approve` | dangerous | Asked for the first time the plugin uses it |
+| `providers.read` | dangerous | Asked for the first time the plugin uses it, and only for an account whose plan includes Custom API |
 
 - A dangerous permission is asked for once, when the plugin first uses it; the answer is kept. While
   the user has not allowed it, its calls fail with `BreezellPermissionDenied` and the plugin should
@@ -120,6 +124,10 @@ each plugin declares before it is installed.
   sees, hidden messages or other workspaces' conversations. A tool's parameters and result are cut
   at 20,000 characters. `chat.send` sends at most 10 messages a minute and refuses a busy
   conversation; its messages are billed like the user's own.
+- `providers.read` hands out the custom APIs' keys: a plugin can call those APIs itself, outside
+  Breezell, and the providers bill the user. It works only for an account whose Breezell plan
+  includes Custom API; otherwise the call fails with `BreezellPlanRequired` and the user is not
+  asked. It never gives Breezell's own account or other providers' keys.
 
 Rules of `models.request`:
 
