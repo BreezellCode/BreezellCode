@@ -22,13 +22,13 @@
 	"icon": "packages/breezell.focus-player/icon.png",
 	"readme": "packages/breezell.focus-player/README.md",
 	"readmes": {
-		"zh-CN": "packages/breezell.focus-player/README.zh-CN.md",
-		"zh-TW": "packages/breezell.focus-player/README.zh-TW.md",
-		"ja": "packages/breezell.focus-player/README.ja.md",
-		"ko": "packages/breezell.focus-player/README.ko.md",
-		"ru": "packages/breezell.focus-player/README.ru.md",
-		"es": "packages/breezell.focus-player/README.es.md",
-		"pt-BR": "packages/breezell.focus-player/README.pt-BR.md"
+		"zh-CN": "packages/breezell.focus-player/i18n/README.zh-CN.md",
+		"zh-TW": "packages/breezell.focus-player/i18n/README.zh-TW.md",
+		"ja": "packages/breezell.focus-player/i18n/README.ja.md",
+		"ko": "packages/breezell.focus-player/i18n/README.ko.md",
+		"ru": "packages/breezell.focus-player/i18n/README.ru.md",
+		"es": "packages/breezell.focus-player/i18n/README.es.md",
+		"pt-BR": "packages/breezell.focus-player/i18n/README.pt-BR.md"
 	},
 	"l10n": {
 		"zh-CN": {

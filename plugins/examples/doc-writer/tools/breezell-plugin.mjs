@@ -38,6 +38,14 @@ const MARKET_URLS = [
 const MAX_PACKAGE_BYTES = 50 * 1024 * 1024;
 /** README.<locale>.md next to README.md (English): Breezell shows the user's language, else English. */
 const README_LOCALES = ['zh-CN', 'zh-TW', 'ja', 'ko', 'ru', 'es', 'pt-BR'];
+/**
+ * Translations live in this folder of a plugin (README.<locale>.md, package.nls.<locale>.json), so the
+ * plugin's root keeps only the English README.md and package.nls.json. `pack` moves the package.nls
+ * files to the package root, where VS Code reads them. Files at the root are still accepted.
+ */
+const TRANSLATIONS_DIR = 'i18n';
+/** The plugin's file for a translation: in i18n/, else at the root; undefined when neither exists. */
+const translationFile = (dir, name) => [path.join(dir, TRANSLATIONS_DIR, name), path.join(dir, name)].find(f => fs.existsSync(f));
 const SELF = fileURLToPath(import.meta.url);
 const ID_PART = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const VERSION = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/;
@@ -423,6 +431,7 @@ function packageFiles(dir, pkg, open) {
 		walk(path.posix.dirname(pkg.main.replace(/^\.\//, '')));
 	}
 	walk('media');
+	walk(TRANSLATIONS_DIR);
 	// What a pack declares: skills, rules and themes ship as they are, and each window's folder.
 	const windowFolders = (pkg.contributes?.breezell?.windows ?? []).map(w => typeof w?.entry === 'string' ? w.entry.replace(/^\.\//, '') : undefined).filter(Boolean)
 		.map(entry => path.posix.dirname(entry) === '.' ? entry : path.posix.dirname(entry));
@@ -498,8 +507,12 @@ async function pack(dir, flags) {
 	const entries = [
 		{ name: 'extension.vsixmanifest', data: Buffer.from(vsixManifest(pkg)) },
 		{ name: '[Content_Types].xml', data: Buffer.from(contentTypes(files)) },
-		...files.map(f => ({
-			name: `extension/${f}`,
+		// VS Code reads package.nls.<locale>.json from the extension's root; a copy in i18n/ wins over one at the root.
+		...[...new Map([...files].sort((a, b) => Number(a.startsWith(`${TRANSLATIONS_DIR}/`)) - Number(b.startsWith(`${TRANSLATIONS_DIR}/`))).map(f => [
+			`extension/${/^i18n\/package\.nls\..+\.json$/.test(f) ? path.posix.basename(f) : f}`,
+			f,
+		])).entries()].sort(([a], [b]) => a.localeCompare(b)).map(([name, f]) => ({
+			name,
 			// The packed package.json says how it was published; the one on disk is left as it is.
 			data: f === 'package.json' ? Buffer.from(`${JSON.stringify(pkg, null, '\t')}\n`) : fs.readFileSync(path.join(dir, f)),
 		})),
@@ -603,15 +616,18 @@ function submit(dir, flags) {
 	// Translations: README.<locale>.md, shown to users of that language (English for the others).
 	const readmes = {};
 	for (const locale of README_LOCALES) {
-		const name = `README.${locale}.md`;
-		if (fs.existsSync(path.join(dir, name))) {
-			readmes[locale] = `packages/${id}/${name}`;
-			fs.copyFileSync(path.join(dir, name), path.join(marketRoot, readmes[locale]));
+		const source = translationFile(dir, `README.${locale}.md`);
+		if (source) {
+			readmes[locale] = `packages/${id}/${TRANSLATIONS_DIR}/README.${locale}.md`;
+			fs.mkdirSync(path.join(marketRoot, 'packages', id, TRANSLATIONS_DIR), { recursive: true });
+			fs.copyFileSync(source, path.join(marketRoot, readmes[locale]));
 		}
 	}
-	for (const name of fs.readdirSync(dir).filter(n => /^README\..+\.md$/.test(n))) {
-		if (!README_LOCALES.some(l => name === `README.${l}.md`)) {
-			log(`warning: ${name} is not one of README.<${README_LOCALES.join('|')}>.md and is left out`);
+	for (const folder of [dir, path.join(dir, TRANSLATIONS_DIR)].filter(f => fs.existsSync(f))) {
+		for (const name of fs.readdirSync(folder).filter(n => /^README\..+\.md$/.test(n))) {
+			if (!README_LOCALES.some(l => name === `README.${l}.md`)) {
+				log(`warning: ${name} is not one of README.<${README_LOCALES.join('|')}>.md and is left out`);
+			}
 		}
 	}
 	const repository = typeof pkg.repository === 'string' ? pkg.repository : pkg.repository?.url;

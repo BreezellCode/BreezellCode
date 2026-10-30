@@ -30,13 +30,13 @@
 			"icon": "packages/breezell.doc-writer/icon.png",
 			"readme": "packages/breezell.doc-writer/README.md",
 			"readmes": {
-				"zh-CN": "packages/breezell.doc-writer/README.zh-CN.md",
-				"zh-TW": "packages/breezell.doc-writer/README.zh-TW.md",
-				"ja": "packages/breezell.doc-writer/README.ja.md",
-				"ko": "packages/breezell.doc-writer/README.ko.md",
-				"ru": "packages/breezell.doc-writer/README.ru.md",
-				"es": "packages/breezell.doc-writer/README.es.md",
-				"pt-BR": "packages/breezell.doc-writer/README.pt-BR.md"
+				"zh-CN": "packages/breezell.doc-writer/i18n/README.zh-CN.md",
+				"zh-TW": "packages/breezell.doc-writer/i18n/README.zh-TW.md",
+				"ja": "packages/breezell.doc-writer/i18n/README.ja.md",
+				"ko": "packages/breezell.doc-writer/i18n/README.ko.md",
+				"ru": "packages/breezell.doc-writer/i18n/README.ru.md",
+				"es": "packages/breezell.doc-writer/i18n/README.es.md",
+				"pt-BR": "packages/breezell.doc-writer/i18n/README.pt-BR.md"
 			},
 			"l10n": {
 				"zh-CN": {
@@ -97,13 +97,13 @@
 			"icon": "packages/breezell.focus-player/icon.png",
 			"readme": "packages/breezell.focus-player/README.md",
 			"readmes": {
-				"zh-CN": "packages/breezell.focus-player/README.zh-CN.md",
-				"zh-TW": "packages/breezell.focus-player/README.zh-TW.md",
-				"ja": "packages/breezell.focus-player/README.ja.md",
-				"ko": "packages/breezell.focus-player/README.ko.md",
-				"ru": "packages/breezell.focus-player/README.ru.md",
-				"es": "packages/breezell.focus-player/README.es.md",
-				"pt-BR": "packages/breezell.focus-player/README.pt-BR.md"
+				"zh-CN": "packages/breezell.focus-player/i18n/README.zh-CN.md",
+				"zh-TW": "packages/breezell.focus-player/i18n/README.zh-TW.md",
+				"ja": "packages/breezell.focus-player/i18n/README.ja.md",
+				"ko": "packages/breezell.focus-player/i18n/README.ko.md",
+				"ru": "packages/breezell.focus-player/i18n/README.ru.md",
+				"es": "packages/breezell.focus-player/i18n/README.es.md",
+				"pt-BR": "packages/breezell.focus-player/i18n/README.pt-BR.md"
 			},
 			"l10n": {
 				"zh-CN": {
@@ -163,13 +163,13 @@
 			"icon": "packages/breezell.focus-timer/icon.png",
 			"readme": "packages/breezell.focus-timer/README.md",
 			"readmes": {
-				"zh-CN": "packages/breezell.focus-timer/README.zh-CN.md",
-				"zh-TW": "packages/breezell.focus-timer/README.zh-TW.md",
-				"ja": "packages/breezell.focus-timer/README.ja.md",
-				"ko": "packages/breezell.focus-timer/README.ko.md",
-				"ru": "packages/breezell.focus-timer/README.ru.md",
-				"es": "packages/breezell.focus-timer/README.es.md",
-				"pt-BR": "packages/breezell.focus-timer/README.pt-BR.md"
+				"zh-CN": "packages/breezell.focus-timer/i18n/README.zh-CN.md",
+				"zh-TW": "packages/breezell.focus-timer/i18n/README.zh-TW.md",
+				"ja": "packages/breezell.focus-timer/i18n/README.ja.md",
+				"ko": "packages/breezell.focus-timer/i18n/README.ko.md",
+				"ru": "packages/breezell.focus-timer/i18n/README.ru.md",
+				"es": "packages/breezell.focus-timer/i18n/README.es.md",
+				"pt-BR": "packages/breezell.focus-timer/i18n/README.pt-BR.md"
 			},
 			"l10n": {
 				"zh-CN": {
@@ -229,13 +229,13 @@
 			"icon": "packages/breezell.starter-pack/icon.png",
 			"readme": "packages/breezell.starter-pack/README.md",
 			"readmes": {
-				"zh-CN": "packages/breezell.starter-pack/README.zh-CN.md",
-				"zh-TW": "packages/breezell.starter-pack/README.zh-TW.md",
-				"ja": "packages/breezell.starter-pack/README.ja.md",
-				"ko": "packages/breezell.starter-pack/README.ko.md",
-				"ru": "packages/breezell.starter-pack/README.ru.md",
-				"es": "packages/breezell.starter-pack/README.es.md",
-				"pt-BR": "packages/breezell.starter-pack/README.pt-BR.md"
+				"zh-CN": "packages/breezell.starter-pack/i18n/README.zh-CN.md",
+				"zh-TW": "packages/breezell.starter-pack/i18n/README.zh-TW.md",
+				"ja": "packages/breezell.starter-pack/i18n/README.ja.md",
+				"ko": "packages/breezell.starter-pack/i18n/README.ko.md",
+				"ru": "packages/breezell.starter-pack/i18n/README.ru.md",
+				"es": "packages/breezell.starter-pack/i18n/README.es.md",
+				"pt-BR": "packages/breezell.starter-pack/i18n/README.pt-BR.md"
 			},
 			"l10n": {
 				"zh-CN": {

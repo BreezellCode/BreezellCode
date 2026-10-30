@@ -21,13 +21,13 @@
 	"icon": "packages/breezell.focus-timer/icon.png",
 	"readme": "packages/breezell.focus-timer/README.md",
 	"readmes": {
-		"zh-CN": "packages/breezell.focus-timer/README.zh-CN.md",
-		"zh-TW": "packages/breezell.focus-timer/README.zh-TW.md",
-		"ja": "packages/breezell.focus-timer/README.ja.md",
-		"ko": "packages/breezell.focus-timer/README.ko.md",
-		"ru": "packages/breezell.focus-timer/README.ru.md",
-		"es": "packages/breezell.focus-timer/README.es.md",
-		"pt-BR": "packages/breezell.focus-timer/README.pt-BR.md"
+		"zh-CN": "packages/breezell.focus-timer/i18n/README.zh-CN.md",
+		"zh-TW": "packages/breezell.focus-timer/i18n/README.zh-TW.md",
+		"ja": "packages/breezell.focus-timer/i18n/README.ja.md",
+		"ko": "packages/breezell.focus-timer/i18n/README.ko.md",
+		"ru": "packages/breezell.focus-timer/i18n/README.ru.md",
+		"es": "packages/breezell.focus-timer/i18n/README.es.md",
+		"pt-BR": "packages/breezell.focus-timer/i18n/README.pt-BR.md"
 	},
 	"l10n": {
 		"zh-CN": {

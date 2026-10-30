@@ -53,7 +53,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Purge jsDelivr
         run: |
-          for file in plugins/index.json plugins/devkit/templates.json plugins/devkit/breezell.d.ts plugins/devkit/breezell-plugin.mjs plugins/packages/*/README.md plugins/packages/*/icon.*; do
+          for file in plugins/index.json plugins/devkit/templates.json plugins/devkit/breezell.d.ts plugins/devkit/breezell-plugin.mjs plugins/packages/*/README.md plugins/packages/*/i18n/*.md plugins/packages/*/icon.*; do
             [ -f "$file" ] || continue
             curl -fsS --retry 2 "https://purge.jsdelivr.net/gh/${GITHUB_REPOSITORY}@main/${file}" > /dev/null && echo "purged $file" || echo "could not purge $file"
           done

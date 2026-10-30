@@ -23,13 +23,13 @@
 	"icon": "packages/breezell.starter-pack/icon.png",
 	"readme": "packages/breezell.starter-pack/README.md",
 	"readmes": {
-		"zh-CN": "packages/breezell.starter-pack/README.zh-CN.md",
-		"zh-TW": "packages/breezell.starter-pack/README.zh-TW.md",
-		"ja": "packages/breezell.starter-pack/README.ja.md",
-		"ko": "packages/breezell.starter-pack/README.ko.md",
-		"ru": "packages/breezell.starter-pack/README.ru.md",
-		"es": "packages/breezell.starter-pack/README.es.md",
-		"pt-BR": "packages/breezell.starter-pack/README.pt-BR.md"
+		"zh-CN": "packages/breezell.starter-pack/i18n/README.zh-CN.md",
+		"zh-TW": "packages/breezell.starter-pack/i18n/README.zh-TW.md",
+		"ja": "packages/breezell.starter-pack/i18n/README.ja.md",
+		"ko": "packages/breezell.starter-pack/i18n/README.ko.md",
+		"ru": "packages/breezell.starter-pack/i18n/README.ru.md",
+		"es": "packages/breezell.starter-pack/i18n/README.es.md",
+		"pt-BR": "packages/breezell.starter-pack/i18n/README.pt-BR.md"
 	},
 	"l10n": {
 		"zh-CN": {
