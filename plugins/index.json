@@ -1,12 +1,12 @@
 {
 	"schemaVersion": 1,
-	"updatedAt": "2026-10-30T06:37:19.196Z",
+	"updatedAt": "2026-10-30T06:49:32.284Z",
 	"plugins": [
 		{
 			"id": "breezell.doc-writer",
 			"displayName": "Doc Writer",
 			"description": "Writes doc comments and explains code with your Breezell chat model.",
-			"version": "1.0.4",
+			"version": "1.0.5",
 			"apiVersion": 1,
 			"categories": [
 				"Programming Languages"
@@ -62,11 +62,11 @@
 				}
 			},
 			"package": {
-				"path": "packages/breezell.doc-writer/1.0.4/breezell.doc-writer-1.0.4.vsix",
-				"sha256": "8cd72acbbb367097b4357df04c3a66a4c6128578b7c8242bedb2005afb2c05b6",
-				"size": 29975
+				"path": "packages/breezell.doc-writer/1.0.5/breezell.doc-writer-1.0.5.vsix",
+				"sha256": "de43b46f0ff29639c642fd6194448d05ad6608c3ec7db4e8a5f488d26e83768b",
+				"size": 31095
 			},
-			"updatedAt": "2026-10-30T06:37:19.196Z"
+			"updatedAt": "2026-10-30T06:49:32.284Z"
 		},
 		{
 			"id": "breezell.focus-player",

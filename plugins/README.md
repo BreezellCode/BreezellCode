@@ -101,6 +101,10 @@ Rules of `models.request`:
 - The user's rules, skills and memories are not added, and no memory recall runs (no Super Memory quota is used).
 - Each plugin may have at most 2 requests running and 20 a minute; a request holds at most 100
   messages and 200,000 characters.
+- `onText` gets the whole text so far while the reply streams, `onReasoning` the model's reasoning so
+  far while it thinks (models that reason and relays that pass it on), so a plugin can show it is
+  working before any text. A model that sends nothing at all for two minutes fails the request with
+  `BreezellModelError`.
 - Errors carry a `name`: `BreezellNotSignedIn`, `BreezellPermissionDenied`, `BreezellRateLimited`,
   `BreezellNoModel`, `BreezellInvalidRequest`, `BreezellModelError`, `BreezellCancelled`,
   `BreezellBlocked` (the plugin is on the [blocklist](#blocklist)).

@@ -64,6 +64,12 @@ declare module 'vscode' {
 			readonly system?: string;
 			/** Called with the whole text so far while the reply streams. */
 			readonly onText?: (textSoFar: string) => void;
+			/**
+			 * Called with the model's whole reasoning so far while it thinks, before and between
+			 * text (models that reason, and relays that pass it on). Lets a plugin show that the
+			 * model is working while no text has come yet.
+			 */
+			readonly onReasoning?: (reasoningSoFar: string) => void;
 		}
 
 		export interface ModelResponse {
@@ -78,7 +84,8 @@ declare module 'vscode' {
 		 * billed to the user's account, a custom provider needs a plan that includes Custom
 		 * API. Errors carry a `name`: `BreezellNotSignedIn`, `BreezellPermissionDenied`,
 		 * `BreezellRateLimited`, `BreezellNoModel`, `BreezellInvalidRequest`, `BreezellModelError`,
-		 * `BreezellCancelled`, `BreezellBlocked` (the plugin is on the market's blocklist).
+		 * `BreezellCancelled`, `BreezellBlocked` (the plugin is on the market's blocklist). A request
+		 * whose model sends nothing at all for two minutes fails with `BreezellModelError`.
 		 */
 		export namespace models {
 			export function request(request: ModelRequest, token?: CancellationToken): Thenable<ModelResponse>;

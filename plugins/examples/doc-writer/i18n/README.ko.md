@@ -20,7 +20,7 @@ Doc Writer가 요청하는 권한은 `models.request` 하나입니다. 첫 요�
 ## 이 예제가 보여 주는 것
 
 - `vscode.breezell` 확인(Breezell 밖에서는 undefined).
-- `onText`를 쓰는 스트리밍 요청: 코드 옆 문서에 바로 표시(`explain`), 그리고 진행 알림에 실시간으로 보여 주고 전체를 확인한 뒤 넣는 주석(`writeDoc`).
+- `onText`를 쓰는 스트리밍 요청: 코드 옆 문서에 바로 표시(`explain`), 그리고 진행 알림에 실시간으로 보여 주고 전체를 확인한 뒤 넣는 주석(`writeDoc`). 본문이 오기 전에는 `onReasoning`으로 모델이 생각 중임을 보여 줍니다.
 - 진행 알림의 취소 토큰으로 요청 취소.
 - 오류 `name`별 처리: `BreezellNotSignedIn`, `BreezellPermissionDenied`, `BreezellNoModel`, `BreezellRateLimited`, `BreezellCancelled`.
 - 코드에 넣기 전에 답변이 정말 주석인지 확인(`src/comment.ts`): 모델이 항상 지시대로 답하지는 않으며, 주석이 아닌 답변은 코드에 넣지 않고 옆에 보여 줍니다.

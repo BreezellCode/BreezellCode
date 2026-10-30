@@ -64,6 +64,12 @@ declare module 'vscode' {
 			readonly system?: string;
 			/** Called with the whole text so far while the reply streams. */
 			readonly onText?: (textSoFar: string) => void;
+			/**
+			 * Called with the model's whole reasoning so far while it thinks, before and between
+			 * text (models that reason, and relays that pass it on). Lets a plugin show that the
+			 * model is working while no text has come yet.
+			 */
+			readonly onReasoning?: (reasoningSoFar: string) => void;
 		}
 
 		export interface ModelResponse {
@@ -78,10 +84,35 @@ declare module 'vscode' {
 		 * billed to the user's account, a custom provider needs a plan that includes Custom
 		 * API. Errors carry a `name`: `BreezellNotSignedIn`, `BreezellPermissionDenied`,
 		 * `BreezellRateLimited`, `BreezellNoModel`, `BreezellInvalidRequest`, `BreezellModelError`,
-		 * `BreezellCancelled`.
+		 * `BreezellCancelled`, `BreezellBlocked` (the plugin is on the market's blocklist). A request
+		 * whose model sends nothing at all for two minutes fails with `BreezellModelError`.
 		 */
 		export namespace models {
 			export function request(request: ModelRequest, token?: CancellationToken): Thenable<ModelResponse>;
+		}
+
+		/**
+		 * A plugin window: a separate window showing the plugin's own page, declared in package.json
+		 * `contributes.breezell.windows` ({ "id", "title", "entry", "width", "height", ... }). The page
+		 * loads `/__breezell/api.js` to get `window.breezell.postMessage(...)` and `onMessage(...)`.
+		 */
+		export interface PluginWindow {
+			readonly windowId: string;
+			/** Sends JSON to the page (its `breezell.onMessage` listeners). */
+			postMessage(message: unknown): Thenable<boolean>;
+			/** What the page sends with `breezell.postMessage`. */
+			readonly onDidReceiveMessage: Event<unknown>;
+			readonly onDidClose: Event<void>;
+			close(): Thenable<void>;
+		}
+
+		/**
+		 * Windows the plugin declares. Opening one needs a signed-in account, and the plugin must
+		 * run on the user's computer ("extensionKind": ["ui", ...]). Opening an open window brings
+		 * it to the front and returns it again.
+		 */
+		export namespace windows {
+			export function open(windowId: string): Thenable<PluginWindow>;
 		}
 	}
 }

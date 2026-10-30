@@ -24,7 +24,7 @@ your current chat model and count exactly like your own chat requests.
 ## What the example shows
 
 - Checking for `vscode.breezell` (undefined outside Breezell).
-- Streamed requests with `onText`: into a document beside the code (`explain`), and into the progress notification while the comment is checked before it goes in (`writeDoc`).
+- Streamed requests with `onText`: into a document beside the code (`explain`), and into the progress notification while the comment is checked before it goes in (`writeDoc`); `onReasoning` shows that the model is thinking before any text comes.
 - Cancelling through the progress notification's cancellation token.
 - Handling each error `name`: `BreezellNotSignedIn`, `BreezellPermissionDenied`, `BreezellNoModel`,
   `BreezellRateLimited`, `BreezellCancelled`.

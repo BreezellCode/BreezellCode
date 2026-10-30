@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.5
+
+- While the model reasons and no text has come yet, Write Doc Comment and Explain Selection say "Thinking… (n characters)" (in the notification, and in Explain's document), instead of showing nothing until the text starts. Uses `onReasoning`; a Breezell without it ignores it, and Doc Writer works as before there.
+
 ## 1.0.4
 
 - Write Doc Comment shows the comment as the model writes it, in its progress notification. It still goes into the code only once it is complete and checked.

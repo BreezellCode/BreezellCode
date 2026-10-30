@@ -20,7 +20,7 @@ Doc Writer 只请求一个权限：`models.request`。第一次请求前 Breezel
 ## 这个示例演示了什么
 
 - 检查 `vscode.breezell`（在 Breezell 以外的编辑器中为 undefined）。
-- 使用 `onText` 的流式请求：逐字写进代码旁的文档（`explain`），以及在进度通知里实时显示、整段检查后才插入的注释（`writeDoc`）。
+- 使用 `onText` 的流式请求：逐字写进代码旁的文档（`explain`），以及在进度通知里实时显示、整段检查后才插入的注释（`writeDoc`）；正文出来前，用 `onReasoning` 显示模型正在思考。
 - 通过进度通知的取消令牌取消请求。
 - 处理每一种错误 `name`：`BreezellNotSignedIn`、`BreezellPermissionDenied`、`BreezellNoModel`、`BreezellRateLimited`、`BreezellCancelled`。
 - 插入前先检查回复确实是注释（`src/comment.ts`）：模型不一定按指示回答，不是注释的回复不会插进代码，而是显示在旁边。

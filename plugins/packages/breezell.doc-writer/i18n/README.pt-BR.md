@@ -20,7 +20,7 @@ O Doc Writer pede uma única permissão, `models.request`. O Breezell pergunta a
 ## O que o exemplo mostra
 
 - Verificar `vscode.breezell` (undefined fora do Breezell).
-- Solicitações em streaming com `onText`: num documento ao lado do código (`explain`) e na notificação de progresso, com o comentário verificado inteiro antes de ser inserido (`writeDoc`).
+- Solicitações em streaming com `onText`: num documento ao lado do código (`explain`) e na notificação de progresso, com o comentário verificado inteiro antes de ser inserido (`writeDoc`); antes de o texto chegar, `onReasoning` mostra que o modelo está pensando.
 - Cancelar pelo token de cancelamento da notificação de progresso.
 - Tratar cada `name` de erro: `BreezellNotSignedIn`, `BreezellPermissionDenied`, `BreezellNoModel`, `BreezellRateLimited`, `BreezellCancelled`.
 - Verificar se a resposta é um comentário antes de colocá-la no código (`src/comment.ts`): os modelos nem sempre seguem as instruções, e uma resposta que não é um comentário aparece ao lado do código.

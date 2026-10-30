@@ -67,6 +67,8 @@ async function writeDoc(breezell: Breezell) {
 				// The comment goes into the code only once it is complete and checked; while it
 				// streams, the notification shows the line being written.
 				onText: text => progress.report({ message: lastLine(text) }),
+				// Before any text, the model may reason for a while: show that it is working.
+				onReasoning: reasoning => progress.report({ message: thinking(reasoning) }),
 			}, token);
 			const comment = commentFromAnswer(stripFence(response.text), languageId, code);
 			if (!comment) {
@@ -98,6 +100,7 @@ async function explain(breezell: Breezell) {
 	const doc = await vscode.workspace.openTextDocument({ language: 'markdown', content: '' });
 	const shown = await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside, true);
 	let shownText = '';
+	let hasText = false;
 	// Edits are queued so streamed chunks land in order. Text that continues what is shown is
 	// appended; anything else (the final text can differ from the stream) replaces it.
 	let queue = Promise.resolve();
@@ -116,18 +119,33 @@ async function explain(breezell: Breezell) {
 		return queue;
 	};
 
-	await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'Doc Writer: explaining…', cancellable: true }, async (_progress, token) => {
+	await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'Doc Writer: explaining…', cancellable: true }, async (progress, token) => {
 		try {
 			const response = await breezell.models.request({
 				system: `You explain code to a developer: what it does, how, and anything surprising. Be concise and concrete. Answer in Markdown, in ${outputLanguage()}.`,
 				messages: [{ role: 'user', content: `Explain this ${editor.document.languageId} code:\n\n${code}` }],
-				onText: text => void writeUpTo(text),
+				onText: text => {
+					hasText ||= text.length > 0;
+					void writeUpTo(text);
+				},
+				// Until the explanation starts, the document and the notification say the model is thinking.
+				onReasoning: reasoning => {
+					progress.report({ message: thinking(reasoning) });
+					if (!hasText) {
+						void writeUpTo(`*${thinking(reasoning)}*`);
+					}
+				},
 			}, token);
 			await writeUpTo(`${response.text}\n\n---\n*${response.model}*\n`);
 		} catch (err) {
 			explainError(err);
 		}
 	});
+}
+
+/** What the notification says while the model reasons and no text has come yet. */
+function thinking(reasoning: string): string {
+	return `Thinking… (${reasoning.length} characters)`;
 }
 
 /** The last non-empty line of the text so far, shortened for a notification. */
