@@ -23,4 +23,5 @@ Doc Writer が求める権限は `models.request` の 1 つだけです。最初
 - 通常のリクエスト（`writeDoc`）と `onText` を使うストリーミング（`explain`）。
 - 進捗通知のキャンセルトークンによるキャンセル。
 - エラーの `name` ごとの処理：`BreezellNotSignedIn`、`BreezellPermissionDenied`、`BreezellNoModel`、`BreezellRateLimited`、`BreezellCancelled`。
+- コードに入れる前に、回答が本当にコメントかを確認（`src/comment.ts`）：モデルは指示どおりに答えるとは限らず、コメントでない回答はコードに入れずに横に表示します。
 - `"extensionKind": ["ui", "workspace"]` により WSL や SSH のウィンドウでも動作します。

@@ -23,4 +23,5 @@ Doc Writer가 요청하는 권한은 `models.request` 하나입니다. 첫 요�
 - 일반 요청(`writeDoc`)과 `onText`를 쓰는 스트리밍 요청(`explain`).
 - 진행 알림의 취소 토큰으로 요청 취소.
 - 오류 `name`별 처리: `BreezellNotSignedIn`, `BreezellPermissionDenied`, `BreezellNoModel`, `BreezellRateLimited`, `BreezellCancelled`.
+- 코드에 넣기 전에 답변이 정말 주석인지 확인(`src/comment.ts`): 모델이 항상 지시대로 답하지는 않으며, 주석이 아닌 답변은 코드에 넣지 않고 옆에 보여 줍니다.
 - `"extensionKind": ["ui", "workspace"]`이므로 WSL과 SSH 창에서도 동작합니다.

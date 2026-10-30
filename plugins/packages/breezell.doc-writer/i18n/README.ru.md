@@ -23,4 +23,5 @@ Doc Writer запрашивает одно разрешение — `models.requ
 - Обычный запрос (`writeDoc`) и потоковый с `onText` (`explain`).
 - Отмену через токен отмены уведомления о ходе работы.
 - Обработку каждого `name` ошибки: `BreezellNotSignedIn`, `BreezellPermissionDenied`, `BreezellNoModel`, `BreezellRateLimited`, `BreezellCancelled`.
+- Проверку, что ответ — действительно комментарий, прежде чем вставить его в код (`src/comment.ts`): модели не всегда следуют инструкциям, и ответ, который не является комментарием, показывается рядом с кодом.
 - `"extensionKind": ["ui", "workspace"]`, поэтому он работает и в окнах WSL и SSH.

@@ -23,4 +23,5 @@ O Doc Writer pede uma única permissão, `models.request`. O Breezell pergunta a
 - Uma solicitação comum (`writeDoc`) e uma em streaming com `onText` (`explain`).
 - Cancelar pelo token de cancelamento da notificação de progresso.
 - Tratar cada `name` de erro: `BreezellNotSignedIn`, `BreezellPermissionDenied`, `BreezellNoModel`, `BreezellRateLimited`, `BreezellCancelled`.
+- Verificar se a resposta é um comentário antes de colocá-la no código (`src/comment.ts`): os modelos nem sempre seguem as instruções, e uma resposta que não é um comentário aparece ao lado do código.
 - `"extensionKind": ["ui", "workspace"]`, então também funciona em janelas WSL e SSH.

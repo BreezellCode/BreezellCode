@@ -28,4 +28,5 @@ your current chat model and count exactly like your own chat requests.
 - Cancelling through the progress notification's cancellation token.
 - Handling each error `name`: `BreezellNotSignedIn`, `BreezellPermissionDenied`, `BreezellNoModel`,
   `BreezellRateLimited`, `BreezellCancelled`.
+- Checking that the answer is a comment before it goes into the code (`src/comment.ts`): models do not always follow the instructions, and an answer that is not a comment is shown beside the code instead.
 - `"extensionKind": ["ui", "workspace"]`, so it also works in WSL and SSH windows.

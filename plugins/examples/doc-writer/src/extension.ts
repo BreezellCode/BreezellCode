@@ -1,11 +1,13 @@
 import * as vscode from 'vscode';
+import { commentFromAnswer } from './comment';
 
 /**
  * Doc Writer — an example Breezell plugin that uses the user's chat model
  * (`vscode.breezell.models.request`, permission "models.request").
  *
  * - "Write Doc Comment" asks the model for a doc comment in the syntax of the
- *   file's language and inserts it above the selection, indented like it.
+ *   file's language and inserts it above the selection, indented like it, only when
+ *   the answer really is a comment (src/comment.ts).
  * - "Explain Selection" streams an explanation into a Markdown document beside the code.
  *
  * Breezell asks the user once before the first request, and every request counts like
@@ -56,13 +58,24 @@ async function writeDoc(breezell: Breezell) {
 					'You write documentation comments for source code.',
 					`Answer with the comment only, in the usual doc comment syntax for ${languageId}: /** */ for TypeScript, JavaScript, Java, C#, Kotlin, PHP; /// for Rust and Swift; // for Go; # lines for Python, Ruby and shell. It goes on the lines above the code.`,
 					'No code fence, no code, no explanation around it. Describe what the code does, its parameters and its return value.',
+					'The code may be only part of a file: document what is there, and never ask for the rest or complete it.',
 					`Write the comment in ${outputLanguage()}.`,
 				].join(' '),
-				messages: [{ role: 'user', content: code }],
+				// The instruction is repeated with the code: some models follow the last user message
+				// rather than the system text, and take bare code for a question about it.
+				messages: [{ role: 'user', content: `Write the doc comment for this ${languageId} code. Reply with the comment only.\n\n${fence(code, languageId)}` }],
 			}, token);
-			const comment = stripFence(response.text).trim();
+			const comment = commentFromAnswer(stripFence(response.text), languageId, code);
 			if (!comment) {
-				vscode.window.showWarningMessage('Doc Writer: the model returned no comment.');
+				// Never put an answer that is not a comment into the code; offer to show it instead
+				// (not awaited: the progress notification closes now).
+				const show = 'Show the answer';
+				void vscode.window.showWarningMessage('Doc Writer: the model did not answer with a comment, so nothing was inserted.', show).then(async choice => {
+					if (choice === show) {
+						const doc = await vscode.workspace.openTextDocument({ language: 'markdown', content: `${response.text}\n\n---\n*${response.model}*\n` });
+						await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside, true);
+					}
+				});
 				return;
 			}
 			const text = comment.split('\n').map(line => indent + line.trimEnd()).join('\n') + '\n';
@@ -112,6 +125,12 @@ async function explain(breezell: Breezell) {
 			explainError(err);
 		}
 	});
+}
+
+/** The code in a Markdown fence longer than any run of backticks inside it. */
+function fence(code: string, languageId: string): string {
+	const ticks = '`'.repeat(Math.max(3, ...(code.match(/`+/g) ?? []).map(run => run.length + 1)));
+	return `${ticks}${languageId}\n${code}\n${ticks}`;
 }
 
 function stripFence(text: string): string {

@@ -23,4 +23,5 @@ Doc Writer 只请求一个权限：`models.request`。第一次请求前 Breezel
 - 普通请求（`writeDoc`）和使用 `onText` 的流式请求（`explain`）。
 - 通过进度通知的取消令牌取消请求。
 - 处理每一种错误 `name`：`BreezellNotSignedIn`、`BreezellPermissionDenied`、`BreezellNoModel`、`BreezellRateLimited`、`BreezellCancelled`。
+- 插入前先检查回复确实是注释（`src/comment.ts`）：模型不一定按指示回答，不是注释的回复不会插进代码，而是显示在旁边。
 - `"extensionKind": ["ui", "workspace"]`，因此在 WSL 和 SSH 窗口中也能使用。
