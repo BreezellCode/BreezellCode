@@ -1,5 +1,7 @@
 {
 	"displayName": "Chat Mirror",
 	"description": "Your Breezell conversations in a window of their own: pick one, read it with its tool calls and recalled memories, reply, approve tool calls, and switch the chat model.",
-	"command.open": "Open"
+	"command.open": "Open",
+	"tool.pinNote": "Pin a note",
+	"tool.listNotes": "Pinned notes"
 }

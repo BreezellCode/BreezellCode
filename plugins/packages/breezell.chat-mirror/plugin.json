@@ -12,7 +12,8 @@
 		"agent",
 		"approve",
 		"model",
-		"window"
+		"window",
+		"tools"
 	],
 	"source": "open",
 	"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/chat-mirror",
@@ -63,6 +64,21 @@
 		}
 	},
 	"versions": [
+		{
+			"version": "1.0.3",
+			"path": "packages/breezell.chat-mirror/1.0.3/breezell.chat-mirror-1.0.3.vsix",
+			"sha256": "7a680297d2d541e67cac29dcad63f98ca7c6367bbce5043c96705ae45735d1a3",
+			"size": 51751,
+			"apiVersion": 1,
+			"permissions": [
+				"chat.read",
+				"chat.send",
+				"chat.approve",
+				"models.select",
+				"agent.tools"
+			],
+			"publishedAt": "2026-10-31T12:23:32.595Z"
+		},
 		{
 			"version": "1.0.2",
 			"path": "packages/breezell.chat-mirror/1.0.2/breezell.chat-mirror-1.0.2.vsix",

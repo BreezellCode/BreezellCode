@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.3
+
+- Two tools for Breezell's agent (`agent.tools`, "Agent tool registration"): `pin_note` pins a note in this window (Chat, Agent and Entanglement modes), `list_notes` reads the pinned notes back (every mode). The notes are listed under the conversations, with **Unpin**.
+- A tool call of a plugin shows the plugin's name and **Plugin tool**.
+
 ## 1.0.2
 
 - While Breezell works on a reply, the last bubble shows what it is doing and for how long, its reasoning and the text as it comes; before, nothing showed until the text started.

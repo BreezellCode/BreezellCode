@@ -15,6 +15,8 @@ Breezell 插件包的官方範例：所有內容都宣告在 `package.json` › 
 
 在 **Breezell Console › 插件 › 已安裝** 停用或移除插件包，以上內容都會一併消失。你自己的同名技能或 MCP 伺服器優先於插件包的。
 
+MCP 伺服器會給 Agent 工具，所以插件包宣告了 `agent.tools` 權限（「Agent 工具註冊」）。插件包第一次執行時 Breezell 會問你一次，你允許後才會啟動這個伺服器；之後可以在 **Breezell Console › 插件 › 已安裝** › Starter Pack 開啟或關閉。
+
 ## 自己做一個
 
 從 **Pack** 範本開始（Breezell Console › 插件 › 開發，或 `node breezell-plugin.mjs init my-pack --id me.my-pack --template pack`），再執行 `npm run package:open`。

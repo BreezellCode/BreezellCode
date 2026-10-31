@@ -1,5 +1,7 @@
 {
 	"displayName": "Chat Mirror",
 	"description": "在独立窗口中查看你的 Breezell 对话：选择一则对话，阅读其中的工具调用和召回的记忆、回复、批准工具调用，并切换对话模型。",
-	"command.open": "打开"
+	"command.open": "打开",
+	"tool.pinNote": "置顶笔记",
+	"tool.listNotes": "已置顶的笔记"
 }

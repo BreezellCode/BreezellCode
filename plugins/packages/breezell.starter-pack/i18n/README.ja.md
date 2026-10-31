@@ -15,6 +15,8 @@ Breezell プラグインパックの公式サンプルです。すべて `packag
 
 **Breezell Console › プラグイン › インストール済み** でパックをオフにするか削除すると、これらはすべて消えます。同じ名前の自分のスキルや MCP サーバーがパックのものより優先されます。
 
+MCP サーバーは Agent にツールを提供するので、パックは `agent.tools` 権限（「Agent ツール登録」）を宣言しています。パックが初めて動くときに Breezell が一度だけ確認し、許可した場合にだけサーバーを起動します。**Breezell Console › プラグイン › インストール済み** › Starter Pack でオン・オフできます。
+
 ## 自分で作る
 
 **Pack** テンプレートから始め（Breezell Console › プラグイン › 開発、または `node breezell-plugin.mjs init my-pack --id me.my-pack --template pack`）、`npm run package:open` を実行します。

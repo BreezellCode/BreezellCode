@@ -14,8 +14,21 @@ El ejemplo oficial de un plugin de Breezell que lee conversaciones y participa e
 - Cuando una llamada a herramienta espera aprobación, pulsa aquí **Approve** (aprobar) o **Reject** (rechazar).
 - **Open in Breezell** muestra la conversación en el chat de Breezell.
 - **Model**, junto a **Send**, cambia el modelo del chat de Breezell. Es el mismo ajuste que el selector de modelo del chat de Breezell, así que un cambio en un lado se ve en el otro (aquí, cuando la ventana recibe el foco).
+- **Pinned notes** (notas fijadas), bajo las conversaciones: las notas que el Agent de Breezell fijó con la herramienta `pin_note` de Chat Mirror, las más recientes primero. **Unpin** quita una.
+- La llamada a una herramienta de un plugin muestra el nombre del plugin y **Plugin tool** (también el propio `pin_note` de Chat Mirror); una herramienta MCP muestra su servidor.
 
 La interfaz de la ventana está en inglés.
+
+## Herramientas para Agent
+
+Chat Mirror da al Agent de Breezell dos herramientas propias (`agent.tools`, «Registro de herramientas de Agent»). Cada una indica los modos en que se ofrece; en los demás modos el Agent ni la ve ni puede llamarla.
+
+| Herramienta | Modos | Qué hace |
+|---|---|---|
+| `pin_note` | Chat, Agent, Entanglement | Fija una nota (un título y su texto) en esta ventana |
+| `list_notes` | Chat, Agent, Entanglement, Analizar, Teams | Lee las notas fijadas, de la más reciente a la más antigua |
+
+Pruébalo en Chat: «Fija una nota en Chat Mirror: publicar 1.4.42 el lunes». Las notas se guardan en tu equipo con los datos del plugin, también con la ventana cerrada. Sus llamadas siguen **Aprobar herramientas MCP automáticamente**, como cualquier herramienta MCP.
 
 ## Permisos
 
@@ -25,8 +38,11 @@ La interfaz de la ventana está en inglés.
 | `chat.send` | Send y New conversation |
 | `chat.approve` | Approve y Reject |
 | `models.select` | Model (la lista y el cambio de modelo) |
+| `agent.tools` | Las herramientas `pin_note` y `list_notes` para el Agent |
 
 Breezell pregunta por cada permiso `chat.*` la primera vez que Chat Mirror lo usa; `models.select` no implica riesgo y está activado mientras no lo desactives. Si rechazas uno, Chat Mirror dice lo que no puede hacer y el resto sigue funcionando. Puedes activar o desactivar cada uno, o todos a la vez, en Breezell Console › Plugins › Instalados › Chat Mirror. Los mensajes que envía cuentan como los tuyos.
+
+`agent.tools` se pregunta una sola vez: la primera vez que Chat Mirror se inicia. Si lo rechazas, las dos herramientas quedan desactivadas hasta que actives el permiso, y la ventana funciona como siempre.
 
 ## Cómo está hecho
 
@@ -35,3 +51,5 @@ Breezell pregunta por cada permiso `chat.*` la primera vez que Chat Mirror lo us
 - Model usa `vscode.breezell.models`: `list` al abrir la ventana o cuando recibe el foco, y `select` al cambiar.
 - Mientras se escribe una respuesta llegan cambios, como mucho unos pocos por segundo; cada vez que Breezell pasa a hacer otra cosa (pensar, escribir, llamar a una herramienta, terminar), el plugin vuelve a leer la conversación. Los recuerdos salen de `recalledMemories` y `memoryUse` de cada mensaje.
 - Un permiso rechazado hace que su llamada falle con `BreezellPermissionDenied`, y la página lo convierte en una frase.
+- Las herramientas se declaran en `package.json` (`contributes.breezell.tools`: nombre, descripción, `inputSchema`, `modes`) y se ejecutan en `src/extension.ts` con `vscode.breezell.tools.register`. Se registran al arrancar (`onStartupFinished`), así que el Agent las tiene antes de que se abra la ventana.
+- En una conversación leída con `chat.read`, la llamada a una herramienta de un plugin lleva `plugin` (`{ id, name }`): la página muestra ese nombre en lugar del servidor `plugin:<id>`.

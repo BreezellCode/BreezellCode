@@ -15,6 +15,8 @@ O exemplo oficial de um pacote de plugins do Breezell: tudo é declarado em `pac
 
 Desative ou remova o pacote em **Breezell Console › Plugins › Instalados** e tudo isso some. Uma skill ou servidor MCP seu com o mesmo nome tem prioridade sobre o do pacote.
 
+O servidor MCP dá ferramentas ao Agent, então o pacote declara a permissão `agent.tools` ("Registro de ferramentas do Agent"). O Breezell pergunta uma vez, quando o pacote roda pela primeira vez, e só inicia o servidor se você permitir; você pode ligar ou desligar em **Breezell Console › Plugins › Instalados** › Starter Pack.
+
 ## Faça o seu
 
 Comece pelo modelo **Pack** (Breezell Console › Plugins › Desenvolver, ou `node breezell-plugin.mjs init my-pack --id me.my-pack --template pack`) e depois execute `npm run package:open`.

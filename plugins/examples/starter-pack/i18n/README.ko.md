@@ -15,6 +15,8 @@ Breezell 플러그인 팩의 공식 예제입니다. 모든 내용은 `package.j
 
 **Breezell Console › 플러그인 › 설치됨**에서 팩을 끄거나 제거하면 이 모두가 사라집니다. 같은 이름의 내 스킬이나 MCP 서버가 팩의 것보다 우선합니다.
 
+MCP 서버는 Agent에 도구를 제공하므로 팩은 `agent.tools` 권한("Agent 도구 등록")을 선언합니다. 팩이 처음 실행될 때 Breezell이 한 번 묻고, 허용한 경우에만 서버를 시작합니다. **Breezell Console › 플러그인 › 설치됨** › Starter Pack에서 켜고 끌 수 있습니다.
+
 ## 직접 만들기
 
 **Pack** 템플릿으로 시작한 뒤(Breezell Console › 플러그인 › 개발, 또는 `node breezell-plugin.mjs init my-pack --id me.my-pack --template pack`) `npm run package:open`을 실행하세요.

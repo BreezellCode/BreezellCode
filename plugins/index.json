@@ -1,12 +1,12 @@
 {
 	"schemaVersion": 1,
-	"updatedAt": "2026-10-30T12:33:41.824Z",
+	"updatedAt": "2026-10-31T12:23:32.680Z",
 	"plugins": [
 		{
 			"id": "breezell.chat-mirror",
 			"displayName": "Chat Mirror",
 			"description": "Your Breezell conversations in a window of their own: pick one, read it with its tool calls and recalled memories, reply, approve tool calls, and switch the chat model.",
-			"version": "1.0.2",
+			"version": "1.0.3",
 			"apiVersion": 1,
 			"categories": [
 				"Chat",
@@ -18,13 +18,15 @@
 				"agent",
 				"approve",
 				"model",
-				"window"
+				"window",
+				"tools"
 			],
 			"permissions": [
 				"chat.read",
 				"chat.send",
 				"chat.approve",
-				"models.select"
+				"models.select",
+				"agent.tools"
 			],
 			"source": "open",
 			"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/chat-mirror",
@@ -75,11 +77,11 @@
 				}
 			},
 			"package": {
-				"path": "packages/breezell.chat-mirror/1.0.2/breezell.chat-mirror-1.0.2.vsix",
-				"sha256": "fc274ffa8d8cf35f9aa4062b5496c6694ee462159273f80efbaaedb4c9516ed6",
-				"size": 41043
+				"path": "packages/breezell.chat-mirror/1.0.3/breezell.chat-mirror-1.0.3.vsix",
+				"sha256": "7a680297d2d541e67cac29dcad63f98ca7c6367bbce5043c96705ae45735d1a3",
+				"size": 51751
 			},
-			"updatedAt": "2026-10-30T12:33:41.824Z"
+			"updatedAt": "2026-10-31T12:23:32.595Z"
 		},
 		{
 			"id": "breezell.doc-writer",
@@ -284,7 +286,7 @@
 			"id": "breezell.starter-pack",
 			"displayName": "Starter Pack",
 			"description": "Code review and testing skills, short house rules, a thinking MCP server and a calm dark theme: no code.",
-			"version": "1.0.2",
+			"version": "1.0.3",
 			"apiVersion": 1,
 			"categories": [
 				"Themes"
@@ -297,7 +299,9 @@
 				"review",
 				"testing"
 			],
-			"permissions": [],
+			"permissions": [
+				"agent.tools"
+			],
 			"source": "open",
 			"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/starter-pack",
 			"author": {
@@ -340,11 +344,11 @@
 				}
 			},
 			"package": {
-				"path": "packages/breezell.starter-pack/1.0.2/breezell.starter-pack-1.0.2.vsix",
-				"sha256": "bda569f3dd8a6d7d0d7dc5e8ebcf125eb1341068565c46f35e1f6ce762ed79b3",
-				"size": 16531
+				"path": "packages/breezell.starter-pack/1.0.3/breezell.starter-pack-1.0.3.vsix",
+				"sha256": "a2ce7e26118116f248d56b2234bc6d4d1c58690cd31f13c1734ea70bc1528b14",
+				"size": 17868
 			},
-			"updatedAt": "2026-10-29T21:30:05.925Z"
+			"updatedAt": "2026-10-31T12:23:32.680Z"
 		}
 	]
 }

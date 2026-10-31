@@ -12,6 +12,7 @@
  *                      copy the .vsix into the market, update its plugin.json and index.json
  *    index <market plugins folder> [--check]
  *                      rebuild index.json from packages/<id>/plugin.json; --check verifies every package
+ *                      and blocklist.json
  *    templates-json    print devkit/templates.json (what Breezell's "Create a plugin" uses)
  *    types             print the plugin API typings
  *
@@ -28,7 +29,9 @@ import { fileURLToPath } from 'node:url';
 
 const DEVKIT_VERSION = '1.0.0';
 const API_VERSION = 1;
-const PERMISSIONS = ['chat.events', 'models.request'];
+const PERMISSIONS = ['chat.events', 'models.request', 'models.select', 'chat.read', 'chat.send', 'chat.approve', 'providers.read', 'agent.tools'];
+/** The chat modes an agent tool can be offered in (contributes.breezell.tools[].modes). */
+const TOOL_MODES = ['chat', 'agent', 'entanglement', 'analyze', 'teams'];
 const MARKET_REPO = 'BreezellCode/BreezellCode';
 const MARKET_URLS = [
 	`https://raw.githubusercontent.com/${MARKET_REPO}/main/plugins/`,
@@ -278,6 +281,45 @@ function checkPackage(pkg, { forMarket = false, nls } = {}) {
 		const servers = declared.mcpServers ?? {};
 		if (typeof servers !== 'object' || Array.isArray(servers) || Object.values(servers).some(s => typeof s !== 'object' || s === null || (typeof s.command !== 'string' && typeof s.url !== 'string'))) {
 			errors.push('"contributes.breezell.mcpServers" maps a name to { "command", "args", "env" } or { "url" }');
+		}
+		// Agent tools: declared here, run by the plugin's code (vscode.breezell.tools.register).
+		const tools = declared.tools ?? [];
+		if (!Array.isArray(tools) || tools.length > 16) {
+			errors.push('"contributes.breezell.tools" is an array of at most 16 tools');
+		} else {
+			const names = new Set();
+			for (const t of tools) {
+				const where = `"contributes.breezell.tools"${typeof t?.name === 'string' ? ` ${t.name}` : ''}`;
+				if (typeof t?.name !== 'string' || !/^[a-z][a-z0-9_]{1,47}$/.test(t.name)) {
+					errors.push(`${where}: "name" is 2 to 48 lowercase letters, digits and underscores, starting with a letter`);
+				} else if (names.has(t.name)) {
+					errors.push(`${where}: duplicate name`);
+				} else {
+					names.add(t.name);
+				}
+				if (typeof t?.description !== 'string' || !t.description.trim() || t.description.length > 2000) {
+					errors.push(`${where}: "description" tells the agent what the tool does and when to use it (1 to 2,000 characters)`);
+				}
+				const schema = t?.inputSchema;
+				if (schema !== undefined && (typeof schema !== 'object' || schema === null || Array.isArray(schema) || (schema.type !== undefined && schema.type !== 'object') || (schema.properties !== undefined && (typeof schema.properties !== 'object' || schema.properties === null)))) {
+					errors.push(`${where}: "inputSchema" is a JSON Schema of type "object"`);
+				} else if (schema !== undefined && JSON.stringify(schema).length > 16000) {
+					errors.push(`${where}: "inputSchema" is longer than 16,000 characters`);
+				}
+				const modes = t?.modes === undefined ? [] : Array.isArray(t.modes) ? t.modes : [t.modes];
+				for (const mode of modes) {
+					if (!TOOL_MODES.includes(mode)) {
+						errors.push(`${where}: unknown mode ${JSON.stringify(mode)} (use ${TOOL_MODES.join(', ')}; none: agent)`);
+					}
+				}
+			}
+			if (tools.length && typeof pkg.main !== 'string') {
+				errors.push('"contributes.breezell.tools" need code that runs them: "main", calling vscode.breezell.tools.register for each');
+			}
+		}
+		const reachesAgent = (Array.isArray(tools) && tools.length > 0) || (servers && typeof servers === 'object' && Object.keys(servers).length > 0);
+		if (reachesAgent && !(Array.isArray(pkg.breezell?.permissions) && pkg.breezell.permissions.includes('agent.tools'))) {
+			errors.push('"contributes.breezell.tools" and "mcpServers" reach the agent only with the "agent.tools" permission: add it to "breezell.permissions"');
 		}
 	}
 	if (typeof pkg.main !== 'string' && declared === undefined && !pkg.contributes?.themes) {
@@ -763,7 +805,78 @@ function checkMarket(marketRoot) {
 	if (!fs.existsSync(current) || JSON.stringify(readJson(current)) !== JSON.stringify(index)) {
 		problems.push('index.json is not up to date: run "node plugins/devkit/breezell-plugin.mjs index plugins"');
 	}
+	problems.push(...checkBlocklist(marketRoot).map(p => `blocklist.json: ${p}`));
 	return { problems, count: index.plugins.length };
+}
+
+// ---------------------------------------------------------------------------
+// Blocklist (blocklist.json, edited by the market's maintainers)
+// ---------------------------------------------------------------------------
+
+const BLOCK_ID = /^[a-z0-9][a-z0-9_-]{0,127}\.[a-z0-9][a-z0-9_-]{0,127}$/;
+const BLOCK_PUBLISHER = /^[a-z0-9][a-z0-9_-]{0,127}$/;
+const BLOCK_VERSION = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
+const BLOCK_REASON_CHARS = 500;
+const BLOCK_ENTRIES = 5000;
+
+/**
+ * The rules Breezell reads blocklist.json by (parsePluginBlocklist): every entry has "id"
+ * (publisher.name) or "publisher", optional "versions", a "reason" in English and optional
+ * "l10n" translations of it. Breezell leaves out an entry that breaks them; this says which.
+ */
+function checkBlocklist(marketRoot) {
+	const file = path.join(marketRoot, 'blocklist.json');
+	if (!fs.existsSync(file)) {
+		return [];
+	}
+	let list;
+	try {
+		list = JSON.parse(fs.readFileSync(file, 'utf8'));
+	} catch (err) {
+		return [`not JSON: ${err.message}`];
+	}
+	if (typeof list !== 'object' || list === null || Array.isArray(list) || !Array.isArray(list.plugins)) {
+		return ['must be an object with a "plugins" array'];
+	}
+	const problems = [];
+	const isReason = value => typeof value === 'string' && value.trim() !== '' && value.length <= BLOCK_REASON_CHARS;
+	if (list.plugins.length > BLOCK_ENTRIES) {
+		problems.push(`at most ${BLOCK_ENTRIES} entries are read`);
+	}
+	list.plugins.forEach((entry, i) => {
+		const where = `entry ${i + 1}`;
+		if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+			problems.push(`${where}: not an object`);
+			return;
+		}
+		const hasId = typeof entry.id === 'string';
+		const hasPublisher = typeof entry.publisher === 'string';
+		if (hasId === hasPublisher) {
+			problems.push(`${where}: needs either "id" or "publisher"`);
+		} else if (hasId && !BLOCK_ID.test(entry.id.trim().toLowerCase())) {
+			problems.push(`${where}: "${entry.id}" is not publisher.name`);
+		} else if (hasPublisher && !BLOCK_PUBLISHER.test(entry.publisher.trim().toLowerCase())) {
+			problems.push(`${where}: "${entry.publisher}" is not a publisher`);
+		}
+		if (entry.versions !== undefined && (!Array.isArray(entry.versions) || !entry.versions.length || !entry.versions.every(v => typeof v === 'string' && BLOCK_VERSION.test(v)))) {
+			problems.push(`${where}: "versions" must be a non-empty list of versions like "1.0.3"`);
+		}
+		if (!isReason(entry.reason)) {
+			problems.push(`${where}: needs a "reason" of at most ${BLOCK_REASON_CHARS} characters`);
+		}
+		if (entry.l10n !== undefined) {
+			if (typeof entry.l10n !== 'object' || entry.l10n === null || Array.isArray(entry.l10n)) {
+				problems.push(`${where}: "l10n" must be an object`);
+			} else {
+				for (const [locale, text] of Object.entries(entry.l10n)) {
+					if (!README_LOCALES.includes(locale) || !isReason(text)) {
+						problems.push(`${where}: l10n "${locale}" must be one of ${README_LOCALES.join(', ')} with a reason of at most ${BLOCK_REASON_CHARS} characters`);
+					}
+				}
+			}
+		}
+	});
+	return problems;
 }
 
 // ---------------------------------------------------------------------------

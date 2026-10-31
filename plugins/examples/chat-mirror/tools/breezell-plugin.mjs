@@ -29,7 +29,9 @@ import { fileURLToPath } from 'node:url';
 
 const DEVKIT_VERSION = '1.0.0';
 const API_VERSION = 1;
-const PERMISSIONS = ['chat.events', 'models.request', 'models.select', 'chat.read', 'chat.send', 'chat.approve', 'providers.read'];
+const PERMISSIONS = ['chat.events', 'models.request', 'models.select', 'chat.read', 'chat.send', 'chat.approve', 'providers.read', 'agent.tools'];
+/** The chat modes an agent tool can be offered in (contributes.breezell.tools[].modes). */
+const TOOL_MODES = ['chat', 'agent', 'entanglement', 'analyze', 'teams'];
 const MARKET_REPO = 'BreezellCode/BreezellCode';
 const MARKET_URLS = [
 	`https://raw.githubusercontent.com/${MARKET_REPO}/main/plugins/`,
@@ -279,6 +281,45 @@ function checkPackage(pkg, { forMarket = false, nls } = {}) {
 		const servers = declared.mcpServers ?? {};
 		if (typeof servers !== 'object' || Array.isArray(servers) || Object.values(servers).some(s => typeof s !== 'object' || s === null || (typeof s.command !== 'string' && typeof s.url !== 'string'))) {
 			errors.push('"contributes.breezell.mcpServers" maps a name to { "command", "args", "env" } or { "url" }');
+		}
+		// Agent tools: declared here, run by the plugin's code (vscode.breezell.tools.register).
+		const tools = declared.tools ?? [];
+		if (!Array.isArray(tools) || tools.length > 16) {
+			errors.push('"contributes.breezell.tools" is an array of at most 16 tools');
+		} else {
+			const names = new Set();
+			for (const t of tools) {
+				const where = `"contributes.breezell.tools"${typeof t?.name === 'string' ? ` ${t.name}` : ''}`;
+				if (typeof t?.name !== 'string' || !/^[a-z][a-z0-9_]{1,47}$/.test(t.name)) {
+					errors.push(`${where}: "name" is 2 to 48 lowercase letters, digits and underscores, starting with a letter`);
+				} else if (names.has(t.name)) {
+					errors.push(`${where}: duplicate name`);
+				} else {
+					names.add(t.name);
+				}
+				if (typeof t?.description !== 'string' || !t.description.trim() || t.description.length > 2000) {
+					errors.push(`${where}: "description" tells the agent what the tool does and when to use it (1 to 2,000 characters)`);
+				}
+				const schema = t?.inputSchema;
+				if (schema !== undefined && (typeof schema !== 'object' || schema === null || Array.isArray(schema) || (schema.type !== undefined && schema.type !== 'object') || (schema.properties !== undefined && (typeof schema.properties !== 'object' || schema.properties === null)))) {
+					errors.push(`${where}: "inputSchema" is a JSON Schema of type "object"`);
+				} else if (schema !== undefined && JSON.stringify(schema).length > 16000) {
+					errors.push(`${where}: "inputSchema" is longer than 16,000 characters`);
+				}
+				const modes = t?.modes === undefined ? [] : Array.isArray(t.modes) ? t.modes : [t.modes];
+				for (const mode of modes) {
+					if (!TOOL_MODES.includes(mode)) {
+						errors.push(`${where}: unknown mode ${JSON.stringify(mode)} (use ${TOOL_MODES.join(', ')}; none: agent)`);
+					}
+				}
+			}
+			if (tools.length && typeof pkg.main !== 'string') {
+				errors.push('"contributes.breezell.tools" need code that runs them: "main", calling vscode.breezell.tools.register for each');
+			}
+		}
+		const reachesAgent = (Array.isArray(tools) && tools.length > 0) || (servers && typeof servers === 'object' && Object.keys(servers).length > 0);
+		if (reachesAgent && !(Array.isArray(pkg.breezell?.permissions) && pkg.breezell.permissions.includes('agent.tools'))) {
+			errors.push('"contributes.breezell.tools" and "mcpServers" reach the agent only with the "agent.tools" permission: add it to "breezell.permissions"');
 		}
 	}
 	if (typeof pkg.main !== 'string' && declared === undefined && !pkg.contributes?.themes) {

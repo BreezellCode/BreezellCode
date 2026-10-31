@@ -3,7 +3,8 @@ import * as vscode from 'vscode';
 /**
  * Chat Mirror — an example Breezell plugin that reads and takes part in the user's
  * conversations (permissions "chat.read", "chat.send", "chat.approve"), in a window of its own,
- * and switches Breezell's chat model ("models.select").
+ * switches Breezell's chat model ("models.select") and gives the agent two tools of its own
+ * ("agent.tools"): pin_note and list_notes, which keep notes the window shows.
  *
  * The page in window/ draws the list and the conversation; this code relays between it and
  * vscode.breezell.chat. Breezell asks the user for each permission the first time the plugin
@@ -24,7 +25,26 @@ type PageMessage =
 	| { type: 'reject' }
 	| { type: 'show' }
 	| { type: 'models' }
-	| { type: 'selectModel'; provider: string; model: string };
+	| { type: 'selectModel'; provider: string; model: string }
+	| { type: 'unpin'; id: string };
+
+/** A note the agent pinned with pin_note; kept with the plugin's data, shown in the window. */
+interface Note {
+	readonly id: string;
+	readonly title: string;
+	readonly text: string;
+	readonly at: number;
+}
+
+const NOTES_KEY = 'notes';
+const MAX_NOTES = 50;
+
+const readNotes = (context: vscode.ExtensionContext): Note[] => context.globalState.get<Note[]>(NOTES_KEY) ?? [];
+
+async function writeNotes(context: vscode.ExtensionContext, notes: Note[]): Promise<void> {
+	await context.globalState.update(NOTES_KEY, notes);
+	void mirror?.window.postMessage({ type: 'notes', items: notes });
+}
 
 export function activate(context: vscode.ExtensionContext) {
 	const breezell = vscode.breezell as Breezell | undefined;
@@ -35,6 +55,37 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 		return openMirror(breezell, context);
 	}));
+	// The agent's tools, declared in package.json ("contributes.breezell.tools", with their modes)
+	// and run here. Registered at startup so the agent has them before the window ever opens;
+	// Breezell asks the user for "agent.tools" the first time. A Breezell from before tools has none.
+	if (breezell && typeof breezell.tools?.register === 'function') {
+		context.subscriptions.push(
+			breezell.tools.register('pin_note', { invoke: input => pinNote(context, input) }),
+			breezell.tools.register('list_notes', { invoke: () => listNotes(context) }),
+		);
+	}
+}
+
+/** pin_note (Chat, Agent, Entanglement): keeps a note for the window. */
+async function pinNote(context: vscode.ExtensionContext, input: { readonly [name: string]: unknown }): Promise<vscode.breezell.ToolResult> {
+	const text = typeof input.text === 'string' ? input.text.trim() : '';
+	if (!text) {
+		return { text: 'Nothing pinned: "text" is empty.', isError: true };
+	}
+	const title = typeof input.title === 'string' ? input.title.trim().slice(0, 80) : '';
+	const note: Note = { id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, title, text: text.slice(0, 2000), at: Date.now() };
+	const notes = [note, ...readNotes(context)].slice(0, MAX_NOTES);
+	await writeNotes(context, notes);
+	return `Pinned${title ? ` "${title}"` : ''} in Chat Mirror. ${notes.length} note${notes.length === 1 ? '' : 's'} pinned.`;
+}
+
+/** list_notes (every mode): what is pinned, newest first. */
+function listNotes(context: vscode.ExtensionContext): vscode.breezell.ToolResult {
+	const notes = readNotes(context);
+	if (!notes.length) {
+		return 'No notes are pinned in Chat Mirror.';
+	}
+	return notes.map((note, i) => `${i + 1}. ${note.title ? `${note.title}: ` : ''}${note.text} (pinned ${new Date(note.at).toISOString()})`).join('\n');
 }
 
 let mirror: { window: vscode.breezell.PluginWindow } | undefined;
@@ -120,6 +171,7 @@ async function openMirror(breezell: Breezell, context: vscode.ExtensionContext):
 		const message = raw as PageMessage;
 		switch (message?.type) {
 			case 'ready':
+				post({ type: 'notes', items: readNotes(context) });
 				await sendList();
 				await sendModels();
 				watch();
@@ -172,6 +224,9 @@ async function openMirror(breezell: Breezell, context: vscode.ExtensionContext):
 					const id = selected;
 					await run('show', () => breezell.chat.show(id));
 				}
+				return;
+			case 'unpin':
+				await writeNotes(context, readNotes(context).filter(note => note.id !== message.id));
 				return;
 		}
 	});

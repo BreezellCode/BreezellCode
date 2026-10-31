@@ -21,7 +21,7 @@ declare module 'vscode' {
 		 * The permissions this plugin declared in `breezell.permissions`, as an Android app declares
 		 * its permissions: nothing undeclared is ever usable. A `normal` permission is
 		 * on unless the user turns it off (`chat.events`, `models.select`). A `dangerous` one
-		 * (`models.request`, `chat.read`, `chat.send`, `chat.approve`, `providers.read`) is asked for
+		 * (`models.request`, `chat.read`, `chat.send`, `chat.approve`, `providers.read`, `agent.tools`) is asked for
 		 * the first time the plugin uses it; while the user
 		 * has not allowed it, its calls fail with `BreezellPermissionDenied`. The user can switch each
 		 * permission on and off, or all at once, on the plugin's page in Plugins › Installed.
@@ -134,7 +134,8 @@ declare module 'vscode' {
 		export type ConversationMessage =
 			| { readonly kind: 'user'; readonly index: number; readonly text: string; readonly time?: number; readonly attachments: readonly string[]; readonly recalledMemories: readonly RecalledMemory[]; readonly memoryUse?: MemoryUse }
 			| { readonly kind: 'assistant'; readonly index: number; readonly text: string; readonly reasoning: string }
-			| { readonly kind: 'tool'; readonly index: number; readonly id: string; readonly name: string; readonly status: ToolCallStatus; readonly params: { readonly [key: string]: unknown }; readonly result: string; readonly resultLength: number; readonly mcpServer?: string }
+			/** `mcpServer`: the MCP server of an MCP tool; `plugin`: set for a Breezell plugin's agent tool (server `plugin:<id>`), with the plugin's name. */
+			| { readonly kind: 'tool'; readonly index: number; readonly id: string; readonly name: string; readonly status: ToolCallStatus; readonly params: { readonly [key: string]: unknown }; readonly result: string; readonly resultLength: number; readonly mcpServer?: string; readonly plugin?: { readonly id: string; readonly name: string } }
 			| { readonly kind: 'error'; readonly index: number; readonly text: string };
 
 		/** The reply being written now. */
@@ -277,6 +278,47 @@ declare module 'vscode' {
 
 		export namespace windows {
 			export function open(windowId: string): Thenable<PluginWindow>;
+		}
+
+		/**
+		 * What a tool answers the agent: text, or `{ text, isError }` to report a failure the agent
+		 * should see as one. Longer than 400,000 characters is cut.
+		 */
+		export type ToolResult = string | { readonly text: string; readonly isError?: boolean };
+
+		/** The code of an agent tool. A thrown error reaches the agent as a failed call. */
+		export interface Tool {
+			/**
+			 * Runs one call. `input` is what the agent passed, checked against the tool's
+			 * `inputSchema` (required properties present; undeclared ones removed unless the schema
+			 * allows additionalProperties). `token` is
+			 * cancelled when the user stops the agent or the call takes over 5 minutes.
+			 */
+			invoke(input: { readonly [name: string]: unknown }, token: CancellationToken): ToolResult | Thenable<ToolResult>;
+		}
+
+		/**
+		 * Tools for Breezell's agent (`agent.tools`, "Agent tool registration", dangerous: asked the
+		 * first time). Each tool is declared in package.json `contributes.breezell.tools`:
+		 * `{ "name": "lowercase_name", "description": "what it does, for the agent",
+		 * "inputSchema": { "type": "object", "properties": { ... }, "required": [ ... ] },
+		 * "modes": ["chat", "agent", "entanglement"], "displayName": "shown to the user" }` (up to 16),
+		 * and its code is registered here, usually when the plugin activates
+		 * (`"activationEvents": ["onStartupFinished"]`).
+		 *
+		 * `modes` picks the chat modes the tool is offered in, one or several: `chat`, `agent`,
+		 * `entanglement`, `analyze`, `teams` (default `["agent"]`). The agent reaches the tools as
+		 * those of the server `plugin:<publisher.name>`; in another mode it neither sees nor can call
+		 * them. The user's "MCP tools" auto-approve setting applies to their calls, and conversations
+		 * read with `chat.read` show each call with its plugin (`plugin` on the tool message).
+		 *
+		 * They are offered only while the user allows `agent.tools`; a refusal keeps the code
+		 * registered but unused, and turning the permission on later brings the tools back. The same
+		 * permission lets the MCP servers the plugin declares (`contributes.breezell.mcpServers`) start.
+		 */
+		export namespace tools {
+			/** Registers the code of a declared tool; disposing it takes the tool away from the agent. */
+			export function register(name: string, tool: Tool): Disposable;
 		}
 	}
 }

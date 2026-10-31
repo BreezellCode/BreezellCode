@@ -1,5 +1,7 @@
 {
 	"displayName": "Chat Mirror",
 	"description": "Breezell の会話を専用のウィンドウで：会話を選び、ツール呼び出しや呼び出されたメモリーと一緒に読み、返信し、ツール呼び出しを承認し、チャットのモデルを切り替えます。",
-	"command.open": "開く"
+	"command.open": "開く",
+	"tool.pinNote": "メモをピン留め",
+	"tool.listNotes": "ピン留めしたメモ"
 }

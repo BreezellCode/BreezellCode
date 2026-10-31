@@ -145,7 +145,14 @@ function drawMessage(message, isLatestTool) {
 		case 'tool': {
 			const card = el('div', 'tool');
 			const head = el('div', 'head');
-			head.append(el('span', 'name', message.mcpServer ? `${message.mcpServer} · ${message.name}` : message.name), el('span', `status ${message.status}`, STATUS[message.status] ?? message.status));
+			// A plugin's agent tool comes with its plugin's name (Chat Mirror's own pin_note included),
+			// an MCP tool with its server.
+			const source = message.plugin?.name ?? message.mcpServer;
+			head.append(el('span', 'name', source ? `${source} · ${message.name}` : message.name));
+			if (message.plugin) {
+				head.append(el('span', 'tag', 'Plugin tool'));
+			}
+			head.append(el('span', `status ${message.status}`, STATUS[message.status] ?? message.status));
 			card.append(head);
 			const params = JSON.stringify(message.params, null, 2);
 			if (params && params !== '{}') {
@@ -282,8 +289,35 @@ function drawLive(stickToBottom) {
 	}
 }
 
+// The notes the agent pinned with Chat Mirror's pin_note tool, newest first.
+function drawNotes(items) {
+	const list = $('notes');
+	$('notesCount').textContent = items.length ? String(items.length) : '';
+	if (!items.length) {
+		list.replaceChildren(el('li', 'hint', 'Nothing pinned. Ask Breezell, in Chat, Agent or Entanglement: "pin a note in Chat Mirror: …"'));
+		return;
+	}
+	list.replaceChildren(...items.map(note => {
+		const item = el('li');
+		if (note.title) {
+			item.append(el('b', '', note.title));
+		}
+		item.append(el('div', 'text', note.text));
+		const foot = el('div', 'foot');
+		foot.append(el('span', 'when', when(new Date(note.at).toISOString())));
+		const unpin = el('button', 'ghost', 'Unpin');
+		unpin.addEventListener('click', () => { unpin.disabled = true; window.breezell.postMessage({ type: 'unpin', id: note.id }); });
+		foot.append(unpin);
+		item.append(foot);
+		return item;
+	}));
+}
+
 window.breezell.onMessage(message => {
 	switch (message?.type) {
+		case 'notes':
+			drawNotes(message.items ?? []);
+			return;
 		case 'conversations':
 			conversations = message.items;
 			drawList();

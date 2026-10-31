@@ -1,5 +1,7 @@
 {
 	"displayName": "Chat Mirror",
 	"description": "Tus conversaciones de Breezell en una ventana propia: elige una, léela con sus llamadas a herramientas y los recuerdos recuperados, responde, aprueba llamadas a herramientas y cambia el modelo del chat.",
-	"command.open": "Abrir"
+	"command.open": "Abrir",
+	"tool.pinNote": "Fijar una nota",
+	"tool.listNotes": "Notas fijadas"
 }

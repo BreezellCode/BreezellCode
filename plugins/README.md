@@ -96,6 +96,7 @@ The typings are in [`devkit/breezell.d.ts`](devkit/breezell.d.ts); the templates
 | `breezell.models.list()`, `select({ provider, model })` | `models.select` | The models of Breezell's model picker, and switching the chat model to one of them |
 | `breezell.providers.listCustom()` | `providers.read` | The user's custom APIs as their settings page shows them: base URL, protocol, request address, **API key**, request headers, account pool, models and prices |
 | `breezell.windows.open(id)` | — (the window is declared in `package.json`) | Open one of the plugin's windows; returns it with `postMessage`, `onDidReceiveMessage`, `onDidClose`, `close` |
+| `breezell.tools.register(name, { invoke })` | `agent.tools` | Give Breezell's agent a tool the plugin declares and runs, in the chat modes it picks (see [Agent tools](#agent-tools)) |
 
 ### Permissions
 
@@ -112,6 +113,7 @@ each plugin declares before it is installed.
 | `chat.send` | dangerous | Asked for the first time the plugin uses it |
 | `chat.approve` | dangerous | Asked for the first time the plugin uses it |
 | `providers.read` | dangerous | Asked for the first time the plugin uses it, and only for an account whose plan includes Custom API |
+| `agent.tools` | dangerous | "Agent tool registration": asked when the plugin first registers a tool, or when a plugin with MCP servers first runs |
 
 - A dangerous permission is asked for once, when the plugin first uses it; the answer is kept. While
   the user has not allowed it, its calls fail with `BreezellPermissionDenied` and the plugin should
@@ -239,9 +241,70 @@ Declare them in `package.json`; no code is needed:
   per file and 24,000 for all plugins together). Keep them short: they count against every request.
 - `mcpServers`: a `command` (with `args` and `env`) or a `url` (with `headers`). They appear in the MCP list
   labelled with the plugin; a user or project server of the same name wins. Users see each command before
-  they install.
+  they install. MCP servers give the agent tools, so they need the `agent.tools` permission in
+  `breezell.permissions`: they start once the user allows it.
 
 Everything a plugin declares goes away when it is turned off or removed, and while nobody is signed in.
+
+## Agent tools
+
+A plugin can give Breezell's agent tools of its own: it declares each one in `package.json`, with
+the chat modes it is offered in, and runs it in its code. It needs the `agent.tools` permission
+("Agent tool registration"), which the user is asked for when the plugin first registers a tool.
+
+```json
+"activationEvents": ["onStartupFinished"],
+"breezell": { "apiVersion": 1, "permissions": ["agent.tools"] },
+"contributes": {
+	"breezell": {
+		"tools": [{
+			"name": "get_weather",
+			"displayName": "Weather",
+			"description": "Current weather for a city. Use it when the user asks about the weather.",
+			"modes": ["chat", "agent", "entanglement"],
+			"inputSchema": {
+				"type": "object",
+				"properties": { "city": { "type": "string", "description": "City name" } },
+				"required": ["city"]
+			}
+		}]
+	}
+}
+```
+
+```ts
+context.subscriptions.push(vscode.breezell.tools.register('get_weather', {
+	async invoke(input, token) {
+		const weather = await lookUp(String(input.city), token);
+		return weather ? `${weather.summary}, ${weather.celsius} °C` : { text: 'No such city', isError: true };
+	},
+}));
+```
+
+- `name`: 2 to 48 lowercase letters, digits and underscores, not one of Breezell's own tool names. At
+  most 16 tools. `description` is what the agent reads to decide when to call it; `inputSchema` is an
+  object JSON Schema (left out: no arguments); `displayName` is what the user sees.
+- `modes`: one or several of `chat`, `agent`, `entanglement`, `analyze`, `teams` (none: `agent`). In
+  any other mode the agent neither sees nor can call the tool, so a set of tools can make a mode of
+  its own, for example Chat with a few tools of yours.
+- Register the code when the plugin starts (`onStartupFinished`): a tool is offered only while its code
+  is registered. Disposing the registration takes it away.
+- The agent reaches the tools as those of the MCP server `plugin:<publisher.name>`; the user's "MCP
+  tools" auto-approve setting applies to their calls. `input` is checked against `inputSchema`
+  first (required properties present; undeclared ones removed unless the schema allows
+  `additionalProperties`).
+- `invoke` returns text, or `{ text, isError: true }` for a failure the agent should see as one; a
+  thrown error is a failure too. Results longer than 400,000 characters are cut. `token` is
+  cancelled when the user stops the agent or after 5 minutes.
+- If the user refuses, the tools stay registered but unused; turning the permission on later under
+  **Plugins › Installed** brings them back at once. Signed out, blocklisted or turned off, nothing is
+  offered, and each call is checked again.
+- With `chat.read`, a conversation shows each call of a plugin's tool with `plugin: { id, name }`.
+- The arguments the agent passes can hold conversation text or file contents: keep them on the user's
+  computer unless the tool says otherwise. Review looks closely at plugins with agent tools.
+
+[Chat Mirror](examples/chat-mirror) has two: `pin_note` (Chat, Agent, Entanglement) and `list_notes`
+(every mode).
 
 ## Windows
 

@@ -56,6 +56,17 @@
 	},
 	"versions": [
 		{
+			"version": "1.0.3",
+			"path": "packages/breezell.starter-pack/1.0.3/breezell.starter-pack-1.0.3.vsix",
+			"sha256": "a2ce7e26118116f248d56b2234bc6d4d1c58690cd31f13c1734ea70bc1528b14",
+			"size": 17868,
+			"apiVersion": 1,
+			"permissions": [
+				"agent.tools"
+			],
+			"publishedAt": "2026-10-31T12:23:32.680Z"
+		},
+		{
 			"version": "1.0.2",
 			"path": "packages/breezell.starter-pack/1.0.2/breezell.starter-pack-1.0.2.vsix",
 			"sha256": "bda569f3dd8a6d7d0d7dc5e8ebcf125eb1341068565c46f35e1f6ce762ed79b3",

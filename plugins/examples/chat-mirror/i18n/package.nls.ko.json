@@ -1,5 +1,7 @@
 {
 	"displayName": "Chat Mirror",
 	"description": "Breezell 대화를 별도 창에서: 대화를 골라 도구 호출과 불러온 메모리와 함께 읽고, 답장하고, 도구 호출을 승인하고, 채팅 모델을 바꿉니다.",
-	"command.open": "열기"
+	"command.open": "열기",
+	"tool.pinNote": "메모 고정",
+	"tool.listNotes": "고정한 메모"
 }

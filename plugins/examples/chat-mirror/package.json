@@ -3,7 +3,7 @@
 	"publisher": "breezell",
 	"displayName": "%displayName%",
 	"description": "%description%",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"license": "MIT",
 	"author": {
 		"name": "Breezell",
@@ -28,11 +28,13 @@
 		"agent",
 		"approve",
 		"model",
-		"window"
+		"window",
+		"tools"
 	],
 	"main": "./dist/extension.js",
 	"activationEvents": [
-		"onCommand:chatMirror.open"
+		"onCommand:chatMirror.open",
+		"onStartupFinished"
 	],
 	"breezell": {
 		"apiVersion": 1,
@@ -40,7 +42,8 @@
 			"chat.read",
 			"chat.send",
 			"chat.approve",
-			"models.select"
+			"models.select",
+			"agent.tools"
 		],
 		"source": "open"
 	},
@@ -60,7 +63,51 @@
 			"launcher": {
 				"command": "chatMirror.open",
 				"sidebar": true
-			}
+			},
+			"tools": [
+				{
+					"name": "pin_note",
+					"displayName": "%tool.pinNote%",
+					"description": "Pins a short note in the user's Chat Mirror window, beside their conversations, for them to read later: a summary, a decision, a next step or a reminder. Use it when the user asks to note, pin or keep something in Chat Mirror. Returns how many notes are pinned.",
+					"modes": [
+						"chat",
+						"agent",
+						"entanglement"
+					],
+					"inputSchema": {
+						"type": "object",
+						"properties": {
+							"title": {
+								"type": "string",
+								"description": "A few words shown in bold above the note."
+							},
+							"text": {
+								"type": "string",
+								"description": "The note itself, plain text, at most 2,000 characters."
+							}
+						},
+						"required": [
+							"text"
+						]
+					}
+				},
+				{
+					"name": "list_notes",
+					"displayName": "%tool.listNotes%",
+					"description": "Lists the notes pinned in the user's Chat Mirror window, newest first, with when each was pinned. Read-only. Use it when the user refers to their pinned notes.",
+					"modes": [
+						"chat",
+						"agent",
+						"entanglement",
+						"analyze",
+						"teams"
+					],
+					"inputSchema": {
+						"type": "object",
+						"properties": {}
+					}
+				}
+			]
 		},
 		"commands": [
 			{

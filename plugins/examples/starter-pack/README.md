@@ -18,6 +18,8 @@ Source: [`plugins/examples/starter-pack`](https://github.com/BreezellCode/Breeze
 Turn the pack off or remove it under **Breezell Console › Plugins › Installed** and all of it goes away.
 A skill or MCP server of yours with the same name wins over the pack's.
 
+The MCP server gives the agent tools, so the pack declares the `agent.tools` permission ("Agent tool registration"). Breezell asks for it once, when the pack first runs, and starts the server only if you allow it; you can turn it on or off under **Breezell Console › Plugins › Installed** › Starter Pack.
+
 ## Make your own
 
 Start from the **Pack** template (Breezell Console › Plugins › Develop, or
