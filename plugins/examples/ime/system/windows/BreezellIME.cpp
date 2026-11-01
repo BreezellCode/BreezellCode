@@ -33,7 +33,7 @@
 
 // This build's version: a newer one published under the tip folder replaces it in running programs.
 #ifndef TIP_VERSION
-#define TIP_VERSION 6
+#define TIP_VERSION 7
 #endif
 #define WIDE2(x) L##x
 #define WIDE(x) WIDE2(x)
@@ -1511,7 +1511,9 @@ STDAPI DllRegisterServer() {
 	ITfInputProcessorProfileMgr* pm = nullptr;
 	if (SUCCEEDED(CoCreateInstance(CLSID_TF_InputProcessorProfiles, nullptr, CLSCTX_INPROC_SERVER, IID_ITfInputProcessorProfileMgr, (void**)&pm))) {
 		for (const Profile& p : PROFILES) {
-			HRESULT hr = pm->RegisterProfile(CLSID_BreezellIME, p.lang, *p.guid, p.name, (ULONG)wcslen(p.name), path, (ULONG)wcslen(path), 0, nullptr, 0, TRUE, 0);
+			// Not enabled by default: that would show it under every language the user has, whichever
+			// was chosen. InstallLayoutOrTip turns on the one chosen, for that user.
+			HRESULT hr = pm->RegisterProfile(CLSID_BreezellIME, p.lang, *p.guid, p.name, (ULONG)wcslen(p.name), path, (ULONG)wcslen(path), 0, nullptr, 0, FALSE, 0);
 			if (FAILED(hr)) result = hr;
 		}
 		pm->Release();

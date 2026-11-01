@@ -12,12 +12,13 @@ if ($Part -ne 'machine') {
 	Add-Type -Namespace BreezellIME -Name Input -MemberDefinition @'
 [DllImport("input.dll", CharSet = CharSet.Unicode)] public static extern bool InstallLayoutOrTip(string psz, uint dwFlags);
 '@
-	# Only what is on the user's list: removing a profile of a language not on it adds that language.
+	# In every language the user has, on the list or not: a profile enabled for the whole machine
+	# (older builds registered them so) shows under its language without being on the list. Not in a
+	# language the user does not have: removing a profile there adds that language.
 	$listed = (Get-WinUserLanguageList).InputMethodTips
 	foreach ($p in $profiles) {
 		$lang, $guid = $p.Split(':')
-		$tip = "${lang}:$clsid$guid"
-		if ($listed -contains $tip) { [void][BreezellIME.Input]::InstallLayoutOrTip($tip, 1) }
+		if ($listed | Where-Object { $_ -like "${lang}:*" }) { [void][BreezellIME.Input]::InstallLayoutOrTip("${lang}:$clsid$guid", 1) }
 	}
 	# Windows' default input method, if it is this one, goes back to the first of the user's list.
 	$default = (Get-WinDefaultInputMethodOverride -ErrorAction SilentlyContinue).InputMethodTip

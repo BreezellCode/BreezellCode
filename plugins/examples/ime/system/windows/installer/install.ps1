@@ -84,6 +84,13 @@ if ($Part -ne 'machine') {
 [DllImport("input.dll", CharSet = CharSet.Unicode)] public static extern bool InstallLayoutOrTip(string psz, uint dwFlags);
 [DllImport("input.dll", CharSet = CharSet.Unicode)] public static extern bool SetDefaultLayoutOrTip(string psz, uint dwFlags);
 '@
+	# Only the one chosen shows: the others are off in the languages the user has (older builds
+	# registered them enabled for the whole machine). Not in a language the user does not have:
+	# removing a profile there adds that language.
+	$listed = (Get-WinUserLanguageList).InputMethodTips
+	foreach ($other in @($profiles.Keys | Where-Object { $_ -ne $Lang })) {
+		if ($listed | Where-Object { $_ -like "${other}:*" }) { [void][BreezellIME.Input]::InstallLayoutOrTip("${other}:$clsid$($profiles[$other])", 1) }
+	}
 	$tip = "${Lang}:$clsid$($profiles[$Lang])"
 	if (-not [BreezellIME.Input]::InstallLayoutOrTip($tip, 0)) { Write-Warning "Could not add $tip to the input methods" }
 	# The host now, models loaded, so the first key anywhere finds it ready.

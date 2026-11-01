@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.4
+
+- Removing the plugin takes the input method away in every language: it stayed under another language you have (Simplified Chinese when you chose Traditional), because Windows had it enabled for the whole machine.
+- Installing shows it only under the language chosen, not once per language you have.
+
 ## 1.1.3
 
 - Removing the plugin asks to restart Breezell, which finishes taking the input method off Windows at once (with a Breezell that can ask).
