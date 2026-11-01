@@ -51,6 +51,10 @@ export class SettingsPage implements vscode.Disposable {
 	private readonly states = new Map<PackId, PackState | 'checking'>();
 	private readonly errors = new Map<PackId, string>();
 	private systemBusy: '' | 'installing' | 'removing' = '';
+	/** Setting up after the install: what is going on, for the top of the page. */
+	private setup: '' | 'asking' | 'downloading' = '';
+	/** What to do once the language the input method needs is here (it turns on). */
+	private whenReady?: { pack: PackId; run: () => Promise<void> };
 	private systemError = '';
 	private checks = 0;
 	private postTimer?: NodeJS.Timeout;
@@ -87,6 +91,52 @@ export class SettingsPage implements vscode.Disposable {
 	}
 
 	private needed?: PackId;
+
+	/**
+	 * The first start after the plugin is installed: nothing more for the user to do but answer
+	 * Windows' prompt. That comes first, so the rest needs nobody. The input method on Windows
+	 * waits for the models by itself, leaving keys to the programs until they are here.
+	 */
+	async firstRun(pack: PackId, ready: () => Promise<void>): Promise<void> {
+		this.whenReady = { pack, run: ready };
+		this.open();
+		// A moment for the page to show: it says why Windows is about to ask.
+		const system = systemState();
+		if (system.supported && !system.installed) {
+			this.setup = 'asking';
+			this.post();
+			await new Promise(r => setTimeout(r, 1200));
+			await this.installSystemNow();
+			this.setup = '';
+		}
+		if (!hasPack(this.manifest, this.ime.dataDir, pack)) {
+			this.setup = 'downloading';
+			this.setupPack = pack;
+			this.post();
+			await this.download(pack);
+			this.setup = '';
+			this.post();
+			return;  // Ready, or the page shows why not and Download tries again.
+		}
+		await this.finishSetup();
+	}
+
+	private setupPack?: PackId;
+
+	/** The language is here: the input method turns on, and the user hears it is ready. */
+	private async finishSetup(): Promise<void> {
+		const w = this.whenReady;
+		if (!w || !hasPack(this.manifest, this.ime.dataDir, w.pack)) {
+			return;
+		}
+		this.whenReady = undefined;
+		await w.run();
+		const everywhere = systemState().installed;
+		void vscode.window.showInformationMessage(everywhere
+			? l10n.t('Breezell IME is ready. {0} turns it off. In programs that are already open, press Win+Space to switch to it.', this.ime.toggleKey)
+			: l10n.t('Breezell IME is ready. {0} turns it off.', this.ime.toggleKey));
+		this.post();
+	}
 
 	/** What each pack is on this computer (a first look hashes what was never hashed: in the background). */
 	private async check(): Promise<void> {
@@ -169,7 +219,11 @@ export class SettingsPage implements vscode.Disposable {
 				this.needed = undefined;
 			}
 			await this.ime.dataChanged();
-			void vscode.window.showInformationMessage(l10n.t('Breezell IME: {0} is ready.', this.packName(id)));
+			if (this.whenReady?.pack === id) {
+				await this.finishSetup();
+			} else {
+				void vscode.window.showInformationMessage(l10n.t('Breezell IME: {0} is ready.', this.packName(id)));
+			}
 		} catch (e) {
 			this.downloads.delete(id);
 			if (e instanceof DataError && e.kind === 'cancelled') {
@@ -216,12 +270,6 @@ export class SettingsPage implements vscode.Disposable {
 	}
 
 	private async installSystem(): Promise<void> {
-		const pack = packOfLayout(this.ime.layout);
-		if (!hasPack(this.manifest, this.ime.dataDir, pack)) {
-			this.systemError = l10n.t('Download {0} first.', this.packName(pack));
-			this.post();
-			return;
-		}
 		const yes = l10n.t('Install');
 		const answer = await vscode.window.showInformationMessage(
 			l10n.t('Install Breezell IME in Windows?'),
@@ -231,6 +279,14 @@ export class SettingsPage implements vscode.Disposable {
 		if (answer !== yes) {
 			return;
 		}
+		if (await this.installSystemNow()) {
+			void vscode.window.showInformationMessage(l10n.t('Breezell IME is installed. In programs that are already open, press Win+Space to switch to it.'));
+		}
+	}
+
+	/** Windows' prompt, then the input method for the whole computer. True when it is installed. */
+	private async installSystemNow(): Promise<boolean> {
+		let done = false;
 		this.systemBusy = 'installing';
 		this.systemError = '';
 		this.post();
@@ -243,7 +299,7 @@ export class SettingsPage implements vscode.Disposable {
 				version: String((this.context.extension.packageJSON as { version?: unknown }).version ?? ''),
 			});
 			await this.ime.systemChanged();
-			void vscode.window.showInformationMessage(l10n.t('Breezell IME is installed. In programs that are already open, press Win+Space to switch to it.'));
+			done = true;
 		} catch (e) {
 			if (!(e instanceof SystemCancelled)) {
 				this.systemError = String((e as Error)?.message ?? e);
@@ -251,6 +307,7 @@ export class SettingsPage implements vscode.Disposable {
 		}
 		this.systemBusy = '';
 		this.post();
+		return done;
 	}
 
 	private async uninstallSystem(): Promise<void> {
@@ -314,6 +371,9 @@ export class SettingsPage implements vscode.Disposable {
 			type: 'state',
 			strings: this.strings(),
 			needed: this.needed && !hasPack(this.manifest, this.ime.dataDir, this.needed) ? this.packName(this.needed) : '',
+			setup: this.setup === 'asking' ? l10n.t('Setting up: Windows will ask for permission to add the input method to every program.')
+				: this.setup === 'downloading' && this.setupPack ? l10n.t('Setting up: downloading {0}. You can keep working; it turns on by itself when this finishes.', this.packName(this.setupPack))
+					: '',
 			dataDir: this.ime.dataDir,
 			packs: PACKS.map(id => {
 				const pack = this.manifest.packs.find(p => p.id === id)!;

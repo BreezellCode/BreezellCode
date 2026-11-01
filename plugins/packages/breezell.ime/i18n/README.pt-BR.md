@@ -14,17 +14,19 @@ Um método de entrada que conhece seu código e sua conversa: pinyin, zhuyin, pi
 
 ## Primeiros passos
 
-1. Instale em **Breezell Console › Plugins**.
-2. Abra o **Breezell IME** em **Plugins** na barra lateral. A página dele abre sozinha na primeira vez.
-3. Em **Idiomas**, baixe os que você quiser:
+Em **Breezell Console › Plugins**, clique em **Instalar**. É só isso. Ele se configura sozinho:
 
-   | Idioma | Métodos de entrada | Download |
-   |---|---|---|
-   | Chinês | Pinyin, zhuyin, pinyin duplo (Flypy, Microsoft, Ziranma, Sogou, ABC, Ziguang, Pinyin Jiajia), Wubi 86 | 374 MB |
-   | Japonês | Romaji para kana e kanji | 189 MB |
-   | Coreano | Hangul de 2 conjuntos com sugestões de palavras | 128 MB |
+- O Windows pede permissão de administrador uma vez, para adicionar o método de entrada.
+- O idioma correspondente ao idioma da interface do Breezell é baixado (japonês ou coreano nesses casos, chinês nos demais).
+- Ele liga sozinho. A página dele mostra o andamento.
 
-4. Escolha seu método de entrada na página e pressione **Ctrl+Alt+Space** no editor para começar a digitar.
+Se você recusar no Windows, ele continua funcionando no editor do Breezell, e **Instalar no Windows…** na página dele oferece de novo. Para adicionar outros idiomas ou trocar o método de entrada, abra o **Breezell IME** em **Plugins** na barra lateral:
+
+| Idioma | Métodos de entrada | Download |
+|---|---|---|
+| Chinês | Pinyin, zhuyin, pinyin duplo (Flypy, Microsoft, Ziranma, Sogou, ABC, Ziguang, Pinyin Jiajia), Wubi 86 | 374 MB |
+| Japonês | Romaji para kana e kanji | 189 MB |
+| Coreano | Hangul de 2 conjuntos com sugestões de palavras | 128 MB |
 
 Os idiomas vêm da release do GitHub deste plugin, e um download continua de onde parou se a conexão cair. Cada arquivo é verificado pelo SHA-256 antes de ser usado. Cada idioma em que você digita mantém seu modelo na memória: cerca de 400 MB para o chinês.
 
@@ -44,9 +46,11 @@ Os idiomas vêm da release do GitHub deste plugin, e um download continua de ond
 
 ## Todos os programas no Windows
 
-Na página do plugin, **Instalar no Windows…** o adiciona como método de entrada do Windows, com o mesmo motor e as mesmas palavras aprendidas do Breezell. O Windows pede permissão de administrador uma vez, para registrar o serviço de texto. Depois ele se torna seu método de entrada padrão; **Win+Space** troca para outro, e **Remover do Windows…** o retira.
+Na primeira inicialização ele se adiciona como método de entrada do Windows, com o mesmo mecanismo e as mesmas palavras aprendidas do Breezell. Ele se torna seu método de entrada padrão; **Win+Space** troca para outro. Nos programas já abertos na instalação, pressione **Win+Space** para mudar para ele.
 
-Ele instala um serviço de texto em `Program Files\BreezellIME` e o host do motor em `%LOCALAPPDATA%\BreezellIME`, tudo a partir do pacote deste plugin; nenhum código é baixado. Nos programas já abertos quando você instala, pressione **Win+Space** para trocar para ele.
+Ele instala um serviço de texto em `Program Files\BreezellIME` e o host do mecanismo em `%LOCALAPPDATA%\BreezellIME`, tudo a partir do pacote deste plugin; nenhum código é baixado.
+
+**Ao remover o plugin**, ele sai da sua lista de métodos de entrada, o mecanismo para, o método de entrada padrão volta e os idiomas da pasta padrão são apagados; o que ele aprendeu fica. Os arquivos do serviço de texto ficam em Program Files, sem uso: use antes **Remover do Windows…** na página dele para removê-los também.
 
 No Linux e no macOS ele funciona no editor do Breezell; um método de entrada do sistema ainda não está disponível.
 

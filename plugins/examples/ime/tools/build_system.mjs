@@ -12,6 +12,8 @@ const out = join(root, 'dist', 'system');
 mkdirSync(out, { recursive: true });
 execFileSync(join(root, 'node_modules', '.bin', 'esbuild'), [join('system', 'host', 'host.ts'), '--bundle', '--platform=node', '--format=cjs', '--target=node20',
 	`--outfile=${join(out, 'host.cjs')}`, '--log-level=warning'], { cwd: root, stdio: 'inherit' });
+execFileSync(join(root, 'node_modules', '.bin', 'esbuild'), [join('src', 'uninstall-hook.ts'), '--bundle', '--platform=node', '--format=cjs', '--target=node20',
+	`--outfile=${join(out, 'uninstall-hook.cjs')}`, '--log-level=warning'], { cwd: root, stdio: 'inherit' });
 for (const name of ['install.ps1', 'uninstall.ps1']) {
 	copyFileSync(join(root, 'system', 'windows', 'installer', name), join(out, name));
 }

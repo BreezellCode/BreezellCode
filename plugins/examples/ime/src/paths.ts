@@ -43,6 +43,22 @@ export function configuredDataDir(): string {
 	return typeof path === 'string' && path ? path : defaultDataDir();
 }
 
+/** There once the plugin set itself up on this computer; it goes when the plugin is removed. */
+export function setupMarker(): string {
+	return join(imeHome(), 'plugin-set-up');
+}
+
+/** True the first time it is asked after the plugin is installed: one window does the setting up. */
+export function claimSetup(): boolean {
+	mkdirSync(imeHome(), { recursive: true });
+	try {
+		writeFileSync(setupMarker(), new Date().toISOString(), { flag: 'wx' });
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 /** config.json, shared with the system input method's host. */
 export function readSharedConfig(): Record<string, unknown> {
 	try {

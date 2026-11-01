@@ -23,7 +23,7 @@ import { englishAt } from './code.js';
 import { AsyncComposer, ChineseComposer, ChineseData, Composer, JapaneseComposer, JapaneseData, KoreanComposer, KoreanData, LocalComposer, WubiComposer } from './composers.js';
 import { Key, KeySession, KeyView } from './keys.js';
 import { DataManifest, hasPack, loadManifest, packOfLayout } from './data.js';
-import { configuredDataDir, updateSharedConfig } from './paths.js';
+import { claimSetup, configuredDataDir, updateSharedConfig } from './paths.js';
 import { HostClient, HostEvent, RemoteComposer } from './remote.js';
 import { SettingsPage } from './settings.js';
 import { refreshSystem } from './system.js';
@@ -511,6 +511,7 @@ class Ime implements vscode.Disposable {
 			this.typeCommand = undefined;
 		}
 		this.enabled = on;
+		void this.context.globalState.update('enabled', on);
 		void vscode.commands.executeCommand('setContext', 'breezellIme.enabled', on);
 		this.log.info(on ? `on: ${this.layout}` : 'off');
 		this.host?.updateFocus();
@@ -630,14 +631,22 @@ class Ime implements vscode.Disposable {
 		await this.render();
 	}
 
-	/** First start with nothing downloaded: the page says what to do next. */
-	welcome(): void {
-		if (this.context.globalState.get<boolean>('welcomed')) {
-			return;
-		}
-		void this.context.globalState.update('welcomed', true);
-		if (!this.manifest.packs.some(p => hasPack(this.manifest, this.dataDir, p.id))) {
-			this.settings.open();
+	/**
+	 * Installed from the market and ready to use: the first start after an install sets everything
+	 * up (see SettingsPage.firstRun). Breezell in Japanese or Korean begins with that language.
+	 * Later starts turn on again if it was on.
+	 */
+	start(): void {
+		if (claimSetup()) {
+			const language = vscode.env.language.toLowerCase();
+			if (!this.context.globalState.get<string>('layout') && !this.config.inspect<string>('layout')?.globalValue) {
+				this.layout = language.startsWith('ja') ? 'japanese' : language.startsWith('ko') ? 'korean' : this.layout;
+				void this.context.globalState.update('layout', this.layout);
+			}
+			this.log.info(`first start: setting up ${this.layout}`);
+			void this.settings.firstRun(packOfLayout(this.layout), async () => { await this.run(() => this.setEnabled(true)); });
+		} else if (this.context.globalState.get<boolean>('enabled') && hasPack(this.manifest, this.dataDir, packOfLayout(this.layout))) {
+			void this.run(() => this.setEnabled(true));
 		}
 	}
 
@@ -924,7 +933,7 @@ class Ime implements vscode.Disposable {
 export function activate(context: vscode.ExtensionContext): void {
 	const ime = new Ime(context);
 	context.subscriptions.push(ime);
-	ime.welcome();
+	ime.start();
 	ime.refreshSystemParts();
 }
 

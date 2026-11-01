@@ -3,7 +3,7 @@
 	"publisher": "breezell",
 	"displayName": "%displayName%",
 	"description": "%description%",
-	"version": "1.0.1",
+	"version": "1.1.0",
 	"license": "GPL-3.0-or-later",
 	"author": {
 		"name": "Breezell",
@@ -291,6 +291,7 @@
 		}
 	},
 	"scripts": {
+		"vscode:uninstall": "node ./dist/system/uninstall-hook.cjs",
 		"build": "node tools/build_system.mjs && node tools/breezell-plugin.mjs build",
 		"watch": "node tools/breezell-plugin.mjs build --watch",
 		"typecheck": "tsc -p .",

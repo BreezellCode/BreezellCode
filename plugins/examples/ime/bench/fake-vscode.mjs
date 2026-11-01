@@ -91,11 +91,11 @@ export const window = {
 	onDidChangeWindowState: on('window'),
 };
 export const workspace = {
-	getConfiguration: () => ({ get: (k, d) => (k in settings ? settings[k] : d), update: async (k, v) => { settings[k] = v; } }),
+	getConfiguration: () => ({ get: (k, d) => (k in settings ? settings[k] : d), inspect: k => ({ globalValue: settings[k] }), update: async (k, v) => { settings[k] = v; } }),
 	onDidChangeTextDocument: on('document'),
 	onDidChangeConfiguration: on('config'),
 };
-export const env = { language: 'zh-tw' };
+export const env = { language: "zh-tw" };
 const format = (t, args) => t.replace(/\{(\d+)\}/g, (m, i) => args[i] ?? m);
 export const l10n = { t: (message, ...args) => format(message, args) };
 export const ViewColumn = { Active: -1 };

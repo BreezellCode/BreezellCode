@@ -164,8 +164,9 @@
 		const needs = el('div', 'callout');
 		data.append(needs);
 		updaters.push(() => {
-			needs.textContent = state.needed ? fill(state.strings.needs, state.needed) : '';
-			show(needs, !!state.needed);
+			// Setting up says what is going on; otherwise, what the input method chosen is missing.
+			needs.textContent = state.setup || (state.needed ? fill(state.strings.needs, state.needed) : '');
+			show(needs, !!(state.setup || state.needed));
 		});
 		const packs = el('div', 'packs');
 		data.append(packs);

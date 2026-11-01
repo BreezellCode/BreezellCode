@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0
+
+- Install it from the market and it is ready: it asks Windows' permission once, downloads the language for you, and turns on by itself. Nothing else to click.
+- It starts on again if it was on when Breezell closed.
+- Removing the plugin takes the input method off Windows' list, stops its engine, puts the default input method back, and deletes the languages from the default folder. What it learned stays.
+
 ## 1.0.1
 
 - After you commit Chinese text, digits are digits: typing a number no longer picks one of the words offered next. Tab takes the first of them, and a click takes any.

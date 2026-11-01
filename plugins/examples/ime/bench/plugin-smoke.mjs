@@ -6,7 +6,7 @@
 //   plugin-smoke.mjs <scratch dir> <data dir>
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createReadStream, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -15,6 +15,7 @@ const [scratch, data] = process.argv.slice(2);
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..');
 const out = join(scratch, 'plugin-smoke', 'extension.mjs');
+const hook = join(root, 'dist', 'system', 'uninstall-hook.cjs');
 mkdirSync(dirname(out), { recursive: true });
 const esbuild = join(root, 'node_modules', '.bin', 'esbuild');
 execFileSync(esbuild, [join(root, 'src', 'extension.ts'), '--bundle', '--platform=node', '--format=esm', '--external:vscode',
@@ -49,6 +50,11 @@ const contextAt = (extensionPath, name) => {
 	};
 };
 const context = contextAt(root, 'storage');
+// This part is not a first start: the setting up has its own part below.
+const home = join(process.env.HOME, '.config', 'breezell-ime');
+rmSync(home, { recursive: true, force: true });
+mkdirSync(home, { recursive: true });
+writeFileSync(join(home, 'plugin-set-up'), 'test');
 ext.activate(context);
 check(`activates on ${process.platform}`, vscode.calls.some(c => c[0] === 'log' && String(c[1]).startsWith('activated')));
 await vscode.commands.executeCommand('breezellIme.toggle');
@@ -111,7 +117,7 @@ const hello = await vscode.commands.executeCommand('breezellIme.chatKey', { key:
 check('English among the candidates: hello', english?.composing && hello?.commit === 'hello', JSON.stringify(hello));
 
 check('no errors logged', !vscode.calls.some(c => c[0] === 'error'), JSON.stringify(vscode.calls.filter(c => c[0] === 'error')));
-check('with the models here, the settings page does not open by itself', !vscode.calls.some(c => c[0] === 'webview'));
+check('not a first start: the settings page does not open by itself', !vscode.calls.some(c => c[0] === 'webview'));
 for (const d of context.subscriptions) d.dispose();
 
 // The settings page: a first start with no models, a small "language" on a server here.
@@ -135,7 +141,9 @@ Object.assign(vscode.settings, { dataPath: dataDir, useSystemHost: false, layout
 const pageContext = contextAt(pluginDir, 'page-storage');
 ext.activate(pageContext);
 const pageOf = () => vscode.calls.filter(c => c[0] === 'webview').at(-1)?.[1];
-check('a first start with nothing downloaded opens the settings page', !!pageOf());
+await vscode.commands.executeCommand('breezellIme.openSettings');
+await settle();
+check('the settings page opens from its command', !!pageOf());
 const page = pageOf();
 const stateNow = () => page.webview.posted.filter(m => m.type === 'state').at(-1);
 const until = async test => { for (let i = 0; i < 200 && !test(); i++) await new Promise(r => setTimeout(r, 10)); return test(); };
@@ -173,6 +181,64 @@ vscode.setDialogAnswer(undefined);
 check(`the whole computer: ${process.platform === 'win32' ? 'offered' : 'not on this system yet'}`, stateNow().system.supported === (process.platform === 'win32'));
 for (const d of pageContext.subscriptions) d.dispose();
 server.close();
+
+// Installed from the market: one click, then it is ready. A real language from a server here.
+const files = createServer((req, res) => {
+	const from = Number(/bytes=(\d+)-/.exec(req.headers.range ?? '')?.[1] ?? 0);
+	const file = join(data, decodeURIComponent(req.url.slice(1)));
+	if (!existsSync(file)) {
+		res.writeHead(404).end();
+		return;
+	}
+	res.writeHead(from ? 206 : 200);
+	createReadStream(file, { start: from }).pipe(res);
+});
+await new Promise(r => files.listen(0, '127.0.0.1', r));
+const freshData = join(scratch, 'plugin-smoke', 'fresh-data');
+rmSync(freshData, { recursive: true, force: true });
+rmSync(join(home, 'plugin-set-up'), { force: true });
+Object.assign(vscode.settings, { dataPath: freshData, dataMirror: `http://127.0.0.1:${files.address().port}`, useSystemHost: false });
+delete vscode.settings.layout;
+vscode.env.language = 'ko';
+const before = vscode.calls.length;
+const firstContext = contextAt(root, 'first-storage');
+ext.activate(firstContext);
+const logged = text => vscode.calls.slice(before).some(c => c[0] === 'log' && String(c[1]).includes(text));
+check('first start: it says what it sets up, from Breezell\'s language', logged('first start: setting up korean'), JSON.stringify(vscode.calls.slice(before, before + 6)));
+const firstPage = vscode.calls.slice(before).find(c => c[0] === 'webview')?.[1];
+check('first start: the page opens by itself', !!firstPage);
+const firstState = () => firstPage.webview.posted.filter(m => m.type === 'state').at(-1);
+check('first start: the download begins by itself, and the page says so', await until(() => firstState()?.setup?.includes('Korean') || logged('on: korean')), JSON.stringify(firstState()?.setup));
+check('first start: the language comes down and it turns on, with nothing clicked', await until(() => logged('on: korean')) && existsSync(join(freshData, 'ko.bzlm')), JSON.stringify(vscode.calls.slice(-4).map(c => c[1]).filter(x => typeof x === 'string')));
+check('first start: it says it is ready', vscode.calls.slice(before).some(c => c[0] === 'info' && String(c[1]).includes('is ready')));
+check('first start: the setting-up note goes', await until(() => !firstState().setup));
+await vscode.commands.executeCommand('breezellIme.toggle');
+await settle();
+for (const d of firstContext.subscriptions) d.dispose();
+// The next start: nothing asked; on again only if it was on.
+const nextBefore = vscode.calls.length;
+await firstContext.globalState.update('enabled', true);
+ext.activate(firstContext);
+await until(() => vscode.calls.slice(nextBefore).some(c => c[0] === 'log' && String(c[1]).includes('on: korean')));
+check('the next start: no setting up, and on again as it was', !vscode.calls.slice(nextBefore).some(c => c[0] === 'webview') && vscode.calls.slice(nextBefore).some(c => c[0] === 'log' && String(c[1]).includes('on: korean')));
+for (const d of firstContext.subscriptions) d.dispose();
+files.close();
+vscode.env.language = 'zh-tw';
+
+// Removing the plugin: the mark goes, so installing it again sets up again; a folder the user chose stays.
+execFileSync(process.execPath, [hook], { env: { ...process.env } });
+check('removed: the set-up mark goes', !existsSync(join(home, 'plugin-set-up')));
+writeFileSync(join(home, 'plugin-set-up'), 'test');
+const defaultData = join(process.env.HOME, '.local', 'share', 'breezell-ime');
+mkdirSync(defaultData, { recursive: true });
+writeFileSync(join(defaultData, 'ko.bzlm'), 'x');
+writeFileSync(join(defaultData, 'mine.txt'), 'x');
+writeFileSync(join(home, 'config.json'), JSON.stringify({ dataPath: '/somewhere/the/user/chose' }));
+execFileSync(process.execPath, [hook], { env: { ...process.env } });
+check('removed: a folder the user chose is left alone', existsSync(join(defaultData, 'ko.bzlm')));
+writeFileSync(join(home, 'config.json'), '{}');
+execFileSync(process.execPath, [hook], { env: { ...process.env } });
+check('removed: the default folder loses the languages, and only them', !existsSync(join(defaultData, 'ko.bzlm')) && existsSync(join(defaultData, 'mine.txt')));
 check('still no errors logged', vscode.calls.filter(c => c[0] === 'error').length === errorsBefore, JSON.stringify(vscode.calls.filter(c => c[0] === 'error')));
 console.log(failed ? `${failed} failed` : 'all passed');
 process.exit(failed ? 1 : 0);

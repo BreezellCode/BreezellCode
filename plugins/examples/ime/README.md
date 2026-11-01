@@ -19,17 +19,19 @@ Japanese and Korean, in Breezell's editor and chat and, on Windows, in every pro
 
 ## Getting started
 
-1. Install it from **Breezell Console › Plugins**.
-2. Open **Breezell IME** under **Plugins** in the sidebar. Its page opens by itself the first time.
-3. Under **Languages**, download the ones you want:
+In **Breezell Console › Plugins**, press **Install**. That is all. It sets itself up:
 
-   | Language | Input methods | Download |
-   |---|---|---|
-   | Chinese | Pinyin, zhuyin, double pinyin (Flypy, Microsoft, Ziranma, Sogou, ABC, Ziguang, Pinyin Jiajia), Wubi 86 | 374 MB |
-   | Japanese | Romaji to kana and kanji | 189 MB |
-   | Korean | 2-set Hangul with word suggestions | 128 MB |
+- Windows asks for administrator permission once, to add the input method.
+- The language that goes with Breezell's display language downloads (Japanese or Korean for those, Chinese otherwise).
+- It turns on by itself. Its page shows how far along it is.
 
-4. Choose your input method on the page and press **Ctrl+Alt+Space** in the editor to start typing.
+Say no to Windows and it still works in Breezell's editor; **Install in Windows…** on its page offers it again. To add other languages or change the input method, open **Breezell IME** under **Plugins** in the sidebar:
+
+| Language | Input methods | Download |
+|---|---|---|
+| Chinese | Pinyin, zhuyin, double pinyin (Flypy, Microsoft, Ziranma, Sogou, ABC, Ziguang, Pinyin Jiajia), Wubi 86 | 374 MB |
+| Japanese | Romaji to kana and kanji | 189 MB |
+| Korean | 2-set Hangul with word suggestions | 128 MB |
 
 The languages come from this plugin's GitHub release, and a download goes on from where it stopped if
 the connection drops. Every file is checked against its SHA-256 before it is used. Each language you
@@ -51,14 +53,11 @@ type in keeps its model in memory: about 400 MB for Chinese.
 
 ## Every program on Windows
 
-On the plugin's page, **Install in Windows…** adds it as a Windows input method, with the same engine
-and the same learned words as in Breezell. Windows asks for administrator permission once, to register
-the text service. It then becomes your default input method; **Win+Space** switches to another, and
-**Remove from Windows…** takes it away.
+On its first start it adds itself as a Windows input method, with the same engine and the same learned words as in Breezell. It becomes your default input method; **Win+Space** switches to another. In programs already open when it installs, press **Win+Space** to switch to it.
 
-It installs a text service in `Program Files\BreezellIME` and the engine host in
-`%LOCALAPPDATA%\BreezellIME`, all from this plugin's package; no code is downloaded. In programs
-already open when you install, press **Win+Space** to switch to it.
+It installs a text service in `Program Files\BreezellIME` and the engine host in `%LOCALAPPDATA%\BreezellIME`, all from this plugin's package; no code is downloaded.
+
+**Removing the plugin** takes it off your list of input methods, stops the engine, puts the default input method back and deletes the languages from the default folder; what it learned stays. The text service's files stay in Program Files, unused: use **Remove from Windows…** on its page first to remove those too.
 
 On Linux and macOS it works in Breezell's editor; a system input method is not available yet.
 
