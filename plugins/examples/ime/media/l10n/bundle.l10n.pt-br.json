@@ -76,7 +76,7 @@
 	"English in code": "Inglês no código",
 	"In code, type English outside comments and strings; in comments, strings, or after /// on the line, type your own language.": "No código, digite em inglês fora de comentários e strings; em comentários, strings ou depois de /// na linha, digite no seu idioma.",
 	"Next words": "Próximas palavras",
-	"After you commit Chinese text, offer the words that may come next.": "Depois de confirmar texto em chinês, oferece as palavras que podem vir em seguida.",
+	"After you commit Chinese text, offer the words that may come next. Tab takes the first.": "Depois de confirmar texto em chinês, oferece as palavras que podem vir em seguida. Tab pega a primeira.",
 	"Wubi: order by context": "Wubi: ordenar por contexto",
 	"Order candidates with the same code by the text around them. Off: a fixed order.": "Ordena os candidatos com o mesmo código pelo texto ao redor. Desativado: uma ordem fixa.",
 	"Learn from me": "Aprender comigo",

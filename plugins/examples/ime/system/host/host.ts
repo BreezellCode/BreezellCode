@@ -16,7 +16,7 @@
  *   M                              Shift: switch native / English → S …
  *   C [data]                       config file changed: reload (data: the model files changed too)
  *   Q                              what the host knows (JSON: programs, Breezell windows), for diagnosis
- * S <eaten> <composing> <mode> <highlight> <labels d|s> <more> <commit> <preedit> <candidates>
+ * S <eaten> <composing> <mode> <highlight> <labels d|s|n> <more> <commit> <preedit> <candidates>
  *   <reading> <previous page 0|1> <badge> <quiet 0|1>
  *   reading: the panel's top line (hen jian dan); badge: 中 · 繁, あ, 한; quiet: the key went to
  *   Breezell's own input method (no sign from the text service).
@@ -289,9 +289,9 @@ class Session {
 			traditional: this.traditional,
 			pageSize: config.pageSize,
 			fullWidth: config.fullWidthPunctuation,
-			// Only to text services that show the words offered and take them away again (build 5 on):
-			// an older one would never show them, and its next digit would pick one unseen.
-			prediction: config.prediction && this.build >= 5,
+			// Only to text services that show them without numbers (build 6 on): an older one would
+			// label them 1, 2, 3, though digits now go to the program.
+			prediction: config.prediction && this.build >= 6,
 			english,
 		}));
 	}
@@ -362,7 +362,7 @@ class Session {
 		const clean = (t: string) => t.replace(/[\t\n\r\x1e]/g, ' ');
 		const v = this.keys ? await this.keys.view() : undefined;
 		const shown = v && (v.composing || v.predicting);
-		return ['S', eaten ? 1 : 0, v?.composing ? 1 : 0, english ? 'e' : 'n', v?.highlight ?? 0, v?.labels === 'shift' ? 's' : 'd',
+		return ['S', eaten ? 1 : 0, v?.composing ? 1 : 0, english ? 'e' : 'n', v?.highlight ?? 0, v?.labels === 'shift' ? 's' : v?.labels === 'none' ? 'n' : 'd',
 			v?.more ? 1 : 0, clean(commit), clean(v?.preedit ?? ''), shown ? v!.candidates.map(clean).join('\x1e') : '',
 			clean(v?.reading ?? ''), v?.prev ? 1 : 0, v?.badge ?? '', quiet ? 1 : 0].join('\t');
 	}

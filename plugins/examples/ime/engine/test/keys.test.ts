@@ -96,21 +96,52 @@ test('keys: Backspace right after a commit takes it back from what was learned; 
 	assert.equal(c.calls.filter(x => x === 'undo').length, 1);
 });
 
-test('keys: the words offered after a commit: a digit takes one, another key and they go', async () => {
+test('keys: the words offered after a commit: Tab takes the first, a click any, another key and they go', async () => {
 	const { s } = make({ prediction: true });
 	await type(s, 'ni');
 	await s.key(k(' '));
 	let v = await s.view();
 	assert.equal(v.predicting, true);
-	assert.equal(v.highlight, -1);
+	assert.equal(v.highlight, 0);  // what Tab takes
+	assert.equal(v.labels, 'none');  // no key shown: digits do not pick them
 	assert.equal(v.candidates.join(), '甲,乙');
-	assert.equal(v.reading, '聯想');
-	assert.equal((await s.key(k('2'))).commit, '乙');
+	assert.equal(v.reading, '聯想  Tab ⇥');
+	assert.equal(s.eats(k('Tab')), true);
+	assert.equal(s.eats(k('Tab', { shift: true })), false);
+	assert.equal((await s.key(k('Tab'))).commit, '甲');
 	assert.equal((await s.view()).predicting, true);  // and more after it
+	assert.equal(await s.pick(1), '乙');
+	assert.equal((await s.view()).predicting, true);
 	assert.equal((await s.key(k('ArrowRight'))).eaten, false);
 	v = await s.view();
 	assert.equal(v.predicting, false);
-	assert.equal(s.eats(k('1')), false);  // a digit is the program's again
+	assert.equal(s.eats(k('Tab')), false);  // Tab is the program's again
+});
+
+test('keys: a digit after text is a digit, whatever is offered, and what is offered goes', async () => {
+	const { s, c } = make({ prediction: true });
+	await type(s, 'ni');
+	await s.key(k(' '));
+	assert.equal((await s.view()).predicting, true);
+	assert.equal(s.eats(k('1')), false);
+	const typed = await s.key(k('1'));
+	assert.deepEqual(typed, { eaten: false, commit: '' });  // the program types it
+	assert.equal((await s.view()).predicting, false);
+	assert.equal(c.calls.at(-1), 'other');  // what comes next follows a Latin run
+	assert.equal((await s.key(k('2'))).eaten, false);
+	// While composing a digit still picks.
+	await type(s, 'ma');
+	assert.equal((await s.key(k('1'))).commit, 'MA');
+});
+
+test('keys: zhuyin: Shift+digit after a commit is its mark, not a word offered', async () => {
+	const { s } = make({ layout: 'zhuyin', prediction: true });
+	await type(s, 'ni');
+	await s.key(k(' '));
+	assert.equal((await s.view()).predicting, true);
+	const mark = await s.key(k('!', { shift: true, digit: 1 }));
+	assert.equal(mark.commit, '！');
+	assert.notEqual(mark.commit, '甲');
 });
 
 test('keys: pages of candidates, the highlight, ‹ ›', async () => {

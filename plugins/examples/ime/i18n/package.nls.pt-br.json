@@ -12,7 +12,7 @@
 	"config.englishInCode": "No código, digite em inglês fora de comentários e strings; em comentários, strings ou depois de /// na linha, digite no seu idioma.",
 	"config.wubiSmartOrder": "Wubi: ordena os candidatos com o mesmo código pelo texto ao redor (desativado: uma ordem fixa, como na tabela Jidian).",
 	"config.useSystemHost": "Windows: quando o método de entrada do sistema está instalado, compõe com o motor dele (os modelos carregam uma vez, e o que ele aprende é igual em todo lugar).",
-	"config.prediction": "Chinês: depois de confirmar o texto, oferece as palavras que podem vir em seguida. Os dígitos escolhem uma (zhuyin: Shift+dígito), Tab pega a primeira.",
+	"config.prediction": "Chinês: depois de confirmar o texto, oferece as palavras que podem vir em seguida. Tab pega a primeira, ou clique em uma. Os dígitos continuam sendo dígitos.",
 	"config.learning": "Lembra as palavras que você escolhe e as palavras novas que digita.",
 	"config.pageSize": "Candidatos por página.",
 	"config.dataMirror": "Avançado: um endereço https de onde baixar os dicionários em vez do GitHub (um espelho dos mesmos arquivos). Cada arquivo continua sendo verificado pelo SHA-256.",

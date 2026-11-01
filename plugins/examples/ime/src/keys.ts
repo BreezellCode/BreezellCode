@@ -48,7 +48,8 @@ export interface KeyView {
 	readonly reading: string;
 	readonly badge: string;
 	readonly lang: string;
-	readonly labels: 'digits' | 'shift';
+	/** How the candidates are picked: digits, Shift+digits, or not by a key shown (the words offered after a commit: Tab, or a click). */
+	readonly labels: 'digits' | 'shift' | 'none';
 	readonly predicting: boolean;
 }
 
@@ -126,6 +127,14 @@ export class KeySession {
 		return !this.composer.composing && this.predicted.length > 0;
 	}
 
+	/**
+	 * Tab takes the first of the words offered after a commit. Digits do not: a digit typed after
+	 * text is a digit (12 of 你好12), and Shift+digit its mark.
+	 */
+	private takesOffered(k: Key): boolean {
+		return this.predicting && k.key === 'Tab' && !k.shift && !k.command;
+	}
+
 	/** Which candidate on the page a key picks: a digit, zhuyin's Shift+digit; -1 none. */
 	private pickOnPage(k: Key): number {
 		if (this.o.layout === 'zhuyin') {
@@ -148,11 +157,8 @@ export class KeySession {
 		if (k.command) {
 			return false;
 		}
-		if (this.predicting) {
-			const i = this.pickOnPage(k);
-			if (i >= 0 && i < this.predicted.length) {
-				return true;
-			}
+		if (this.takesOffered(k)) {
+			return true;
 		}
 		if (c.composing) {
 			return COMPOSING_KEYS.has(k.key) || k.key.length === 1;
@@ -220,14 +226,11 @@ export class KeySession {
 			this.highlight = 0;
 			take();
 		};
-		// A word offered after the last commit.
-		if (this.predicting) {
-			const i = this.pickOnPage(k);
-			if (i >= 0 && i < this.predicted.length) {
-				await c.takePrediction(i);
-				take();
-				return this.committed(commit, false);
-			}
+		// The first word offered after the last commit.
+		if (this.takesOffered(k)) {
+			await c.takePrediction(0);
+			take();
+			return this.committed(commit, false);
 		}
 		this.predicted = [];
 		const n = this.last.candidates.length;
@@ -416,14 +419,15 @@ export class KeySession {
 			composing,
 			preedit: composing ? s.preedit : '',
 			candidates: composing ? s.candidates.slice(start, start + this.pageSize) : this.predicted,
-			highlight: predicting ? -1 : this.highlight - start,
+			// The first of the words offered is what Tab takes.
+			highlight: predicting ? 0 : this.highlight - start,
 			pageStart: composing ? start : 0,
 			more: composing && s.candidates.length > start + this.pageSize,
 			prev: composing && start > 0,
-			reading: composing ? ((await c.reading(this.highlight)) || s.preedit) : predicting ? (o.layout === 'zhuyin' || o.traditional ? '聯想' : '联想') : '',
+			reading: composing ? ((await c.reading(this.highlight)) || s.preedit) : predicting ? `${o.layout === 'zhuyin' || o.traditional ? '聯想' : '联想'}  Tab ⇥` : '',
 			badge: badgeOf(o.layout, o.traditional),
 			lang: langOf(o.layout, o.traditional),
-			labels: o.layout === 'zhuyin' ? 'shift' : 'digits',
+			labels: predicting ? 'none' : o.layout === 'zhuyin' ? 'shift' : 'digits',
 			predicting,
 		};
 	}

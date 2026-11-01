@@ -12,10 +12,16 @@ if ($Part -ne 'machine') {
 	Add-Type -Namespace BreezellIME -Name Input -MemberDefinition @'
 [DllImport("input.dll", CharSet = CharSet.Unicode)] public static extern bool InstallLayoutOrTip(string psz, uint dwFlags);
 '@
+	# Only what is on the user's list: removing a profile of a language not on it adds that language.
+	$listed = (Get-WinUserLanguageList).InputMethodTips
 	foreach ($p in $profiles) {
 		$lang, $guid = $p.Split(':')
-		[void][BreezellIME.Input]::InstallLayoutOrTip("${lang}:$clsid$guid", 1)
+		$tip = "${lang}:$clsid$guid"
+		if ($listed -contains $tip) { [void][BreezellIME.Input]::InstallLayoutOrTip($tip, 1) }
 	}
+	# Windows' default input method, if it is this one, goes back to the first of the user's list.
+	$default = (Get-WinDefaultInputMethodOverride -ErrorAction SilentlyContinue).InputMethodTip
+	if ($default -like "*$clsid*") { Set-WinDefaultInputMethodOverride }
 	# The registered path goes first, so no text service starts the host again.
 	Remove-Item -Path 'HKCU:\Software\BreezellIME' -Recurse -Force -ErrorAction SilentlyContinue
 	Get-CimInstance Win32_Process -Filter "Name LIKE 'Breezell%'" | Where-Object { $_.CommandLine -like '*host.cjs*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }

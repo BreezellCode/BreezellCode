@@ -73,12 +73,12 @@ interface ChatAnswer {
 	readonly commit: string;
 	readonly preedit: string;
 	readonly composing: boolean;
-	/** The page of candidates shown, the highlighted one's place on it (-1: the words offered after a commit). */
+	/** The page of candidates shown, the highlighted one's place on it. */
 	readonly candidates: readonly string[];
 	readonly highlight: number;
 	readonly pageStart: number;
-	/** How candidates are picked: digits, or Shift+digits (zhuyin). */
-	readonly labels?: 'digits' | 'shift';
+	/** How candidates are picked: digits, Shift+digits (zhuyin), or Tab and a click (the words offered after a commit). */
+	readonly labels?: 'digits' | 'shift' | 'none';
 	readonly more?: boolean;
 	/** The panel's top line (hen jian dan), the input method's sign (中 · 繁), a page before this one. */
 	readonly reading?: string;

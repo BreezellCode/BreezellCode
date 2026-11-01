@@ -55,7 +55,7 @@ function client() {
 
 const fields = line => {
 	const f = line.split('\t');
-	return { eaten: f[1], composing: f[2], mode: f[3], highlight: Number(f[4]), more: f[6], commit: f[7], preedit: f[8], candidates: f[9] ? f[9].split('\x1e') : [], reading: f[10], prev: f[11], badge: f[12], quiet: f[13] };
+	return { eaten: f[1], composing: f[2], mode: f[3], highlight: Number(f[4]), labels: f[5], more: f[6], commit: f[7], preedit: f[8], candidates: f[9] ? f[9].split('\x1e') : [], reading: f[10], prev: f[11], badge: f[12], quiet: f[13] };
 };
 const key = async (c, ch) => fields(await c.send(`K\t${ch.toUpperCase().charCodeAt(0)}\t${ch.charCodeAt(0)}\t0`));
 
@@ -65,7 +65,7 @@ try {
 	}
 	const BREEZELL = 4242, OTHER = 5151;
 	const tip = await client();
-	await tip.send(`H\tBreezell.exe\t${0x0404}\t${BREEZELL}\t5`);
+	await tip.send(`H\tBreezell.exe\t${0x0404}\t${BREEZELL}\t6`);
 	let s;
 	for (const ch of 'henjaindan') s = await key(tip, ch);
 	check('composing: the panel has the fixed reading', s.reading === 'hen jian dan', s.reading);
@@ -77,21 +77,23 @@ try {
 	check('‹ turns back', back.prev === '0' && back.candidates[0] === s.candidates[0], JSON.stringify(back));
 	await tip.send('R');
 
-	// After a commit: the words that may come next (聯想), a digit takes one, another key and they go.
+	// After a commit: the words that may come next (聯想); Tab takes the first, a digit is a digit.
 	for (const ch of 'nihao') await key(tip, ch);
 	const committed = fields(await tip.send('K\t32\t32\t0'));
-	check('a commit offers the words that may come next', committed.commit === '你好' && committed.composing === '0' && committed.candidates.length > 0 && committed.highlight === -1 && committed.reading === '聯想', JSON.stringify(committed));
-	check('a digit is taken while they show', (await tip.send('T\t49\t49\t0')) === 'E\t1');
-	const picked = fields(await tip.send('K\t49\t49\t0'));
-	check('the digit commits the first of them, and offers more', picked.commit === committed.candidates[0] && picked.candidates.length > 0, JSON.stringify(picked));
-	check('another key (a program\'s) and they go: a digit is the program\'s again', (await tip.send('T\t37\t0\t0')) === 'E\t0' && (await tip.send('T\t49\t49\t0')) === 'E\t0');
+	check('a commit offers the words that may come next', committed.commit === '你好' && committed.composing === '0' && committed.candidates.length > 0 && committed.highlight === 0, JSON.stringify(committed));
+	check('they show with no numbers: no digit picks them', committed.labels === 'n', JSON.stringify(committed));
+	check('Tab is taken while they show', (await tip.send('T\t9\t9\t0')) === 'E\t1');
+	const picked = fields(await tip.send('K\t9\t9\t0'));
+	check('Tab commits the first of them, and offers more', picked.commit === committed.candidates[0] && picked.candidates.length > 0, JSON.stringify(picked));
+	check('a digit goes to the program while they show', (await tip.send('T\t49\t49\t0')) === 'E\t0');
+	check('and they went with it: Tab is the program\'s again', (await tip.send('T\t9\t9\t0')) === 'E\t0' && (await tip.send('T\t49\t49\t0')) === 'E\t0');
 	await tip.send('R');
-	// An older text service (build 4) never shows them: none offered, its digits stay digits.
+	// An older text service (build 5) would number them: none offered.
 	const older = await client();
-	await older.send(`H\tQQ.exe\t${0x0404}\t777\t4`);
+	await older.send(`H\tQQ.exe\t${0x0404}\t777\t5`);
 	for (const ch of 'nihao') await key(older, ch);
 	const olderCommit = fields(await older.send('K\t32\t32\t0'));
-	check('a build 4 text service is offered nothing after a commit', olderCommit.commit === '你好' && olderCommit.candidates.length === 0 && (await older.send('T\t49\t49\t0')) === 'E\t0', JSON.stringify(olderCommit));
+	check('a build 5 text service is offered nothing after a commit', olderCommit.commit === '你好' && olderCommit.candidates.length === 0 && (await older.send('T\t49\t49\t0')) === 'E\t0', JSON.stringify(olderCommit));
 	older.close();
 
 	// Breezell's plugin (off): its editor has the focus.

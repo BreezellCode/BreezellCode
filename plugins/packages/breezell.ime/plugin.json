@@ -67,6 +67,15 @@
 	},
 	"versions": [
 		{
+			"version": "1.0.1",
+			"path": "packages/breezell.ime/1.0.1/breezell.ime-1.0.1.vsix",
+			"sha256": "4f8e972985640c0d8bbba427b5309c11c3eef90b63b0294c601b0f7c94f68466",
+			"size": 558700,
+			"apiVersion": 1,
+			"permissions": [],
+			"publishedAt": "2026-11-01T11:48:14.312Z"
+		},
+		{
 			"version": "1.0.0",
 			"path": "packages/breezell.ime/1.0.0/breezell.ime-1.0.0.vsix",
 			"sha256": "019c6cfce3a9184fe278a1511e40d716d40425236400079f5eb35d9ce9d8136e",

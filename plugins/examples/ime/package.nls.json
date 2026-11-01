@@ -12,7 +12,7 @@
 	"config.englishInCode": "In code, type English outside comments and strings; in comments, strings, or after /// on the line, type your own language.",
 	"config.wubiSmartOrder": "Wubi: order candidates with the same code by the text around them (off: a fixed order, as in the Jidian table).",
 	"config.useSystemHost": "Windows: when the system input method is installed, compose in its engine (the models load once, and what it learns is the same everywhere).",
-	"config.prediction": "Chinese: after you commit text, offer the words that may come next. Digits pick one (zhuyin: Shift+digit), Tab takes the first.",
+	"config.prediction": "Chinese: after you commit text, offer the words that may come next. Tab takes the first, or click one. Digits stay digits.",
 	"config.learning": "Remember the words you pick and the new words you type.",
 	"config.pageSize": "Candidates per page.",
 	"config.dataMirror": "Advanced: an https address to download the dictionaries from instead of GitHub (a mirror of the same files). Every file is still checked against its SHA-256.",

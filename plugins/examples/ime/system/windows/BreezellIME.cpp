@@ -33,7 +33,7 @@
 
 // This build's version: a newer one published under the tip folder replaces it in running programs.
 #ifndef TIP_VERSION
-#define TIP_VERSION 5
+#define TIP_VERSION 6
 #endif
 #define WIDE2(x) L##x
 #define WIDE(x) WIDE2(x)
@@ -128,6 +128,8 @@ struct ImeState {
 	bool english = false;
 	int highlight = 0;
 	bool shiftLabels = false;
+	/** No numbers beside the candidates: no digit picks them (the words offered after a commit). */
+	bool noLabels = false;
 	bool more = false;
 	/** There is a page before this one. */
 	bool prev = false;
@@ -147,6 +149,7 @@ static bool ParseState(const std::string& line, ImeState& s) {
 	s.english = f[3] == "e";
 	s.highlight = atoi(f[4].c_str());
 	s.shiftLabels = f[5] == "s";
+	s.noLabels = f[5] == "n";
 	s.more = f[6] == "1";
 	s.commit = FromUtf8(f[7]);
 	s.preedit = FromUtf8(f[8]);
@@ -469,6 +472,7 @@ class CandidateWindow {
 	}
 
 	std::wstring Label(size_t i) const {
+		if (_state.noLabels) return std::wstring();
 		wchar_t b[8];
 		StringCchPrintfW(b, 8, _state.shiftLabels ? L"⇧%u" : L"%u", (unsigned)(i + 1));
 		return b;
@@ -517,7 +521,7 @@ class CandidateWindow {
 				DWRITE_TEXT_METRICS lm = Measure(it.label), tm = Measure(it.text);
 				it.labelBaseline = Baseline(it.label);
 				it.textBaseline = Baseline(it.text);
-				float w = itemPadX + lm.widthIncludingTrailingWhitespace + labelGap + tm.widthIncludingTrailingWhitespace + itemPadX;
+				float w = itemPadX + lm.widthIncludingTrailingWhitespace + (_state.noLabels ? 0 : labelGap) + tm.widthIncludingTrailingWhitespace + itemPadX;
 				_rowH = std::max(_rowH, tm.height + 2 * itemPadY);
 				it.box = D2D1::RectF(x, y, x + w, y);
 				x += w + itemGap;
@@ -584,7 +588,7 @@ class CandidateWindow {
 					_target->DrawTextLayout(D2D1::Point2F(it.box.left + itemPadX, textTop + it.textBaseline - it.labelBaseline), it.label, brush);
 					DWRITE_TEXT_METRICS lm = Measure(it.label);
 					brush->SetColor(p.fg);
-					_target->DrawTextLayout(D2D1::Point2F(it.box.left + itemPadX + lm.widthIncludingTrailingWhitespace + labelGap, textTop), it.text, brush);
+					_target->DrawTextLayout(D2D1::Point2F(it.box.left + itemPadX + lm.widthIncludingTrailingWhitespace + (_state.noLabels ? 0 : labelGap), textTop), it.text, brush);
 				}
 				if (_pager) {
 					auto arrow = [&](IDWriteTextLayout* l, const D2D1_RECT_F& box, bool on, bool hover) {

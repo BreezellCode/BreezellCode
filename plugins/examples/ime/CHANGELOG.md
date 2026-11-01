@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1
+
+- After you commit Chinese text, digits are digits: typing a number no longer picks one of the words offered next. Tab takes the first of them, and a click takes any.
+- Removing it from Windows no longer adds languages you do not use to your list, and puts Windows' default input method back.
+
 ## 1.0.0
 
 First release.

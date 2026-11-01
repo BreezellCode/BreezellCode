@@ -60,7 +60,7 @@ check('composing shows the panel', panel?.candidates?.[0] === '你好' && panel.
 await type(' ');
 check('Space puts the first candidate in', prose.text === 'Notes: 你好', prose.text);
 const offered = vscode.calls.filter(c => c[0] === 'panel').at(-1)?.[1];
-check('the words that may come next are offered', offered?.highlight === -1 && offered.candidates.length > 0, JSON.stringify(offered));
+check('the words that may come next are offered, with no numbers', offered?.highlight === 0 && offered.labels === 'none' && offered.candidates.length > 0, JSON.stringify(offered));
 await type(',');
 check('a mark goes in full width (and the words offered go)', prose.text === 'Notes: 你好，', prose.text);
 await type('jain');
@@ -71,6 +71,22 @@ check('Backspace while composing takes back a key', decorations.at(-1) === 'jai'
 await vscode.commands.executeCommand('breezellIme.cancel');
 await settle();
 check('Escape drops it', prose.text === 'Notes: 你好，', prose.text);
+
+// A digit after a commit is a digit in the editor too.
+await type('nihao ');
+const beforeDigits = prose.text;
+await type('12');
+check('a digit after a commit goes in as a digit', prose.text === `${beforeDigits}12`, prose.text);
+check('and the words offered go', vscode.calls.filter(c => c[0] === 'panel').at(-1)?.[1] === null, JSON.stringify(vscode.calls.filter(c => c[0] === 'panel').at(-1)));
+// Tab takes the first of the words offered, in the editor by its key binding.
+await type('nihao ');
+const offeredNow = vscode.calls.filter(c => c[0] === 'panel').at(-1)?.[1];
+const beforeTab = prose.text;
+await vscode.commands.executeCommand('breezellIme.tab');
+await settle();
+check('Tab takes the first word offered', offeredNow?.labels === 'none' && offeredNow.highlight === 0 && prose.text === beforeTab + offeredNow.candidates[0], `${prose.text} ${JSON.stringify(offeredNow)}`);
+await vscode.commands.executeCommand('breezellIme.cancel');
+await settle();
 
 // Code: keys stay English outside comments and strings.
 const code = new vscode.FakeEditor('const x = ', 'typescript');
@@ -88,7 +104,7 @@ await vscode.commands.executeCommand('breezellIme.chatKey', { key: 'i' });
 const picked = await vscode.commands.executeCommand('breezellIme.chatKey', { key: ' ' });
 check('the chat commits', picked?.commit?.length === 1 && !picked.composing, JSON.stringify(picked));
 const plain = await vscode.commands.executeCommand('breezellIme.chatKey', { key: '3' });
-check('a digit the chat box types as it is (no words offered after the commit: they went)', plain?.handled && plain.commit === '3' || plain?.commit?.length === 1, JSON.stringify(plain));
+check('a digit after a commit is a digit in the chat box, and the words offered go', plain?.handled && plain.commit === '3' && !plain.predicting, JSON.stringify(plain));
 const english = await vscode.commands.executeCommand('breezellIme.chatKey', { key: 'h' });
 for (const ch of 'ello') await vscode.commands.executeCommand('breezellIme.chatKey', { key: ch });
 const hello = await vscode.commands.executeCommand('breezellIme.chatKey', { key: ' ' });

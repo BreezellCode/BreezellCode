@@ -76,7 +76,7 @@
 	"English in code": "코드에서는 영어",
 	"In code, type English outside comments and strings; in comments, strings, or after /// on the line, type your own language.": "코드에서는 주석과 문자열 밖에서 영어를 입력하고, 주석과 문자열 안이나 줄의 /// 뒤에서는 내 언어를 입력합니다.",
 	"Next words": "다음 단어",
-	"After you commit Chinese text, offer the words that may come next.": "중국어 텍스트를 확정한 뒤 다음에 올 만한 단어를 제안합니다.",
+	"After you commit Chinese text, offer the words that may come next. Tab takes the first.": "중국어 텍스트를 확정한 뒤 다음에 올 만한 단어를 제안합니다. Tab으로 첫 번째를 고릅니다.",
 	"Wubi: order by context": "Wubi: 문맥에 따라 정렬",
 	"Order candidates with the same code by the text around them. Off: a fixed order.": "코드가 같은 후보를 주변 글에 따라 정렬합니다. 끄면: 고정 순서.",
 	"Learn from me": "내 입력에서 학습",

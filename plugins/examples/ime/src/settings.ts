@@ -366,7 +366,7 @@ export class SettingsPage implements vscode.Disposable {
 			englishInCode: l10n.t('English in code'),
 			englishInCodeNote: l10n.t('In code, type English outside comments and strings; in comments, strings, or after /// on the line, type your own language.'),
 			prediction: l10n.t('Next words'),
-			predictionNote: l10n.t('After you commit Chinese text, offer the words that may come next.'),
+			predictionNote: l10n.t('After you commit Chinese text, offer the words that may come next. Tab takes the first.'),
 			wubiSmartOrder: l10n.t('Wubi: order by context'),
 			wubiSmartOrderNote: l10n.t('Order candidates with the same code by the text around them. Off: a fixed order.'),
 			learning: l10n.t('Learn from me'),

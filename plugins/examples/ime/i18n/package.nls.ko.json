@@ -12,7 +12,7 @@
 	"config.englishInCode": "코드에서는 주석과 문자열 밖에서 영어를 입력하고, 주석과 문자열 안이나 줄의 /// 뒤에서는 내 언어를 입력합니다.",
 	"config.wubiSmartOrder": "Wubi: 코드가 같은 후보를 주변 글에 따라 정렬합니다(끄면: Jidian 코드표처럼 고정 순서).",
 	"config.useSystemHost": "Windows: 시스템 입력기가 설치되어 있으면 그 엔진으로 조합합니다(모델은 한 번만 불러오고, 학습 내용은 어디서나 같습니다).",
-	"config.prediction": "중국어: 텍스트를 확정한 뒤 다음에 올 만한 단어를 제안합니다. 숫자로 고르고(주음: Shift+숫자), Tab으로 첫 번째 단어를 고릅니다.",
+	"config.prediction": "중국어: 텍스트를 확정한 뒤 다음에 올 만한 단어를 제안합니다. Tab으로 첫 번째를 고르거나 클릭해서 고릅니다. 숫자 키는 그대로 숫자를 입력합니다.",
 	"config.learning": "내가 고른 단어와 입력한 새 단어를 기억합니다.",
 	"config.pageSize": "페이지당 후보 수.",
 	"config.dataMirror": "고급: GitHub 대신 사전을 다운로드할 https 주소(같은 파일의 미러)입니다. 모든 파일은 여전히 SHA-256으로 확인합니다.",
