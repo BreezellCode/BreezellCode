@@ -29,7 +29,7 @@ import { fileURLToPath } from 'node:url';
 
 const DEVKIT_VERSION = '1.0.0';
 const API_VERSION = 1;
-const PERMISSIONS = ['chat.events', 'models.request', 'models.select', 'chat.read', 'chat.send', 'chat.approve', 'providers.read', 'agent.tools'];
+const PERMISSIONS = ['chat.events', 'models.request', 'models.select', 'chat.read', 'chat.send', 'chat.approve', 'providers.read', 'agent.tools', 'app.restart', 'app.forceRestart'];
 /** The chat modes an agent tool can be offered in (contributes.breezell.tools[].modes). */
 const TOOL_MODES = ['chat', 'agent', 'entanglement', 'analyze', 'teams'];
 const MARKET_REPO = 'BreezellCode/BreezellCode';
@@ -262,6 +262,27 @@ function checkPackage(pkg, { forMarket = false, nls } = {}) {
 		for (const w of declared.windows ?? []) {
 			if (typeof w?.id !== 'string' || !/^[a-z0-9][a-z0-9-]{0,31}$/.test(w.id) || typeof w.entry !== 'string' || !/\.html?$/i.test(w.entry) || w.entry.startsWith('/') || w.entry.split(/[\\/]/).includes('..')) {
 				errors.push('"contributes.breezell.windows": each window needs an "id" (lowercase, digits, dashes) and an .html "entry" inside the plugin');
+			}
+		}
+		if (declared.restart !== undefined) {
+			const r = declared.restart;
+			if (!r || typeof r !== 'object' || Array.isArray(r)) {
+				errors.push('"contributes.breezell.restart" must be an object');
+			} else {
+				for (const [when, v] of Object.entries(r)) {
+					const where = `"contributes.breezell.restart.${when}"`;
+					if (!['afterInstall', 'afterUpdate', 'afterUninstall'].includes(when)) {
+						errors.push(`${where}: it can be afterInstall, afterUpdate or afterUninstall`);
+					} else if (!v || typeof v !== 'object' || !['extensionHost', 'window', 'app'].includes(v.scope)) {
+						errors.push(`${where}: "scope" must be extensionHost, window or app`);
+					} else if (typeof v.reason !== 'string' || !v.reason.trim() || v.reason.length > 300) {
+						errors.push(`${where}: "reason" is needed, at most 300 characters: the user is told why`);
+					} else if (v.force === true && when === 'afterUninstall') {
+						errors.push(`${where}: a plugin being removed may only ask`);
+					} else if (v.force === true && !pkg.breezell?.permissions?.includes('app.forceRestart')) {
+						errors.push(`${where}: "force" needs the "app.forceRestart" permission`);
+					}
+				}
 			}
 		}
 		if (declared.launcher !== undefined) {

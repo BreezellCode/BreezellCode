@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.3
+
+- Removing the plugin asks to restart Breezell, which finishes taking the input method off Windows at once (with a Breezell that can ask).
+
 ## 1.1.2
 
 - Removing the plugin now really takes the input method off Windows' list: the process that did it did not outlive the removal step.

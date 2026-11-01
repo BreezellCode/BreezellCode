@@ -19,12 +19,40 @@ declare module 'vscode' {
 
 		/**
 		 * Breezell's display language, which `vscode.env.language` does not follow: `en`, `zh-CN`,
-		 * `zh-TW`, `ja`, `ko`, `ru`, `es` or `pt-BR`. Empty for a moment at start, until it is known.
+		 * `zh-TW`, `ja`, `ko`, `ru`, `es` or `pt-BR`. Empty for a moment at start, until it is known,
+		 * and undefined on an older Breezell.
 		 */
 		export const language: string;
 
 		/** Breezell's display language changed, or became known. */
 		export const onDidChangeLanguage: Event<string>;
+
+		/** What to restart: the plugins only, this window, or all of Breezell. */
+		export type RestartScope = 'extensionHost' | 'window' | 'app';
+
+		export interface RestartRequest {
+			readonly scope: RestartScope;
+			/** Why, at most 300 characters. The user is told. */
+			readonly reason: string;
+			/** The reason in other languages, by locale: `zh-CN`, `zh-TW`, `ja`, `ko`, `ru`, `es`, `pt-BR`. */
+			readonly l10n?: { readonly [locale: string]: string };
+			/**
+			 * Restart without asking. Needs the `app.forceRestart` permission, which the user is asked
+			 * for the first time. It happens once per version of the plugin (after that it asks), after
+			 * a reply being written ends, with a few seconds' notice.
+			 */
+			readonly force?: boolean;
+		}
+
+		export namespace app {
+			/**
+			 * Asks the user to restart (`app.restart`), or tells them it is happening (`force`). True when
+			 * the restart will happen. After "Later", further requests within 30 minutes return false
+			 * without asking. For after this plugin is installed, updated or removed, when its code
+			 * cannot run, declare `contributes.breezell.restart` in package.json instead.
+			 */
+			export function requestRestart(request: RestartRequest): Thenable<boolean>;
+		}
 
 		/**
 		 * The permissions this plugin declared in `breezell.permissions`, as an Android app declares

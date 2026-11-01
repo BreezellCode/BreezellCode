@@ -3,7 +3,7 @@
 	"publisher": "breezell",
 	"displayName": "%displayName%",
 	"description": "%description%",
-	"version": "1.1.2",
+	"version": "1.1.3",
 	"license": "GPL-3.0-or-later",
 	"author": {
 		"name": "Breezell",
@@ -47,6 +47,21 @@
 			"launcher": {
 				"command": "breezellIme.openSettings",
 				"sidebar": true
+			},
+			"restart": {
+				"afterUninstall": {
+					"scope": "app",
+					"reason": "Finishes removing the input method from this computer.",
+					"l10n": {
+						"zh-TW": "完成把輸入法從這台電腦移除。",
+						"zh-CN": "完成把输入法从这台电脑移除。",
+						"ja": "このコンピューターから入力メソッドの削除を完了します。",
+						"ko": "이 컴퓨터에서 입력기 제거를 마칩니다.",
+						"ru": "Завершает удаление метода ввода с этого компьютера.",
+						"es": "Termina de quitar el método de entrada de este equipo.",
+						"pt-BR": "Termina de remover o método de entrada deste computador."
+					}
+				}
 			}
 		},
 		"commands": [
