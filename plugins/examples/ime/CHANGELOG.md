@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.5
+
+- The words offered after a commit no longer stay on screen. In Breezell's chat box and editor (with a Breezell that has this fix) they close when you click elsewhere or the focus moves, on Esc, and by themselves after five seconds, and what you were composing in the chat box closes the same way. Once they are gone, Tab is Tab again, in the Windows input method too.
+- The switch for them on the settings page is now called **Word predictions**. Off, you just type: nothing is offered, in Korean either, and it takes effect at once, whether set on the page or in settings.json.
+- Turning the input method off while composing in the chat box no longer puts that text in the editor.
+- After an update the engine comes back at once, also when Breezell had only just started it. Before, it stayed away and the next key was lost while the language loaded inside Breezell.
+
 ## 1.1.4
 
 - Removing the plugin takes the input method away in every language: it stayed under another language you have (Simplified Chinese when you chose Traditional), because Windows had it enabled for the whole machine.

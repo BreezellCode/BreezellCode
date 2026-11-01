@@ -94,6 +94,60 @@ check('Tab takes the first word offered', offeredNow?.labels === 'none' && offer
 await vscode.commands.executeCommand('breezellIme.cancel');
 await settle();
 
+// What is on offer does not stay: a click elsewhere, Esc, the time, the switch.
+const lastPanel = () => vscode.calls.filter(c => c[0] === 'panel').at(-1)?.[1];
+await type('nihao ');
+check('offered again', lastPanel()?.labels === 'none', JSON.stringify(lastPanel()));
+await vscode.commands.executeCommand('breezellIme.surface', false, 'none');
+await settle();
+check('the focus leaves the editor: the words offered close', lastPanel() === null, JSON.stringify(lastPanel()));
+await vscode.commands.executeCommand('breezellIme.surface', true, 'editor');
+await settle();
+const beforeDrop = prose.text;
+await type('nih');
+await vscode.commands.executeCommand('breezellIme.surface', true, 'chat');
+await settle();
+check('the focus goes to the chat box: the composition and its panel close, nothing goes in', lastPanel() === null && prose.text === beforeDrop, `${prose.text} ${JSON.stringify(lastPanel())}`);
+const chatComposing = await vscode.commands.executeCommand('breezellIme.chatKey', { key: 'n' });
+check('typing in the chat box does not draw in the editor', chatComposing?.composing && lastPanel() === null, JSON.stringify(lastPanel()));
+await vscode.commands.executeCommand('breezellIme.chatKey', { key: 'i' });
+await vscode.commands.executeCommand('breezellIme.chatForget', 'FocusLost');
+const afterLost = await vscode.commands.executeCommand('breezellIme.chatKey', { key: 'h' });
+check('the chat box loses the focus: what it composed goes', afterLost?.preedit === 'h', JSON.stringify(afterLost));
+await vscode.commands.executeCommand('breezellIme.chatForget', 'FocusLost');
+await vscode.commands.executeCommand('breezellIme.surface', true, 'editor');
+await settle();
+await type('nihao ');
+check('offered in the editor once more', lastPanel()?.labels === 'none', JSON.stringify(lastPanel()));
+await vscode.commands.executeCommand('breezellIme.cancel');
+await settle();
+check('Esc closes them', lastPanel() === null, JSON.stringify(lastPanel()));
+await type('nihao ');
+const beforeWait = prose.text;
+await new Promise(r => setTimeout(r, 5200));
+check('left alone, they close by themselves', lastPanel() === null, JSON.stringify(lastPanel()));
+await vscode.commands.executeCommand('breezellIme.tab');
+await settle();
+check('and Tab takes nothing any more', prose.text === beforeWait, prose.text);
+await vscode.workspace.getConfiguration('breezellIme').update('prediction', false);
+await settle();
+await type('nihao ');
+const beforeOff = prose.text;
+check('the switch off: a commit is just a commit, with no panel', lastPanel() === null && beforeOff.endsWith('你好'), `${beforeOff} ${JSON.stringify(lastPanel())}`);
+const chatCommit = await (async () => {
+	await vscode.commands.executeCommand('breezellIme.surface', true, 'chat');
+	await settle();
+	await vscode.commands.executeCommand('breezellIme.chatKey', { key: 'n' });
+	await vscode.commands.executeCommand('breezellIme.chatKey', { key: 'i' });
+	return vscode.commands.executeCommand('breezellIme.chatKey', { key: ' ' });
+})();
+check('in the chat box too', chatCommit?.commit?.length === 1 && !chatCommit.predicting && !chatCommit.candidates.length, JSON.stringify(chatCommit));
+await vscode.commands.executeCommand('breezellIme.surface', true, 'editor');
+await vscode.workspace.getConfiguration('breezellIme').update('prediction', true);
+await settle();
+await vscode.commands.executeCommand('breezellIme.cancel');
+await settle();
+
 // Code: keys stay English outside comments and strings.
 const code = new vscode.FakeEditor('const x = ', 'typescript');
 vscode.window.activeTextEditor = code;

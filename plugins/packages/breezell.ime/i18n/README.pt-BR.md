@@ -9,7 +9,7 @@ Um método de entrada que conhece seu código e sua conversa: pinyin, zhuyin, pi
 - **Usa o que está ao redor do cursor.** O código que você está editando e a conversa no chat ajudam a escolher as palavras, e nomes como `useState` viram candidatos do jeito que estão escritos lá.
 - **Perdoa deslizes.** No pinyin, teclas pressionadas na ordem errada, uma tecla vizinha ou uma tecla a mais ou a menos ainda encontram a palavra (`jain` encontra 简).
 - **Mistura inglês.** Digite `hello` no pinyin e ele aparece entre os candidatos.
-- **Oferece as próximas palavras** depois que você confirma texto em chinês.
+- **Oferece as próximas palavras** depois que você confirma texto em chinês. Elas somem depois de alguns segundos ou ao clicar em outro lugar; **Previsão de palavras** na página dele as desativa.
 - **Aprende com você**, sem deixar que uma escolha isolada se espalhe para todo o resto.
 
 ## Primeiros passos

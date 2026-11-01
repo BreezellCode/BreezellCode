@@ -14,7 +14,7 @@ Japanese and Korean, in Breezell's editor and chat and, on Windows, in every pro
 - **Forgives slips.** In pinyin, keys pressed in the wrong order, a neighbouring key, or one key too
   many or too few still find the word (`jain` finds 简).
 - **Mixes in English.** Type `hello` in pinyin and it is among the candidates.
-- **Offers the next words** after you commit Chinese text.
+- **Offers the next words** after you commit Chinese text. They go after a few seconds or when you click elsewhere; **Word predictions** on its page turns them off.
 - **Learns from you**, without letting a one-off pick spill into everything else.
 
 ## Getting started

@@ -64,6 +64,12 @@ export interface KeySessionOptions {
 	readonly english: boolean;
 }
 
+/**
+ * How long the words offered after a commit stay. Then they are gone: the panels hide (the text
+ * service's after the same time) and Tab is Tab again, wherever the words were offered.
+ */
+export const OFFERED_MS = 5000;
+
 const COMPOSING_KEYS = new Set(['Backspace', 'Escape', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Tab', ' ']);
 const SHIFT_DIGITS = '!@#$%^&*(';
 
@@ -93,6 +99,7 @@ export class KeySession {
 	private highlight = 0;
 	private last: ImeState = { preedit: '', candidates: [], commit: '' };
 	private predicted: string[] = [];
+	private offeredUntil = 0;
 	private readonly punctuator = new Punctuator();
 	/** What went in from the input method lately: the context of the next composition when the caller has none. */
 	private recent = '';
@@ -104,7 +111,7 @@ export class KeySession {
 	 */
 	private after: 'commit' | 'other' | 'fresh' = 'fresh';
 
-	constructor(readonly composer: AsyncComposer, private readonly options: () => KeySessionOptions) { }
+	constructor(readonly composer: AsyncComposer, private readonly options: () => KeySessionOptions, private readonly now: () => number = Date.now) { }
 
 	private get o(): KeySessionOptions {
 		return this.options();
@@ -124,7 +131,8 @@ export class KeySession {
 	}
 
 	get predicting(): boolean {
-		return !this.composer.composing && this.predicted.length > 0;
+		// The setting is read here too: turned off, what is on offer goes at once.
+		return !this.composer.composing && this.predicted.length > 0 && this.now() < this.offeredUntil && this.o.prediction;
 	}
 
 	/**
@@ -316,6 +324,7 @@ export class KeySession {
 		this.justCommitted = !!commit && !marked && !c.composing;
 		if (commit && !marked && !c.composing && this.o.prediction && !this.o.english) {
 			this.predicted = await c.predictions(this.pageSize);
+			this.offeredUntil = this.now() + OFFERED_MS;
 		}
 		return { eaten: true, commit, typeKey };
 	}
@@ -374,6 +383,7 @@ export class KeySession {
 	async reset(): Promise<void> {
 		this.predicted = [];
 		this.highlight = 0;
+		this.justCommitted = false;
 		await this.composer.cancel();
 		this.composer.state();
 		await this.composer.forget();
@@ -414,11 +424,11 @@ export class KeySession {
 		const composing = c.composing;
 		const s = this.last;
 		const start = Math.floor(this.highlight / this.pageSize) * this.pageSize;
-		const predicting = !composing && this.predicted.length > 0;
+		const predicting = this.predicting;
 		return {
 			composing,
 			preedit: composing ? s.preedit : '',
-			candidates: composing ? s.candidates.slice(start, start + this.pageSize) : this.predicted,
+			candidates: composing ? s.candidates.slice(start, start + this.pageSize) : predicting ? this.predicted : [],
 			// The first of the words offered is what Tab takes.
 			highlight: predicting ? 0 : this.highlight - start,
 			pageStart: composing ? start : 0,

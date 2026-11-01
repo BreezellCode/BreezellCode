@@ -19,7 +19,7 @@ export interface ImeControls {
 	setLayout(id: string): Promise<void>;
 	setDataDir(dir: string): Promise<void>;
 	/** A setting the system input method's host also reads. */
-	setSharedSetting(key: 'prediction' | 'learning' | 'wubiSmartOrder' | 'pageSize', value: unknown): Promise<void>;
+	setSharedSetting(key: 'learning' | 'wubiSmartOrder' | 'pageSize', value: unknown): Promise<void>;
 	clearLearning(): Promise<void>;
 	/** The models changed on disk. */
 	dataChanged(): Promise<void>;
@@ -180,9 +180,9 @@ export class SettingsPage implements vscode.Disposable {
 	}
 
 	private async setting(key: string, value: unknown): Promise<void> {
-		if (key === 'chineseScript' || key === 'englishInCode' || key === 'displayLanguage') {
+		if (key === 'chineseScript' || key === 'englishInCode' || key === 'displayLanguage' || key === 'prediction') {
 			await this.config.update(key, value, vscode.ConfigurationTarget.Global);
-		} else if (key === 'prediction' || key === 'learning' || key === 'wubiSmartOrder' || key === 'pageSize') {
+		} else if (key === 'learning' || key === 'wubiSmartOrder' || key === 'pageSize') {
 			await this.config.update(key, value, vscode.ConfigurationTarget.Global);
 			await this.ime.setSharedSetting(key, value);
 		}
@@ -434,8 +434,8 @@ export class SettingsPage implements vscode.Disposable {
 			pageSize: l10n.t('Candidates per page'),
 			englishInCode: l10n.t('English in code'),
 			englishInCodeNote: l10n.t('In code, type English outside comments and strings; in comments, strings, or after /// on the line, type your own language.'),
-			prediction: l10n.t('Next words'),
-			predictionNote: l10n.t('After you commit Chinese text, offer the words that may come next. Tab takes the first.'),
+			prediction: l10n.t('Word predictions'),
+			predictionNote: l10n.t('After you commit Chinese text, offer the words that may come next (Tab takes the first); in Korean, words as you type. They go after a few seconds or when you click elsewhere. Off: you just type, and nothing is offered.'),
 			wubiSmartOrder: l10n.t('Wubi: order by context'),
 			wubiSmartOrderNote: l10n.t('Order candidates with the same code by the text around them. Off: a fixed order.'),
 			learning: l10n.t('Learn from me'),

@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { AsyncComposer, ImeState } from '../../src/composers.js';
-import { badgeOf, Key, KeySession, KeySessionOptions } from '../../src/keys.js';
+import { badgeOf, Key, KeySession, KeySessionOptions, OFFERED_MS } from '../../src/keys.js';
 import { Punctuator } from '../../src/punctuation.js';
 
 /** Letters compose; candidates are [INPUT, input·2, input·3 …] (as many as `count`); predictions after a commit: 甲 乙. */
@@ -116,6 +116,59 @@ test('keys: the words offered after a commit: Tab takes the first, a click any, 
 	v = await s.view();
 	assert.equal(v.predicting, false);
 	assert.equal(s.eats(k('Tab')), false);  // Tab is the program's again
+});
+
+test('keys: the words offered go by themselves: nothing to see, and Tab is Tab again; what comes next still follows', async () => {
+	const c = new FakeComposer();
+	let clock = 1000;
+	const o: KeySessionOptions = { layout: 'pinyin', traditional: true, pageSize: 3, fullWidth: true, prediction: true, english: false };
+	const s = new KeySession(c, () => o, () => clock);
+	await type(s, 'ni');
+	await s.key(k(' '));
+	clock += OFFERED_MS - 1;
+	assert.equal(s.predicting, true);
+	assert.equal(s.eats(k('Tab')), true);
+	clock += 1;
+	assert.equal(s.predicting, false);
+	const v = await s.view();
+	assert.deepEqual([v.predicting, v.candidates.length, v.reading, v.labels], [false, 0, '', 'digits']);
+	assert.equal(s.eats(k('Tab')), false);
+	assert.equal(await s.pick(0), '');
+	c.calls.length = 0;
+	await type(s, 'ma');
+	assert.equal(c.calls.includes('forget'), false);
+});
+
+test('keys: predictions off: a commit is just a commit; turned off while on offer, they go at once', async () => {
+	const { s, c } = make({ prediction: false });
+	await type(s, 'ni');
+	assert.equal((await s.key(k(' '))).commit, 'NI');
+	assert.deepEqual([s.predicting, (await s.view()).candidates.length, s.eats(k('Tab'))], [false, 0, false]);
+	assert.equal(c.composing, false);
+
+	const on = make({ prediction: true });
+	const options = { ...on.o };
+	const session = new KeySession(on.c, () => options);
+	await type(session, 'ni');
+	await session.key(k(' '));
+	assert.equal(session.predicting, true);
+	(options as { prediction: boolean }).prediction = false;
+	assert.deepEqual([session.predicting, (await session.view()).candidates.length, session.eats(k('Tab'))], [false, 0, false]);
+});
+
+test('keys: reset (the focus moved): the composition and the words offered go, and a Backspace later takes nothing back', async () => {
+	const { s, c } = make({ prediction: true });
+	await type(s, 'ni');
+	await s.reset();
+	assert.deepEqual([s.composing, (await s.view()).candidates.length], [false, 0]);
+	await type(s, 'ni');
+	await s.key(k(' '));
+	assert.equal(s.predicting, true);
+	await s.reset();
+	assert.equal(s.predicting, false);
+	c.calls.length = 0;
+	await s.key(k('Backspace'));
+	assert.equal(c.calls.includes('undo'), false);
 });
 
 test('keys: a digit after text is a digit, whatever is offered, and what is offered goes', async () => {

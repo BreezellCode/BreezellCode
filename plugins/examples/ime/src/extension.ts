@@ -21,7 +21,7 @@ import { join } from 'node:path';
 import * as vscode from 'vscode';
 import { englishAt } from './code.js';
 import { AsyncComposer, ChineseComposer, ChineseData, Composer, JapaneseComposer, JapaneseData, KoreanComposer, KoreanData, LocalComposer, WubiComposer } from './composers.js';
-import { Key, KeySession, KeyView } from './keys.js';
+import { Key, KeySession, OFFERED_MS, KeyView } from './keys.js';
 import { DataManifest, hasPack, loadManifest, packOfLayout } from './data.js';
 import { appLanguage, l10n, refreshL10n } from './l10n.js';
 import { claimSetup, configuredDataDir, updateSharedConfig } from './paths.js';
@@ -120,8 +120,10 @@ class Ime implements vscode.Disposable {
 	private editing = false;
 	/** Where the caret went with this plugin's last edit (its own selection change is no caret move). */
 	private ownCaret?: vscode.Position;
-	/** Whether the words that may come next are offered where the next commit goes (not in code). */
-	private predictionHere = true;
+	/** Korean: the word suggestions follow what was just typed, until the caret or the focus goes elsewhere. */
+	private suggestHere = true;
+	/** Ends what is on offer (the words after a commit, the Korean suggestions) when its time is up. */
+	private offerTimer?: ReturnType<typeof setTimeout>;
 	private readonly status: vscode.StatusBarItem;
 	private readonly preeditDeco = vscode.window.createTextEditorDecorationType({
 		after: { textDecoration: 'underline; text-underline-offset: 3px', color: new vscode.ThemeColor('editor.foreground') },
@@ -144,6 +146,8 @@ class Ime implements vscode.Disposable {
 	private panelShown = false;
 	/** Breezell's editor or chat has the focus (Breezell says so: breezellIme.surface). */
 	private surfaceInternal = false;
+	/** Which of them: 'chat' while the chat box has the focus; it draws its own panel. */
+	private surface?: string;
 	private windowFocused = vscode.window.state.focused;
 
 	constructor(private readonly context: vscode.ExtensionContext) {
@@ -198,13 +202,16 @@ class Ime implements vscode.Disposable {
 		// The chat box's keys (Breezell's chat input hands them over while the input method is on).
 		cmd('breezellIme.chatKey', (a: ChatKey) => this.chatKey(a), true);
 		// A key the chat box kept (Backspace, the arrows, Enter): what comes next follows from it.
-		cmd('breezellIme.chatForget', (key?: string) => this.session?.passed({ key: typeof key === 'string' ? key : 'Escape' }), true);
+		// FocusLost: the box lost the focus or a press landed elsewhere: all of it goes.
+		cmd('breezellIme.chatForget', (key?: string) => key === 'FocusLost' ? this.session?.reset() : this.session?.passed({ key: typeof key === 'string' ? key : 'Escape' }), true);
 		// A candidate clicked in the chat's panel.
 		cmd('breezellIme.chatPick', (i: number) => this.chatPick(Number(i)), true);
 		// Where Breezell's focus is: its editor or chat (the system input method steps aside there).
-		this.disposables.push(vscode.commands.registerCommand('breezellIme.surface', (internal: boolean) => {
+		this.disposables.push(vscode.commands.registerCommand('breezellIme.surface', (internal: boolean, where?: string) => {
 			this.surfaceInternal = !!internal;
+			this.surface = where;
 			this.host?.updateFocus();
+			void this.run(() => this.focusMoved());
 		}));
 		if (this.config.get<boolean>('useSystemHost', true)) {
 			// Windows: the system input method's text service runs in this process; report the focus.
@@ -222,7 +229,7 @@ class Ime implements vscode.Disposable {
 				}
 				const s = this.session;
 				if (e.kind === vscode.TextEditorSelectionChangeKind.Mouse && s?.composing) {
-					void this.run(async () => { await s.reset(); await this.render(); });
+					void this.run(async () => { this.suggestHere = false; await s.reset(); await this.render(); });
 					return;
 				}
 				// The caret moved (not by this plugin's own insert): the words offered go, and what
@@ -230,8 +237,9 @@ class Ime implements vscode.Disposable {
 				const own = !!this.ownCaret && e.selections.length === 1 && e.selections[0].active.isEqual(this.ownCaret);
 				if (!own && s && !s.composing) {
 					void this.run(async () => {
-						const offered = s.predicting;
+						const offered = s.predicting || this.suggestions.length > 0;
 						s.dropPredictions();
+						this.suggestHere = false;
 						if (e.kind !== undefined) {
 							await s.passed({ key: 'ArrowLeft' });
 						}
@@ -269,6 +277,11 @@ class Ime implements vscode.Disposable {
 			vscode.workspace.onDidChangeConfiguration(e => {
 				if (e.affectsConfiguration('breezellIme.displayLanguage')) {
 					this.languageChanged();
+				}
+				// From the settings page or settings.json: the system input method follows too, and
+				// what is on offer goes.
+				if (e.affectsConfiguration('breezellIme.prediction')) {
+					void this.run(() => this.setSharedSetting('prediction', this.predictionOn));
 				}
 				// Settings that change what the composers are: they are made again when next needed.
 				if (['dataPath', 'chineseScript', 'wubiSmartOrder'].some(name => e.affectsConfiguration(`breezellIme.${name}`))) {
@@ -475,13 +488,18 @@ class Ime implements vscode.Disposable {
 		return s;
 	}
 
+	/** The setting that offers words at all: after a commit, and in Korean as you type. */
+	private get predictionOn(): boolean {
+		return this.config.get<boolean>('prediction', true);
+	}
+
 	private newSession(composer: AsyncComposer): KeySession {
 		return new KeySession(composer, () => ({
 			layout: this.layout,
 			traditional: this.traditional,
 			pageSize: this.pageSize,
 			fullWidth: true,
-			prediction: this.predictionHere && this.config.get<boolean>('prediction', true) && CHINESE.has(this.layout),
+			prediction: this.predictionOn && CHINESE.has(this.layout),
 			english: false,
 		}));
 	}
@@ -518,9 +536,11 @@ class Ime implements vscode.Disposable {
 			await this.ensureSession();
 			this.typeCommand = vscode.commands.registerCommand('type', args => this.run(() => this.onType(args?.text ?? '')));
 		} else {
-			if (this.session?.composing) {
+			// What is being composed goes in, but only an editor's: the chat box's is not the editor's text.
+			if (this.session?.composing && this.surface !== 'chat') {
 				await this.insert(await this.session.commitHighlighted());
 			}
+			await this.session?.reset();
 			this.typeCommand?.dispose();
 			this.typeCommand = undefined;
 		}
@@ -669,7 +689,7 @@ class Ime implements vscode.Disposable {
 		const version = String((this.context.extension?.packageJSON as { version?: unknown } | undefined)?.version ?? '');
 		if (version) {
 			// The new host at once, as the install does: the first key anywhere finds it ready.
-			void refreshSystem(this.context.extensionPath, version, m => this.log.info(m)).then(changed => changed ? this.host?.connect() : undefined).catch(e => this.log.warn(`could not update the system input method: ${e?.message ?? e}`));
+			void refreshSystem(this.context.extensionPath, version, m => this.log.info(m)).then(changed => changed ? this.host?.reconnect() : undefined).catch(e => this.log.warn(`could not update the system input method: ${e?.message ?? e}`));
 		}
 	}
 
@@ -757,7 +777,7 @@ class Ime implements vscode.Disposable {
 			await this.typeAsIs(text);
 			return this.render();
 		}
-		this.predictionHere = true;
+		this.suggestHere = true;
 		const r = await s.key({ key: text, shift: SHIFT_DIGITS.includes(text) }, s.composing ? undefined : this.textBefore(editor));
 		if (!r.eaten) {
 			await this.typeAsIs(text);
@@ -776,6 +796,7 @@ class Ime implements vscode.Disposable {
 		if (!s) {
 			return;
 		}
+		this.suggestHere = k.key !== 'Escape';
 		const r = await s.key(k);
 		if (!r.eaten && k.key === 'Backspace') {
 			await vscode.commands.executeCommand('deleteLeft');
@@ -849,12 +870,23 @@ class Ime implements vscode.Disposable {
 		return null;
 	}
 
+	/** The focus moved: what was going on where it was goes, and its panel with it. */
+	private async focusMoved(): Promise<void> {
+		const s = this.session;
+		this.suggestHere = false;
+		if (s?.composing || s?.predicting || this.suggestions.length) {
+			await s?.reset();
+			await this.render();
+		}
+	}
+
 	/** Shows what is being composed and the panel (or the candidates as text after the caret). */
 	private async render(): Promise<void> {
 		const editor = vscode.window.activeTextEditor;
-		const s = this.enabled ? this.session : undefined;
+		// The chat box draws its own panel: what goes on there does not show in the editor.
+		const s = this.enabled && this.surface !== 'chat' ? this.session : undefined;
 		const v = s ? await s.view() : undefined;
-		this.suggestions = this.layout === 'korean' && editor && s ? await s.composer.suggestions(this.wordBefore(editor), this.wordsBefore(editor)) : [];
+		this.suggestions = this.layout === 'korean' && this.suggestHere && this.predictionOn && editor && s ? await s.composer.suggestions(this.wordBefore(editor), this.wordsBefore(editor)) : [];
 		const composing = !!v?.composing;
 		void vscode.commands.executeCommand('setContext', 'breezellIme.composing', composing);
 		void vscode.commands.executeCommand('setContext', 'breezellIme.navigating', composing && v!.candidates.length > 0);
@@ -864,6 +896,14 @@ class Ime implements vscode.Disposable {
 		if (await this.hasPanel() && (panel || this.panelShown)) {
 			this.panelShown = !!panel;
 			this.drawPanel(panel);
+		}
+		// What is on offer (not the candidates of a composition) goes by itself after a while.
+		clearTimeout(this.offerTimer);
+		if (panel && (!composing || this.suggestions.length)) {
+			this.offerTimer = setTimeout(() => void this.run(() => {
+				this.suggestHere = false;
+				return this.render();
+			}), OFFERED_MS + 50);
 		}
 		if (editor) {
 			const at = new vscode.Range(editor.selection.active, editor.selection.active);
@@ -903,7 +943,6 @@ class Ime implements vscode.Disposable {
 			return { handled: false, commit: key.length === 1 ? key : '', preedit: '', candidates: [], highlight: 0, composing: false, pageStart: 0 };
 		}
 		const s = await this.ensureSession();
-		this.predictionHere = true;
 		const r = await s.key({ key, shift: a.shift, digit: a.digit }, a.context);
 		if (!r.eaten) {
 			// The chat box takes it: a character goes in as typed (the bridge held it back), Backspace deletes.
@@ -934,6 +973,7 @@ class Ime implements vscode.Disposable {
 
 	dispose(): void {
 		this.saveLearning();
+		clearTimeout(this.offerTimer);
 		this.log.dispose();
 		this.typeCommand?.dispose();
 		this.preeditDeco.dispose();

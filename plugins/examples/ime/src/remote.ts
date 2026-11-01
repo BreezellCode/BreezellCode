@@ -71,6 +71,14 @@ export class HostClient {
 		return start ? attempt.then(ok => ok || this.open(true)) : attempt;
 	}
 
+	/** The host was replaced on purpose: the new one may be started, whoever started the last. */
+	reconnect(): Promise<boolean> {
+		this.socket?.destroy();
+		this.socket = undefined;
+		this.started = false;
+		return this.connect();
+	}
+
 	private async open(start: boolean): Promise<boolean> {
 		if (await this.tryConnect()) {
 			return true;
