@@ -1,0 +1,12 @@
+node_modules/
+dist/
+engine/dist/
+*.vsix
+*.bzlm
+data/
+tools/ja/jaseg
+tools/lm/lmtrain
+tools/lm/wordids
+system/windows/out/
+bench/hangul/hangul-check
+bench/rime/rime-harness

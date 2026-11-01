@@ -1,0 +1,309 @@
+{
+	"name": "ime",
+	"publisher": "breezell",
+	"displayName": "%displayName%",
+	"description": "%description%",
+	"version": "1.0.0",
+	"license": "GPL-3.0-or-later",
+	"author": {
+		"name": "Breezell",
+		"url": "https://breezell.com"
+	},
+	"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/ime",
+	"icon": "media/icon.png",
+	"engines": {
+		"vscode": "^1.90.0"
+	},
+	"extensionKind": [
+		"ui"
+	],
+	"categories": [
+		"Productivity",
+		"Other"
+	],
+	"keywords": [
+		"input method",
+		"ime",
+		"pinyin",
+		"zhuyin",
+		"bopomofo",
+		"wubi",
+		"double pinyin",
+		"japanese",
+		"korean",
+		"chinese"
+	],
+	"main": "./dist/extension.js",
+	"l10n": "./media/l10n",
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"breezell": {
+		"apiVersion": 1,
+		"permissions": [],
+		"source": "open"
+	},
+	"contributes": {
+		"breezell": {
+			"launcher": {
+				"command": "breezellIme.openSettings",
+				"sidebar": true
+			}
+		},
+		"commands": [
+			{
+				"command": "breezellIme.openSettings",
+				"title": "%command.openSettings%",
+				"category": "Breezell IME"
+			},
+			{
+				"command": "breezellIme.toggle",
+				"title": "%command.toggle%",
+				"category": "Breezell IME"
+			},
+			{
+				"command": "breezellIme.chooseLayout",
+				"title": "%command.chooseLayout%",
+				"category": "Breezell IME"
+			},
+			{
+				"command": "breezellIme.toggleScript",
+				"title": "%command.toggleScript%",
+				"category": "Breezell IME"
+			},
+			{
+				"command": "breezellIme.clearLearning",
+				"title": "%command.clearLearning%",
+				"category": "Breezell IME"
+			}
+		],
+		"keybindings": [
+			{
+				"key": "ctrl+alt+space",
+				"mac": "ctrl+alt+shift+space",
+				"command": "breezellIme.toggle",
+				"when": "editorTextFocus"
+			},
+			{
+				"key": "ctrl+alt+k",
+				"command": "breezellIme.chooseLayout",
+				"when": "editorTextFocus"
+			},
+			{
+				"key": "backspace",
+				"command": "breezellIme.backspace",
+				"when": "editorTextFocus && breezellIme.composing"
+			},
+			{
+				"key": "escape",
+				"command": "breezellIme.cancel",
+				"when": "editorTextFocus && breezellIme.composing"
+			},
+			{
+				"key": "enter",
+				"command": "breezellIme.enter",
+				"when": "editorTextFocus && breezellIme.composing"
+			},
+			{
+				"key": "up",
+				"command": "breezellIme.previous",
+				"when": "editorTextFocus && breezellIme.navigating"
+			},
+			{
+				"key": "down",
+				"command": "breezellIme.next",
+				"when": "editorTextFocus && breezellIme.navigating"
+			},
+			{
+				"key": "left",
+				"command": "breezellIme.previous",
+				"when": "editorTextFocus && breezellIme.navigating"
+			},
+			{
+				"key": "right",
+				"command": "breezellIme.next",
+				"when": "editorTextFocus && breezellIme.navigating"
+			},
+			{
+				"key": "pageup",
+				"command": "breezellIme.pageUp",
+				"when": "editorTextFocus && breezellIme.navigating"
+			},
+			{
+				"key": "pagedown",
+				"command": "breezellIme.pageDown",
+				"when": "editorTextFocus && breezellIme.navigating"
+			},
+			{
+				"key": "tab",
+				"command": "breezellIme.tab",
+				"when": "editorTextFocus && breezellIme.suggesting"
+			},
+			{
+				"key": "shift+1",
+				"command": "breezellIme.select",
+				"args": 0,
+				"when": "editorTextFocus && breezellIme.navigating && breezellIme.shiftSelect"
+			},
+			{
+				"key": "shift+2",
+				"command": "breezellIme.select",
+				"args": 1,
+				"when": "editorTextFocus && breezellIme.navigating && breezellIme.shiftSelect"
+			},
+			{
+				"key": "shift+3",
+				"command": "breezellIme.select",
+				"args": 2,
+				"when": "editorTextFocus && breezellIme.navigating && breezellIme.shiftSelect"
+			},
+			{
+				"key": "shift+4",
+				"command": "breezellIme.select",
+				"args": 3,
+				"when": "editorTextFocus && breezellIme.navigating && breezellIme.shiftSelect"
+			},
+			{
+				"key": "shift+5",
+				"command": "breezellIme.select",
+				"args": 4,
+				"when": "editorTextFocus && breezellIme.navigating && breezellIme.shiftSelect"
+			},
+			{
+				"key": "shift+6",
+				"command": "breezellIme.select",
+				"args": 5,
+				"when": "editorTextFocus && breezellIme.navigating && breezellIme.shiftSelect"
+			},
+			{
+				"key": "shift+7",
+				"command": "breezellIme.select",
+				"args": 6,
+				"when": "editorTextFocus && breezellIme.navigating && breezellIme.shiftSelect"
+			},
+			{
+				"key": "shift+8",
+				"command": "breezellIme.select",
+				"args": 7,
+				"when": "editorTextFocus && breezellIme.navigating && breezellIme.shiftSelect"
+			},
+			{
+				"key": "shift+9",
+				"command": "breezellIme.select",
+				"args": 8,
+				"when": "editorTextFocus && breezellIme.navigating && breezellIme.shiftSelect"
+			}
+		],
+		"configuration": {
+			"title": "Breezell IME",
+			"properties": {
+				"breezellIme.dataPath": {
+					"type": "string",
+					"default": "",
+					"description": "%config.dataPath%"
+				},
+				"breezellIme.layout": {
+					"type": "string",
+					"default": "pinyin",
+					"enum": [
+						"pinyin",
+						"zhuyin",
+						"flypy",
+						"mspy",
+						"ziranma",
+						"sogou",
+						"abc",
+						"ziguang",
+						"jiajia",
+						"wubi",
+						"japanese",
+						"korean"
+					],
+					"enumDescriptions": [
+						"%layout.pinyin%",
+						"%layout.zhuyin%",
+						"%layout.flypy%",
+						"%layout.mspy%",
+						"%layout.ziranma%",
+						"%layout.sogou%",
+						"%layout.abc%",
+						"%layout.ziguang%",
+						"%layout.jiajia%",
+						"%layout.wubi%",
+						"%layout.japanese%",
+						"%layout.korean%"
+					],
+					"description": "%config.layout%"
+				},
+				"breezellIme.chineseScript": {
+					"type": "string",
+					"default": "auto",
+					"enum": [
+						"auto",
+						"simplified",
+						"traditional"
+					],
+					"enumDescriptions": [
+						"%script.auto%",
+						"%script.simplified%",
+						"%script.traditional%"
+					],
+					"description": "%config.chineseScript%"
+				},
+				"breezellIme.englishInCode": {
+					"type": "boolean",
+					"default": true,
+					"description": "%config.englishInCode%"
+				},
+				"breezellIme.wubiSmartOrder": {
+					"type": "boolean",
+					"default": false,
+					"description": "%config.wubiSmartOrder%"
+				},
+				"breezellIme.useSystemHost": {
+					"type": "boolean",
+					"default": true,
+					"description": "%config.useSystemHost%"
+				},
+				"breezellIme.prediction": {
+					"type": "boolean",
+					"default": true,
+					"description": "%config.prediction%"
+				},
+				"breezellIme.learning": {
+					"type": "boolean",
+					"default": true,
+					"description": "%config.learning%"
+				},
+				"breezellIme.pageSize": {
+					"type": "number",
+					"default": 7,
+					"minimum": 3,
+					"maximum": 9,
+					"description": "%config.pageSize%"
+				},
+				"breezellIme.dataMirror": {
+					"type": "string",
+					"default": "",
+					"description": "%config.dataMirror%"
+				}
+			}
+		}
+	},
+	"scripts": {
+		"build": "node tools/build_system.mjs && node tools/breezell-plugin.mjs build",
+		"watch": "node tools/breezell-plugin.mjs build --watch",
+		"typecheck": "tsc -p .",
+		"validate": "node tools/breezell-plugin.mjs validate",
+		"package:open": "node tools/build_system.mjs && node tools/breezell-plugin.mjs pack --open",
+		"submit": "node tools/breezell-plugin.mjs submit",
+		"test": "node tools/build.mjs && node --test engine/dist/engine/test/logic.test.js engine/dist/engine/test/keys.test.js engine/dist/engine/test/data.test.js",
+		"regress": "node tools/build.mjs && node_modules/.bin/esbuild bench/regress.ts --bundle --platform=node --format=esm --outfile=engine/dist/regress.mjs --log-level=warning && node engine/dist/regress.mjs"
+	},
+	"devDependencies": {
+		"@types/node": "^20.19.43",
+		"@types/vscode": "^1.90.0",
+		"esbuild": "^0.28.0",
+		"typescript": "^5.6.0"
+	}
+}

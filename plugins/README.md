@@ -49,7 +49,9 @@ A Breezell plugin is a VS Code extension with a `breezell` object in its `packag
 | **Window** | A window of its own with your page and layout; it can also open without the editor | [Focus Timer](examples/focus-timer) | Window |
 | **Conversation** | Reads the user's conversations, sends messages and approves tool calls, shown in its own window or panel | [Chat Mirror](examples/chat-mirror) | Window |
 
-The kinds combine: one plugin can bring skills, a panel, AI commands and a window.
+The kinds combine: one plugin can bring skills, a panel, AI commands and a window. For a large plugin
+with its own settings page, data downloaded from a GitHub release and a part installed in the system, see
+[Breezell IME](examples/ime).
 
 ## Getting started
 
@@ -349,6 +351,7 @@ To protect users and Breezell, plugins get none of these:
 - The Breezell sign-in token: `vscode.authentication` gives no `breezell` session.
 - API keys, the API Vault, conversation content, system prompts, cloud prompts, memories.
 - Breezell's internal commands: `breezell.*` and the other Breezell commands are for Breezell and its built-in extensions only.
+- The commands `breezellIme.*`: Breezell hands the chat box's keys to them, so only the Breezell IME plugin (`breezell.ime`) may register them.
 
 ## Open or closed source: your choice
 

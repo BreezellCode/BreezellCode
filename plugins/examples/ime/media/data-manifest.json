@@ -1,0 +1,86 @@
+{
+	"version": 1,
+	"base": "https://github.com/BreezellCode/BreezellCode/releases/download/ime-data-1",
+	"packs": [
+		{
+			"id": "chinese",
+			"files": [
+				{
+					"name": "zh.bzlm",
+					"size": 303871324,
+					"sha256": "a0d42deb489e3ee82e98614d9d164601568001a18801ea0721f736753ec40323"
+				},
+				{
+					"name": "zh.bzlx",
+					"size": 82207348,
+					"sha256": "ff0be5a431c51bd015f0480d627c1eba323b532c6162c52ae25175f2bb5d458c"
+				},
+				{
+					"name": "zh-tw.bzlx",
+					"size": 1548920,
+					"sha256": "4e3d31d336666ecf31ae104466ab62f8b9abb7fe7cb93e583de39fedc14eb8fc"
+				},
+				{
+					"name": "zh-tones.tsv",
+					"size": 530970,
+					"sha256": "877d82a1718e531375c7eab5f5be5d861aa57f22ce9f5706ac147a9d7538bffb"
+				},
+				{
+					"name": "zh-t2s.txt",
+					"size": 47883,
+					"sha256": "35baad6f6d3795f7629f373f910a4687288f0aaf3ef0b89c7f8b2f09c61f7153"
+				},
+				{
+					"name": "zh-s2tw.txt",
+					"size": 1045376,
+					"sha256": "27f8c49e26c33ce02c0291ac6d057446baae723026ca3cf81cdaf4db5af8b72a"
+				},
+				{
+					"name": "en-words.tsv",
+					"size": 615976,
+					"sha256": "3965556eda45017719747335a5059237519fab2a328013039f9331719e56f7e6"
+				},
+				{
+					"name": "wubi86.bztb",
+					"size": 2572304,
+					"sha256": "c20ecbb1166b4a558be278053254c5a1e51a36523865285cba96fc01e05877b1"
+				}
+			]
+		},
+		{
+			"id": "japanese",
+			"files": [
+				{
+					"name": "ja.bzlm",
+					"size": 134809648,
+					"sha256": "2677e4bc11035fb4d1b85212be1350bb59adb42a3e87bd78931ad49d5ee3d40a"
+				},
+				{
+					"name": "ja.bzja",
+					"size": 63473724,
+					"sha256": "e82245eaec690ce98e918618de11562ee7b65c2a68b25ad655b00d77f3cd266d"
+				},
+				{
+					"name": "romanji-hiragana.tsv",
+					"size": 2963,
+					"sha256": "fcb900e311d32ced05499c86e236d1084fb0c0937398deb6311fc6c7287a7821"
+				}
+			]
+		},
+		{
+			"id": "korean",
+			"files": [
+				{
+					"name": "ko.bzlm",
+					"size": 129768916,
+					"sha256": "d4ca861c58ce4c5ff8738f1f8c979c5f4f4f9da406ea2a0cd14aef81eb6760ec"
+				},
+				{
+					"name": "ko.vocab",
+					"size": 4806520,
+					"sha256": "d20daabacdcdca71102b46358ba3abfa2cce6b34e39425f0f81cb968c64cf4a5"
+				}
+			]
+		}
+	]
+}

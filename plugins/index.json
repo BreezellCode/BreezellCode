@@ -1,6 +1,6 @@
 {
 	"schemaVersion": 1,
-	"updatedAt": "2026-10-31T12:23:32.680Z",
+	"updatedAt": "2026-11-01T10:36:48.500Z",
 	"plugins": [
 		{
 			"id": "breezell.chat-mirror",
@@ -281,6 +281,83 @@
 				"size": 23617
 			},
 			"updatedAt": "2026-10-29T21:30:05.758Z"
+		},
+		{
+			"id": "breezell.ime",
+			"displayName": "Breezell IME",
+			"description": "An input method that knows your code: pinyin, zhuyin, double pinyin, wubi, Japanese and Korean, in Breezell's editor and chat and, on Windows, in every program.",
+			"version": "1.0.0",
+			"apiVersion": 1,
+			"categories": [
+				"Productivity"
+			],
+			"tags": [
+				"input method",
+				"ime",
+				"pinyin",
+				"zhuyin",
+				"bopomofo",
+				"wubi",
+				"double pinyin",
+				"japanese",
+				"korean",
+				"chinese"
+			],
+			"permissions": [],
+			"source": "open",
+			"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/ime",
+			"author": {
+				"name": "Breezell",
+				"url": "https://breezell.com"
+			},
+			"license": "GPL-3.0-or-later",
+			"icon": "packages/breezell.ime/icon.png",
+			"readme": "packages/breezell.ime/README.md",
+			"readmes": {
+				"zh-CN": "packages/breezell.ime/i18n/README.zh-CN.md",
+				"zh-TW": "packages/breezell.ime/i18n/README.zh-TW.md",
+				"ja": "packages/breezell.ime/i18n/README.ja.md",
+				"ko": "packages/breezell.ime/i18n/README.ko.md",
+				"ru": "packages/breezell.ime/i18n/README.ru.md",
+				"es": "packages/breezell.ime/i18n/README.es.md",
+				"pt-BR": "packages/breezell.ime/i18n/README.pt-BR.md"
+			},
+			"l10n": {
+				"zh-CN": {
+					"displayName": "Breezell 输入法",
+					"description": "懂你代码的输入法：全拼、注音、双拼、五笔、日语和韩语，可用于 Breezell 的编辑器和对话框；在 Windows 上，所有程序都能用。"
+				},
+				"zh-TW": {
+					"displayName": "Breezell 輸入法",
+					"description": "懂你程式碼的輸入法：全拼、注音、雙拼、五筆、日文和韓文，可用於 Breezell 的編輯器和對話框；在 Windows 上，所有程式都能用。"
+				},
+				"ja": {
+					"displayName": "Breezell IME",
+					"description": "コードを理解する入力方式：ピンイン、注音、双拼、五筆、日本語、韓国語を、Breezell のエディターとチャットで、Windows ではすべてのプログラムで使えます。"
+				},
+				"ko": {
+					"displayName": "Breezell 입력기",
+					"description": "내 코드를 아는 입력기: 병음, 주음, 쌍병음, Wubi, 일본어, 한국어를 Breezell의 편집기와 채팅에서, Windows에서는 모든 프로그램에서 사용할 수 있습니다."
+				},
+				"ru": {
+					"displayName": "Breezell IME",
+					"description": "Метод ввода, который знает ваш код: пиньинь, чжуинь, двойной пиньинь, Wubi, японский и корейский — в редакторе и чате Breezell, а в Windows — в любой программе."
+				},
+				"es": {
+					"displayName": "Breezell IME",
+					"description": "Un método de entrada que conoce tu código: pinyin, zhuyin, pinyin doble, wubi, japonés y coreano, en el editor y el chat de Breezell y, en Windows, en todos los programas."
+				},
+				"pt-BR": {
+					"displayName": "Breezell IME",
+					"description": "Um método de entrada que conhece seu código: pinyin, zhuyin, pinyin duplo, wubi, japonês e coreano, no editor e no chat do Breezell e, no Windows, em todos os programas."
+				}
+			},
+			"package": {
+				"path": "packages/breezell.ime/1.0.0/breezell.ime-1.0.0.vsix",
+				"sha256": "019c6cfce3a9184fe278a1511e40d716d40425236400079f5eb35d9ce9d8136e",
+				"size": 557410
+			},
+			"updatedAt": "2026-11-01T10:36:48.500Z"
 		},
 		{
 			"id": "breezell.starter-pack",

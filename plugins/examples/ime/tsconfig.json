@@ -1,0 +1,23 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "nodenext",
+		"moduleResolution": "nodenext",
+		"lib": [
+			"ES2022"
+		],
+		"strict": true,
+		"noEmit": true,
+		"skipLibCheck": true,
+		"types": [
+			"node",
+			"vscode"
+		]
+	},
+	"include": [
+		"src",
+		"engine/src",
+		"system/host",
+		"types"
+	]
+}
