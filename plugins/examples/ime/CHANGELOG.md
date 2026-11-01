@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.2
+
+- Removing the plugin now really takes the input method off Windows' list: the process that did it did not outlive the removal step.
+
 ## 1.1.1
 
 - The Windows input method now installs: a check of regsvr32 stopped the installer halfway in 1.1.0.
