@@ -53,7 +53,7 @@ type in keeps its model in memory: about 400 MB for Chinese.
 
 ## Every program on Windows
 
-On its first start it adds itself as a Windows input method, with the same engine and the same learned words as in Breezell. It becomes your default input method; **Win+Space** switches to another. In programs already open when it installs, press **Win+Space** to switch to it.
+On its first start it adds itself as a Windows input method, with the same engine and the same learned words as in Breezell. It becomes your default input method; **Win+Space** switches to another. It switches on at once in programs already running too; none need restarting.
 
 It installs a text service in `Program Files\BreezellIME` and the engine host in `%LOCALAPPDATA%\BreezellIME`, all from this plugin's package; no code is downloaded.
 

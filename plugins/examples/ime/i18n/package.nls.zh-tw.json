@@ -30,5 +30,6 @@
 	"layout.korean": "韓文（두벌식）",
 	"script.auto": "跟隨 Breezell 的顯示語言",
 	"script.simplified": "簡體中文",
-	"script.traditional": "繁體中文"
+	"script.traditional": "繁體中文",
+	"config.displayLanguage": "這個插件自身文字的語言。auto：跟著 Breezell 的介面語言。"
 }

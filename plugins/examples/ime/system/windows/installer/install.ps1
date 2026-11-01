@@ -40,10 +40,12 @@ if ($Part -ne 'user') {
 		}
 		Copy-Item (Join-Path $here $name) $target -Force
 	}
-	& "$env:SystemRoot\System32\regsvr32.exe" /s (Join-Path $program 'BreezellIME64.dll')
-	if ($LASTEXITCODE -ne 0) { throw "regsvr32 (64-bit) failed: $LASTEXITCODE" }
-	& "$env:SystemRoot\SysWOW64\regsvr32.exe" /s (Join-Path $program 'BreezellIME32.dll')
-	if ($LASTEXITCODE -ne 0) { throw "regsvr32 (32-bit) failed: $LASTEXITCODE" }
+	# regsvr32 is a windowed program: PowerShell neither waits for it nor gets its exit code unless asked.
+	foreach ($r in @(@('System32', 'BreezellIME64.dll'), @('SysWOW64', 'BreezellIME32.dll'))) {
+		$dll = Join-Path $program $r[1]
+		$p = Start-Process -FilePath "$env:SystemRoot\$($r[0])\regsvr32.exe" -ArgumentList '/s', "`"$dll`"" -Wait -PassThru -WindowStyle Hidden
+		if ($p.ExitCode -ne 0) { throw "regsvr32 $($r[1]) failed: $($p.ExitCode)" }
+	}
 }
 
 if ($Part -ne 'machine') {
@@ -67,12 +69,56 @@ if ($Part -ne 'machine') {
 		[IO.File]::WriteAllText($config, $json, (New-Object System.Text.UTF8Encoding $false))
 	}
 
+	# Programs already running that hold an older build of the text service swap to this one between keys.
+	$build = [int](Get-Content (Join-Path $here 'tip-build.txt') -ErrorAction SilentlyContinue)
+	if ($build -gt 0) {
+		$tipDir = Join-Path $user "tip\$build"
+		New-Item -ItemType Directory -Force -Path $tipDir | Out-Null
+		foreach ($name in 'BreezellIME64.dll', 'BreezellIME32.dll') {
+			if (-not (Test-Path (Join-Path $tipDir $name))) { Copy-Item (Join-Path $here $name) (Join-Path $tipDir $name) -Force }
+		}
+		Set-ItemProperty -Path 'HKCU:\Software\BreezellIME' -Name TipVersion -Value $build -Type DWord
+	}
+
 	Add-Type -Namespace BreezellIME -Name Input -MemberDefinition @'
 [DllImport("input.dll", CharSet = CharSet.Unicode)] public static extern bool InstallLayoutOrTip(string psz, uint dwFlags);
 [DllImport("input.dll", CharSet = CharSet.Unicode)] public static extern bool SetDefaultLayoutOrTip(string psz, uint dwFlags);
 '@
 	$tip = "${Lang}:$clsid$($profiles[$Lang])"
 	if (-not [BreezellIME.Input]::InstallLayoutOrTip($tip, 0)) { Write-Warning "Could not add $tip to the input methods" }
-	if ($Default -and -not [BreezellIME.Input]::SetDefaultLayoutOrTip($tip, 0)) { Write-Warning 'Could not make it the default' }
+	# The host now, models loaded, so the first key anywhere finds it ready.
+	$env:ELECTRON_RUN_AS_NODE = '1'
+	Start-Process -FilePath $BreezellExe -ArgumentList "`"$(Join-Path $user 'host.cjs')`"" -WindowStyle Hidden
+	Remove-Item Env:ELECTRON_RUN_AS_NODE
+
+	if ($Default) {
+		if (-not [BreezellIME.Input]::SetDefaultLayoutOrTip($tip, 0)) { Write-Warning 'Could not make it the default' }
+		# The setting Windows' own page shows; the call above does not always write it.
+		Set-WinDefaultInputMethodOverride -InputTip $tip
+		# On now, in the programs already running too: what Win+Space does, for the whole session.
+		Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+namespace BreezellIME {
+	[ComImport, Guid("71c6e74c-0f28-11d8-a82a-00065b84435c"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+	public interface IProfileManager {
+		[PreserveSig] int ActivateProfile(uint profileType, ushort language, ref Guid clsid, ref Guid profile, IntPtr keyboardLayout, uint flags);
+	}
+	[ComImport, Guid("33C53A50-F456-4884-B049-85FD643ECFED")]
+	public class ProfileManager { }
+	public static class Session {
+		const uint InputProcessor = 1, ForSession = 0x20000000, Enable = 1, AnyCurrentLanguage = 4;
+		public static int Activate(ushort language, Guid clsid, Guid profile) {
+			var manager = (IProfileManager)new ProfileManager();
+			return manager.ActivateProfile(InputProcessor, language, ref clsid, ref profile, IntPtr.Zero, ForSession | Enable | AnyCurrentLanguage);
+		}
+	}
+}
+'@
+		try {
+			$hr = [BreezellIME.Session]::Activate([Convert]::ToUInt16($Lang, 16), [Guid]$clsid, [Guid]$profiles[$Lang])
+			if ($hr -ne 0) { Write-Warning ("Could not switch the running programs: 0x{0:X8}" -f $hr) }
+		} catch { Write-Warning "Could not switch the running programs: $_" }
+	}
 }
 Write-Host "Breezell IME: part $Part installed."

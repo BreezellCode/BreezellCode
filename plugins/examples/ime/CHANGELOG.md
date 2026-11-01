@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1
+
+- The Windows input method now installs: a check of regsvr32 stopped the installer halfway in 1.1.0.
+- It switches on at once in programs already running, as Win+Space would; none need restarting. Programs holding an older build swap to the new one between keys.
+- The plugin's own texts follow Breezell's display language (with a Breezell that says it), and the settings page has a language of its own to choose.
+
 ## 1.1.0
 
 - Install it from the market and it is ready: it asks Windows' permission once, downloads the language for you, and turns on by itself. Nothing else to click.

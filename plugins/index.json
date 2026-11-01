@@ -1,6 +1,6 @@
 {
 	"schemaVersion": 1,
-	"updatedAt": "2026-11-01T11:54:57.463Z",
+	"updatedAt": "2026-11-01T12:14:48.589Z",
 	"plugins": [
 		{
 			"id": "breezell.chat-mirror",
@@ -286,7 +286,7 @@
 			"id": "breezell.ime",
 			"displayName": "Breezell IME",
 			"description": "An input method that knows your code: pinyin, zhuyin, double pinyin, wubi, Japanese and Korean, in Breezell's editor and chat and, on Windows, in every program.",
-			"version": "1.1.0",
+			"version": "1.1.1",
 			"apiVersion": 1,
 			"categories": [
 				"Productivity"
@@ -353,11 +353,11 @@
 				}
 			},
 			"package": {
-				"path": "packages/breezell.ime/1.1.0/breezell.ime-1.1.0.vsix",
-				"sha256": "699c386d852bd21dcf8fae2adaaec1f05cdce4bca50dbc2388ad51cb67331b43",
-				"size": 567066
+				"path": "packages/breezell.ime/1.1.1/breezell.ime-1.1.1.vsix",
+				"sha256": "1be9d9ebf2c2337414a0577e3c84cbd4a8a0143eb30106cacf0622432b8d77cf",
+				"size": 572028
 			},
-			"updatedAt": "2026-11-01T11:54:57.463Z"
+			"updatedAt": "2026-11-01T12:14:48.589Z"
 		},
 		{
 			"id": "breezell.starter-pack",

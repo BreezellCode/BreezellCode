@@ -185,6 +185,17 @@
 		});
 
 		const typing = section(() => state.strings.typing);
+		row(typing, () => state.strings.pageLanguage, select('displayLanguage', () => [
+			{ id: 'auto', label: state.strings.scriptAuto },
+			{ id: 'en', label: 'English' },
+			{ id: 'zh-CN', label: '简体中文' },
+			{ id: 'zh-TW', label: '繁體中文' },
+			{ id: 'ja', label: '日本語' },
+			{ id: 'ko', label: '한국어' },
+			{ id: 'ru', label: 'Русский' },
+			{ id: 'es', label: 'Español' },
+			{ id: 'pt-BR', label: 'Português (Brasil)' },
+		]));
 		row(typing, () => state.strings.layout, select('layout', () => state.layouts.map(l => ({ id: l.id, label: l.label }))));
 		row(typing, () => state.strings.script, select('chineseScript', () => [
 			{ id: 'auto', label: state.strings.scriptAuto },

@@ -6,7 +6,7 @@
 //   plugin-smoke.mjs <scratch dir> <data dir>
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { createReadStream, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, createReadStream, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -132,12 +132,13 @@ const pluginDir = join(scratch, 'plugin-smoke', 'page-plugin');
 const dataDir = join(scratch, 'plugin-smoke', 'page-data');
 rmSync(dataDir, { recursive: true, force: true });
 mkdirSync(join(pluginDir, 'media'), { recursive: true });
+cpSync(join(root, 'media', 'l10n'), join(pluginDir, 'media', 'l10n'), { recursive: true });
 const smallFile = { name: 'zh.bzlm', size: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') };
 writeFileSync(join(pluginDir, 'media', 'data-manifest.json'), JSON.stringify({
 	version: 1, base: `http://127.0.0.1:${server.address().port}`,
 	packs: [{ id: 'chinese', files: [smallFile] }, { id: 'japanese', files: [{ ...smallFile, name: 'ja.bzlm' }] }, { id: 'korean', files: [{ ...smallFile, name: 'ko.bzlm' }] }],
 }));
-Object.assign(vscode.settings, { dataPath: dataDir, useSystemHost: false, layout: 'pinyin' });
+Object.assign(vscode.settings, { dataPath: dataDir, useSystemHost: false, layout: 'pinyin', displayLanguage: 'en' });
 const pageContext = contextAt(pluginDir, 'page-storage');
 ext.activate(pageContext);
 const pageOf = () => vscode.calls.filter(c => c[0] === 'webview').at(-1)?.[1];
@@ -160,6 +161,17 @@ check('the download finishes, the language is ready', stateNow().packs[0].state 
 check('and the page no longer asks for it', !stateNow().needed);
 await page.ask({ type: 'set', key: 'prediction', value: false });
 await settle();
+// The page's language: its own choice, else Breezell's, as Breezell changes it.
+await page.ask({ type: 'set', key: 'displayLanguage', value: 'zh-TW' });
+await until(() => stateNow().strings.languages === '語言');
+check('the page speaks the language chosen for it', stateNow().strings.languages === '語言' && stateNow().packs[0].name === '中文', stateNow().strings.languages);
+await page.ask({ type: 'set', key: 'displayLanguage', value: 'auto' });
+vscode.setBreezellLanguage('ja');
+await until(() => stateNow().strings.languages === '言語');
+check('auto: it follows Breezell\'s language, when that changes', stateNow().strings.languages === '言語', stateNow().strings.languages);
+vscode.setBreezellLanguage('');
+await page.ask({ type: 'set', key: 'displayLanguage', value: 'en' });
+await until(() => stateNow().strings.languages === 'Languages');
 check('a setting reaches the plugin and the shared config', vscode.settings.prediction === false && JSON.parse(readFileSync(join(process.env.HOME, '.config', 'breezell-ime', 'config.json'), 'utf8')).prediction === false);
 await page.ask({ type: 'layout', id: 'wubi' });
 await until(() => stateNow().layout === 'wubi');
@@ -199,7 +211,8 @@ rmSync(freshData, { recursive: true, force: true });
 rmSync(join(home, 'plugin-set-up'), { force: true });
 Object.assign(vscode.settings, { dataPath: freshData, dataMirror: `http://127.0.0.1:${files.address().port}`, useSystemHost: false });
 delete vscode.settings.layout;
-vscode.env.language = 'ko';
+vscode.setBreezellLanguage('ko');
+Object.assign(vscode.settings, { displayLanguage: 'en' });
 const before = vscode.calls.length;
 const firstContext = contextAt(root, 'first-storage');
 ext.activate(firstContext);
@@ -223,7 +236,7 @@ await until(() => vscode.calls.slice(nextBefore).some(c => c[0] === 'log' && Str
 check('the next start: no setting up, and on again as it was', !vscode.calls.slice(nextBefore).some(c => c[0] === 'webview') && vscode.calls.slice(nextBefore).some(c => c[0] === 'log' && String(c[1]).includes('on: korean')));
 for (const d of firstContext.subscriptions) d.dispose();
 files.close();
-vscode.env.language = 'zh-tw';
+vscode.setBreezellLanguage('');
 
 // Removing the plugin: the mark goes, so installing it again sets up again; a folder the user chose stays.
 execFileSync(process.execPath, [hook], { env: { ...process.env } });

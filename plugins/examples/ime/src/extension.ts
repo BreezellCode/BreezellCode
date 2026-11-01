@@ -23,12 +23,11 @@ import { englishAt } from './code.js';
 import { AsyncComposer, ChineseComposer, ChineseData, Composer, JapaneseComposer, JapaneseData, KoreanComposer, KoreanData, LocalComposer, WubiComposer } from './composers.js';
 import { Key, KeySession, KeyView } from './keys.js';
 import { DataManifest, hasPack, loadManifest, packOfLayout } from './data.js';
+import { appLanguage, l10n, refreshL10n } from './l10n.js';
 import { claimSetup, configuredDataDir, updateSharedConfig } from './paths.js';
 import { HostClient, HostEvent, RemoteComposer } from './remote.js';
 import { SettingsPage } from './settings.js';
 import { refreshSystem } from './system.js';
-
-const l10n = vscode.l10n;
 
 /** The input methods; `short` is the status bar's mark, in the input method's own script. */
 const LAYOUTS: { id: string; label: () => string; short: string }[] = [
@@ -152,6 +151,7 @@ class Ime implements vscode.Disposable {
 		this.layout = context.globalState.get<string>('layout') ?? this.config.get<string>('layout', 'pinyin');
 		this.log.info(`activated, layout ${this.layout}, platform ${process.platform}, data ${this.dataDir}`);
 		this.manifest = loadManifest(join(context.extensionPath, 'media', 'data-manifest.json'));
+		refreshL10n(context.extensionPath);
 		const self = this;
 		this.settings = new SettingsPage(context, this.manifest, {
 			get layout() { return self.layout; },
@@ -267,6 +267,9 @@ class Ime implements vscode.Disposable {
 				this.host?.updateFocus();
 			}),
 			vscode.workspace.onDidChangeConfiguration(e => {
+				if (e.affectsConfiguration('breezellIme.displayLanguage')) {
+					this.languageChanged();
+				}
 				// Settings that change what the composers are: they are made again when next needed.
 				if (['dataPath', 'chineseScript', 'wubiSmartOrder'].some(name => e.affectsConfiguration(`breezellIme.${name}`))) {
 					this.log.info('settings changed: composers reset');
@@ -282,7 +285,18 @@ class Ime implements vscode.Disposable {
 				}
 			}),
 		);
+		const breezellLanguage = vscode.breezell?.onDidChangeLanguage?.(() => this.languageChanged());
+		if (breezellLanguage) {
+			this.disposables.push(breezellLanguage);
+		}
 		this.updateStatus();
+	}
+
+	private languageChanged(): void {
+		if (refreshL10n()) {
+			this.settings.retranslate();
+			this.updateStatus();
+		}
 	}
 
 	private get config() {
@@ -303,7 +317,7 @@ class Ime implements vscode.Disposable {
 		if (s !== 'auto') {
 			return s === 'traditional';
 		}
-		return /^zh-(tw|hk|mo|hant)/i.test(vscode.env.language);
+		return appLanguage() === 'zh-tw';
 	}
 
 	private get layoutLabel(): string {
@@ -638,9 +652,9 @@ class Ime implements vscode.Disposable {
 	 */
 	start(): void {
 		if (claimSetup()) {
-			const language = vscode.env.language.toLowerCase();
+			const language = appLanguage();
 			if (!this.context.globalState.get<string>('layout') && !this.config.inspect<string>('layout')?.globalValue) {
-				this.layout = language.startsWith('ja') ? 'japanese' : language.startsWith('ko') ? 'korean' : this.layout;
+				this.layout = language === 'ja' ? 'japanese' : language === 'ko' ? 'korean' : this.layout;
 				void this.context.globalState.update('layout', this.layout);
 			}
 			this.log.info(`first start: setting up ${this.layout}`);
@@ -654,7 +668,8 @@ class Ime implements vscode.Disposable {
 	refreshSystemParts(): void {
 		const version = String((this.context.extension?.packageJSON as { version?: unknown } | undefined)?.version ?? '');
 		if (version) {
-			void refreshSystem(this.context.extensionPath, version, m => this.log.info(m)).catch(e => this.log.warn(`could not update the system input method: ${e?.message ?? e}`));
+			// The new host at once, as the install does: the first key anywhere finds it ready.
+			void refreshSystem(this.context.extensionPath, version, m => this.log.info(m)).then(changed => changed ? this.host?.connect() : undefined).catch(e => this.log.warn(`could not update the system input method: ${e?.message ?? e}`));
 		}
 	}
 

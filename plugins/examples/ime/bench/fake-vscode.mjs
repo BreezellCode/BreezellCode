@@ -2,7 +2,7 @@
 // (bench/plugin-smoke.mjs): one editor over a text, commands, settings, events, a log.
 const registry = new Map();
 const listeners = { selection: [], document: [], editor: [], window: [], config: [] };
-const on = name => fn => { listeners[name].push(fn); return { dispose() { } }; };
+const on = name => fn => { listeners[name].push(fn); return { dispose() { listeners[name].splice(listeners[name].indexOf(fn), 1); } }; };
 export const calls = [];
 /** What a modal dialog answers (the test sets it). */
 export let dialogAnswer;
@@ -91,13 +91,15 @@ export const window = {
 	onDidChangeWindowState: on('window'),
 };
 export const workspace = {
-	getConfiguration: () => ({ get: (k, d) => (k in settings ? settings[k] : d), inspect: k => ({ globalValue: settings[k] }), update: async (k, v) => { settings[k] = v; } }),
+	getConfiguration: () => ({ get: (k, d) => (k in settings ? settings[k] : d), inspect: k => ({ globalValue: settings[k] }), update: async (k, v) => { settings[k] = v; for (const fn of [...listeners.config]) fn({ affectsConfiguration: id => id === `breezellIme.${k}` }); } }),
 	onDidChangeTextDocument: on('document'),
 	onDidChangeConfiguration: on('config'),
 };
 export const env = { language: "zh-tw" };
-const format = (t, args) => t.replace(/\{(\d+)\}/g, (m, i) => args[i] ?? m);
-export const l10n = { t: (message, ...args) => format(message, args) };
+/** Breezell's side of the plugin API (the test sets the language). */
+export const breezell = { language: '', onDidChangeLanguage: fn => { languageListeners.push(fn); return { dispose() { languageListeners.splice(languageListeners.indexOf(fn), 1); } }; } };
+const languageListeners = [];
+export const setBreezellLanguage = l => { breezell.language = l; for (const fn of [...languageListeners]) fn(l); };
 export const ViewColumn = { Active: -1 };
 export const Uri = {
 	joinPath: (base, ...parts) => ({ fsPath: [base.fsPath, ...parts].join('/') }),

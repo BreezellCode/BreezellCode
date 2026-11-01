@@ -30,5 +30,6 @@
 	"layout.korean": "韓国語（2ボル式）",
 	"script.auto": "Breezell の表示言語に合わせる",
 	"script.simplified": "簡体字中国語",
-	"script.traditional": "繁体字中国語（台湾）"
+	"script.traditional": "繁体字中国語（台湾）",
+	"config.displayLanguage": "このプラグイン自身のテキストの言語。auto：Breezell の表示言語に合わせます。"
 }

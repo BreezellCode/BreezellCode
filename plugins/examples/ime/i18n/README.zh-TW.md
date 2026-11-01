@@ -46,7 +46,7 @@
 
 ## Windows 上的所有程式
 
-第一次啟動時，它會把自己加入 Windows 輸入法，引擎和學到的詞都和 Breezell 裡相同。它會成為你的預設輸入法；按 **Win+Space** 可切換成其他輸入法。安裝時已經開著的程式，請按 **Win+Space** 切換過去。
+第一次啟動時，它會把自己加入 Windows 輸入法，引擎和學到的詞都和 Breezell 裡相同。它會成為你的預設輸入法；按 **Win+Space** 可切換成其他輸入法。已經開著的程式也會立刻切換過去，不用重開。
 
 它會在 `Program Files\BreezellIME` 安裝文字服務，在 `%LOCALAPPDATA%\BreezellIME` 安裝引擎主程式，全部來自這個插件的套件，不會下載任何程式碼。
 

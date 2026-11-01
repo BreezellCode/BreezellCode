@@ -30,5 +30,6 @@
 	"layout.korean": "Корейский (2-наборная)",
 	"script.auto": "Как язык интерфейса Breezell",
 	"script.simplified": "Упрощённый китайский",
-	"script.traditional": "Традиционный китайский (Тайвань)"
+	"script.traditional": "Традиционный китайский (Тайвань)",
+	"config.displayLanguage": "Язык собственных текстов этого плагина. auto: язык интерфейса Breezell."
 }

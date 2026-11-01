@@ -46,7 +46,7 @@ Os idiomas vêm da release do GitHub deste plugin, e um download continua de ond
 
 ## Todos os programas no Windows
 
-Na primeira inicialização ele se adiciona como método de entrada do Windows, com o mesmo mecanismo e as mesmas palavras aprendidas do Breezell. Ele se torna seu método de entrada padrão; **Win+Space** troca para outro. Nos programas já abertos na instalação, pressione **Win+Space** para mudar para ele.
+Na primeira inicialização ele se adiciona como método de entrada do Windows, com o mesmo mecanismo e as mesmas palavras aprendidas do Breezell. Ele se torna seu método de entrada padrão; **Win+Space** troca para outro. Ele também liga na hora nos programas já abertos; não é preciso reiniciá-los.
 
 Ele instala um serviço de texto em `Program Files\BreezellIME` e o host do mecanismo em `%LOCALAPPDATA%\BreezellIME`, tudo a partir do pacote deste plugin; nenhum código é baixado.
 

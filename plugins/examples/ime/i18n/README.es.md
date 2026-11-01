@@ -46,7 +46,7 @@ Los idiomas vienen de la release de GitHub de este plugin, y una descarga contin
 
 ## Todos los programas en Windows
 
-En su primer inicio se añade como método de entrada de Windows, con el mismo motor y las mismas palabras aprendidas que en Breezell. Pasa a ser tu método de entrada predeterminado; **Win+Space** cambia a otro. En los programas ya abiertos al instalarlo, pulsa **Win+Space** para cambiar a él.
+En su primer inicio se añade como método de entrada de Windows, con el mismo motor y las mismas palabras aprendidas que en Breezell. Pasa a ser tu método de entrada predeterminado; **Win+Space** cambia a otro. También se activa al momento en los programas ya abiertos; no hace falta reiniciarlos.
 
 Instala un servicio de texto en `Program Files\BreezellIME` y el host del motor en `%LOCALAPPDATA%\BreezellIME`, todo desde el paquete de este plugin; no se descarga código.
 

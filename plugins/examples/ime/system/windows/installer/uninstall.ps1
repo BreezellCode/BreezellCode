@@ -33,8 +33,9 @@ if ($Part -ne 'machine') {
 
 if ($Part -ne 'user') {
 	$program = Join-Path $env:ProgramFiles 'BreezellIME'
-	& "$env:SystemRoot\System32\regsvr32.exe" /u /s (Join-Path $program 'BreezellIME64.dll')
-	& "$env:SystemRoot\SysWOW64\regsvr32.exe" /u /s (Join-Path $program 'BreezellIME32.dll')
+	# Waited for: the files go next. (regsvr32 is a windowed program: PowerShell would not wait by itself.)
+	Start-Process -FilePath "$env:SystemRoot\System32\regsvr32.exe" -ArgumentList '/u', '/s', "`"$(Join-Path $program 'BreezellIME64.dll')`"" -Wait -WindowStyle Hidden
+	Start-Process -FilePath "$env:SystemRoot\SysWOW64\regsvr32.exe" -ArgumentList '/u', '/s', "`"$(Join-Path $program 'BreezellIME32.dll')`"" -Wait -WindowStyle Hidden
 	# Files still loaded by running programs stay until the next restart of those programs.
 	Remove-Item -Recurse -Force $program -ErrorAction SilentlyContinue
 }

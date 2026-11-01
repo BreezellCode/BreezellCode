@@ -18,6 +18,15 @@ declare module 'vscode' {
 		export const apiVersion: number;
 
 		/**
+		 * Breezell's display language, which `vscode.env.language` does not follow: `en`, `zh-CN`,
+		 * `zh-TW`, `ja`, `ko`, `ru`, `es` or `pt-BR`. Empty for a moment at start, until it is known.
+		 */
+		export const language: string;
+
+		/** Breezell's display language changed, or became known. */
+		export const onDidChangeLanguage: Event<string>;
+
+		/**
 		 * The permissions this plugin declared in `breezell.permissions`, as an Android app declares
 		 * its permissions: nothing undeclared is ever usable. A `normal` permission is
 		 * on unless the user turns it off (`chat.events`, `models.select`). A `dangerous` one

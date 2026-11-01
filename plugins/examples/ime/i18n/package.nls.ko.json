@@ -30,5 +30,6 @@
 	"layout.korean": "한국어(두벌식)",
 	"script.auto": "Breezell 표시 언어 따르기",
 	"script.simplified": "중국어 간체",
-	"script.traditional": "중국어 번체(대만)"
+	"script.traditional": "중국어 번체(대만)",
+	"config.displayLanguage": "이 플러그인 자체 텍스트의 언어입니다. auto: Breezell 표시 언어를 따릅니다."
 }

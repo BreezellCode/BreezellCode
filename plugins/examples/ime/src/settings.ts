@@ -6,9 +6,8 @@
 import { randomBytes } from 'node:crypto';
 import * as vscode from 'vscode';
 import { DataError, DataManifest, downloadPack, hasPack, PackId, packOfLayout, packSize, packState, PackState, removePack } from './data.js';
+import { displayLanguage, l10n } from './l10n.js';
 import { installSystem, profileFor, SystemCancelled, systemState, uninstallSystem } from './system.js';
-
-const l10n = vscode.l10n;
 
 /** What the page changes in the input method. */
 export interface ImeControls {
@@ -133,7 +132,7 @@ export class SettingsPage implements vscode.Disposable {
 		await w.run();
 		const everywhere = systemState().installed;
 		void vscode.window.showInformationMessage(everywhere
-			? l10n.t('Breezell IME is ready. {0} turns it off. In programs that are already open, press Win+Space to switch to it.', this.ime.toggleKey)
+			? l10n.t('Breezell IME is ready in every program. {0} turns it off here.', this.ime.toggleKey)
 			: l10n.t('Breezell IME is ready. {0} turns it off.', this.ime.toggleKey));
 		this.post();
 	}
@@ -181,7 +180,7 @@ export class SettingsPage implements vscode.Disposable {
 	}
 
 	private async setting(key: string, value: unknown): Promise<void> {
-		if (key === 'chineseScript' || key === 'englishInCode') {
+		if (key === 'chineseScript' || key === 'englishInCode' || key === 'displayLanguage') {
 			await this.config.update(key, value, vscode.ConfigurationTarget.Global);
 		} else if (key === 'prediction' || key === 'learning' || key === 'wubiSmartOrder' || key === 'pageSize') {
 			await this.config.update(key, value, vscode.ConfigurationTarget.Global);
@@ -280,7 +279,7 @@ export class SettingsPage implements vscode.Disposable {
 			return;
 		}
 		if (await this.installSystemNow()) {
-			void vscode.window.showInformationMessage(l10n.t('Breezell IME is installed. In programs that are already open, press Win+Space to switch to it.'));
+			void vscode.window.showInformationMessage(l10n.t('Breezell IME is installed, and on in every program.'));
 		}
 	}
 
@@ -361,6 +360,14 @@ export class SettingsPage implements vscode.Disposable {
 		}, 250);
 	}
 
+	/** The display language changed: the page says everything again. */
+	retranslate(): void {
+		if (this.panel) {
+			this.panel.title = l10n.t('Breezell IME');
+			this.post();
+		}
+	}
+
 	private post(): void {
 		if (!this.panel) {
 			return;
@@ -387,6 +394,7 @@ export class SettingsPage implements vscode.Disposable {
 			}),
 			layouts: this.ime.layouts(),
 			layout: this.ime.layout,
+			displayLanguage: this.config.get<string>('displayLanguage', 'auto'),
 			chineseScript: this.config.get<string>('chineseScript', 'auto'),
 			pageSize: this.config.get<number>('pageSize', 7),
 			englishInCode: this.config.get<boolean>('englishInCode', true),
@@ -416,6 +424,7 @@ export class SettingsPage implements vscode.Disposable {
 			folder: l10n.t('Folder'),
 			change: l10n.t('Change…'),
 			typing: l10n.t('Typing'),
+			pageLanguage: l10n.t('Language of this page'),
 			layout: l10n.t('Input method'),
 			script: l10n.t('Chinese script'),
 			scriptAuto: l10n.t('Follow Breezell\'s display language'),
@@ -456,7 +465,7 @@ export class SettingsPage implements vscode.Disposable {
 		const css = webview.asWebviewUri(vscode.Uri.joinPath(media, 'settings.css'));
 		const js = webview.asWebviewUri(vscode.Uri.joinPath(media, 'settings.js'));
 		return `<!doctype html>
-<html lang="${vscode.env.language}">
+<html lang="${displayLanguage()}">
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}'; img-src ${webview.cspSource}">

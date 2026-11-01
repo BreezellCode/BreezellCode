@@ -90,6 +90,7 @@ The typings are in [`devkit/breezell.d.ts`](devkit/breezell.d.ts); the templates
 |---|---|---|
 | `breezell.apiVersion`, `breezell.permissions` | — | The API version and the permissions this plugin declared |
 | `breezell.account.isSignedIn`, `onDidChangeSignIn` | — | Whether the user is signed in to Breezell |
+| `breezell.language`, `onDidChangeLanguage` | — | Breezell's display language (`en`, `zh-CN`, `zh-TW`, `ja`, `ko`, `ru`, `es`, `pt-BR`), for a plugin's own texts: `vscode.env.language` does not follow it. Check for it: an older Breezell does not have it |
 | `breezell.chat.onDidStartTurn`, `onDidFinishTurn` | `chat.events` | A conversation turn started or finished: mode, outcome (completed, error, stopped) and duration, **never the content** |
 | `breezell.chat.listConversations()`, `getConversation(id)`, `onDidChangeConversation`, `show(id)` | `chat.read` | The conversations of this workspace as the user sees them: messages, replies (with reasoning), tool calls with their parameters, status and result, and the memories used for each message (`recalledMemories`, and `memoryUse` with the chat's resident and relevant counts); the reply being written; open one in Breezell's chat |
 | `breezell.chat.send(text, { conversationId })` | `chat.send` | Send a message as the user would, or start a conversation; the AI answers it like the user's own |

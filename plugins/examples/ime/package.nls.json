@@ -30,5 +30,6 @@
 	"layout.korean": "Korean (2-set)",
 	"script.auto": "Follow Breezell's display language",
 	"script.simplified": "Simplified Chinese",
-	"script.traditional": "Traditional Chinese (Taiwan)"
+	"script.traditional": "Traditional Chinese (Taiwan)",
+	"config.displayLanguage": "The language of this plugin's own texts. auto: Breezell's display language."
 }

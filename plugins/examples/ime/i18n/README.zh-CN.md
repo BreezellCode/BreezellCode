@@ -46,7 +46,7 @@
 
 ## Windows 上的所有程序
 
-第一次启动时，它会把自己添加为 Windows 输入法，引擎和学到的词都和 Breezell 里相同。它会成为你的默认输入法；按 **Win+Space** 可切换成其他输入法。安装时已经打开的程序，请按 **Win+Space** 切换过去。
+第一次启动时，它会把自己添加为 Windows 输入法，引擎和学到的词都和 Breezell 里相同。它会成为你的默认输入法；按 **Win+Space** 可切换成其他输入法。已经打开的程序也会立刻切换过去，不用重开。
 
 它会在 `Program Files\BreezellIME` 安装文本服务，在 `%LOCALAPPDATA%\BreezellIME` 安装引擎主程序，全部来自这个插件的安装包，不会下载任何代码。
 
