@@ -65,6 +65,22 @@ declare module 'vscode' {
 		 */
 		export const permissions: readonly string[];
 
+		/** Where a permission stands: usable, refused, or to be asked for at its first use. */
+		export type PermissionState = 'granted' | 'denied' | 'ask';
+
+		/** Where a permission this plugin declared stands. Asks no one. */
+		export function permissionState(permission: string): Thenable<PermissionState>;
+
+		/**
+		 * Whether the user allows a permission this plugin declared, asking them when it is the first
+		 * time; false when they refuse. For permissions a call does not ask for by itself (`editor.read`),
+		 * or to ask at a moment of your own choosing.
+		 */
+		export function requestPermission(permission: string): Thenable<boolean>;
+
+		/** The user changed a permission of this plugin (after permissionState or requestPermission was called once). */
+		export const onDidChangePermissions: Event<void>;
+
 		export namespace account {
 			/**
 			 * Whether a Breezell account is signed in. Plugins run only while one is: signing
@@ -101,9 +117,21 @@ declare module 'vscode' {
 		 *   the user's own, and they are billed the same way. At most 10 a minute.
 		 * - `chat.approve` (dangerous): approve or reject the tool call a conversation waits for.
 		 */
+		/** The chat box, as `chat.readInput` gives it. */
+		export interface ChatInput {
+			/** What is in the box. */
+			readonly text: string;
+			/** Its part before the caret. */
+			readonly before: string;
+			/** The text of the last messages of the current conversation, oldest first. */
+			readonly recent: string;
+		}
+
 		export namespace chat {
 			export const onDidStartTurn: Event<TurnEvent>;
 			export const onDidFinishTurn: Event<TurnFinishEvent>;
+			/** The chat box (`chat.input`): the one with the focus, else the first there is. */
+			export function readInput(): Thenable<ChatInput>;
 
 			/** The conversations, the most recently changed first (`chat.read`). */
 			export function listConversations(): Thenable<ConversationSummary[]>;

@@ -18,7 +18,8 @@ below; `tools/` holds the scripts that build them.
 ## Text the language models were trained on
 
 The language models (`zh.bzlm`, `ja.bzlm`, `ko.bzlm`) and the word lists (`en-words.tsv`,
-`ko.vocab`) hold word counts and probabilities computed from this text, not the text itself.
+`ko.vocab`, `src/latinWords.ts`) hold word counts and probabilities computed from this text, not the
+text itself.
 
 | Source | License |
 |---|---|

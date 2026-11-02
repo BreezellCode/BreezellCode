@@ -24,7 +24,8 @@ class FakeComposer implements AsyncComposer {
 	async enter() { this.pending += this.input; this.input = ''; }
 	async cancel() { this.input = ''; }
 	state(): ImeState { const commit = this.pending; this.pending = ''; return { preedit: this.input, candidates: this.cands(), commit }; }
-	async setContext(t: string) { this.calls.push(`context:${t}`); }
+	async setContext(t: string, atCaret = true) { this.calls.push(atCaret ? `context:${t}` : `lately:${t}`); }
+	async noteLatin() { }
 	async forget() { this.calls.push('forget'); }
 	async afterOther() { this.calls.push('other'); }
 	async undoLastCommit() { this.calls.push('undo'); }
@@ -83,7 +84,7 @@ test('keys: the context of a new composition is the caller\'s, else what went in
 	assert.ok(c.calls.includes('context:the editor before'));
 	await s.key(k(' '));
 	await s.key(k('h'));
-	assert.ok(c.calls.includes('context:N'));
+	assert.ok(c.calls.includes('lately:N'), 'what went in lately may be from anywhere: not read as what the caret follows');
 });
 
 test('keys: Backspace right after a commit takes it back from what was learned; not after anything else', async () => {

@@ -3,7 +3,7 @@
  * search scores paths with the n-gram model (plus what the user model adds) and keeps the best.
  */
 import { AdaptiveModel } from '../core/adaptive.js';
-import { BOS, EOS, NgramModel, UNK } from '../core/lm.js';
+import { BOS, EOS, NgramModel, OTHER, UNK } from '../core/lm.js';
 import { arcTone, WordArc, ZhLexicon } from './lexicon.js';
 import { EdgeKind, SyllableEdge } from './pinyin.js';
 import { PINYIN, ZhSpeller } from './speller.js';
@@ -96,6 +96,48 @@ function wordEntries(lex: ZhLexicon, vocabSize: number): Int32Array {
 	return map;
 }
 
+/** The longest model word looked up in text before the cursor, and how much of the text is read for it. */
+const MAX_WORD_CHARS = 8;
+const MAX_RUN_CHARS = 32;
+const isHan = (c: number) => (c >= 0x3400 && c <= 0x9fff) || (c >= 0xf900 && c <= 0xfaff);
+/** Digits and letters: one <x> per run in the model's text (with . _ - inside a run). */
+const isOther = (c: number) => (c >= 48 && c <= 57) || (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c === 46 || c === 95 || c === 45;
+
+function hashText(text: string): number {
+	let h = 0x811c9dc5;
+	for (let i = 0; i < text.length; i++) {
+		h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
+	}
+	return h >>> 0;
+}
+
+/** Model words by their text: an open-addressed table of tokens, no strings kept (built once per lexicon, when first needed). */
+const wordIndexCache = new WeakMap<ZhLexicon, { readonly table: Int32Array; readonly mask: number }>();
+function wordIndex(lex: ZhLexicon, vocabSize: number): { readonly table: Int32Array; readonly mask: number } {
+	let index = wordIndexCache.get(lex);
+	if (!index) {
+		const entries = wordEntries(lex, vocabSize);
+		let size = 1024;
+		while (size < vocabSize * 2) {
+			size *= 2;
+		}
+		const table = new Int32Array(size).fill(-1);
+		const mask = size - 1;
+		for (let t = 4; t < vocabSize; t++) {
+			if (entries[t] < 0) {
+				continue;
+			}
+			let i = hashText(lex.text(entries[t])) & mask;
+			while (table[i] >= 0) {
+				i = (i + 1) & mask;
+			}
+			table[i] = t;
+		}
+		wordIndexCache.set(lex, index = { table, mask });
+	}
+	return index;
+}
+
 export class ZhDecoder {
 	readonly speller: ZhSpeller;
 	private readonly tones?: ToneTable;
@@ -153,6 +195,92 @@ export class ZhDecoder {
 		}
 		scored.sort((a, b) => b.score - a.score);
 		return scored.slice(0, count).map(({ text, token }) => ({ text, token }));
+	}
+
+	/** The model's word for `text`, -1 when it has none. */
+	private tokenOf(text: string): number {
+		const { table, mask } = wordIndex(this.lex, this.lm.vocabSize);
+		const entries = wordEntries(this.lex, this.lm.vocabSize);
+		for (let i = hashText(text) & mask; table[i] >= 0; i = (i + 1) & mask) {
+			if (this.lex.text(entries[table[i]]) === text) {
+				return table[i];
+			}
+		}
+		return -1;
+	}
+
+	/** Most probable segmentation of a Han run into model words, as the model's text was segmented; a character it lacks is <unk>. */
+	segment(run: string): { text: string; token: number }[] {
+		const n = run.length;
+		const best = new Float64Array(n + 1).fill(-Infinity);
+		const from = new Int32Array(n + 1);
+		const token = new Int32Array(n + 1);
+		best[0] = 0;
+		for (let i = 0; i < n; i++) {
+			for (let len = 1; len <= MAX_WORD_CHARS && i + len <= n; len++) {
+				const t = this.tokenOf(run.slice(i, i + len));
+				const known = t >= 0;
+				if (!known && len > 1) {
+					continue;
+				}
+				const score = best[i] + (known ? this.lm.unigram(t) : UNK_PENALTY * 2);
+				if (score > best[i + len]) {
+					best[i + len] = score;
+					from[i + len] = i;
+					token[i + len] = known ? t : UNK;
+				}
+			}
+		}
+		const out: { text: string; token: number }[] = [];
+		for (let i = n; i > 0; i = from[i]) {
+			out.unshift({ text: run.slice(from[i], i), token: token[i] });
+		}
+		return out;
+	}
+
+	/**
+	 * The model's history right after `text`, the text before the cursor: its last words, as the
+	 * model's text was read. Punctuation, a space and a line end close a sentence there too; a run of
+	 * digits or Latin letters is one <x>.
+	 */
+	historyAfter(text: string): [number, number] {
+		return this.readBefore(text).history;
+	}
+
+	/** The history after `text`, and its last word as what the input may close (我 + men: 我們). */
+	readBefore(text: string): { history: [number, number]; join?: { entry: number; h2: number; h1: number } } {
+		let end = text.length;
+		if (!end) {
+			return { history: [BOS, BOS] };
+		}
+		const hanRunBefore = (at: number): string => {
+			let start = at;
+			while (start > 0 && at - start < MAX_RUN_CHARS && isHan(text.charCodeAt(start - 1))) {
+				start--;
+			}
+			return text.slice(start, at);
+		};
+		if (isHan(text.charCodeAt(end - 1))) {
+			const run = hanRunBefore(end);
+			const words = this.segment(run);
+			const n = words.length;
+			const before = end - run.length;
+			const start = before > 0 && isOther(text.charCodeAt(before - 1)) ? OTHER : BOS;
+			const h1 = n >= 2 ? words[n - 2].token : start;
+			const entry = wordEntries(this.lex, this.lm.vocabSize)[words[n - 1].token] ?? -1;
+			return {
+				history: [h1, words[n - 1].token],
+				join: entry >= 0 ? { entry, h2: n >= 3 ? words[n - 3].token : n === 2 ? start : BOS, h1 } : undefined,
+			};
+		}
+		if (isOther(text.charCodeAt(end - 1))) {
+			while (end > 0 && isOther(text.charCodeAt(end - 1))) {
+				end--;
+			}
+			const run = end > 0 ? hanRunBefore(end) : '';
+			return { history: [run ? this.segment(run).pop()!.token : BOS, OTHER] };
+		}
+		return { history: [BOS, BOS] };
 	}
 
 	/**

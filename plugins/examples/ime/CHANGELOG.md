@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0
+
+- It reads what is before the caret, whoever typed it. A word typed after text that was already there follows that text (with a Breezell that has `chat.readInput`, in the chat box too), where before it started as a new sentence: the last word of a clause comes first 90 to 95% of the time, against 79 to 87%.
+- Two permissions, listed on its page, each with its own switch: read the code (`editor.read`) and read the chat box (`chat.input`). Breezell asks once for each, the first time you type there. Turned off, it does not read that, and typing goes on without it. An older Breezell leaves them out and installs the plugin as before.
+- English among Chinese is ranked against the Chinese reading of the same letters, by how likely each is here. After Chinese, `my` goes after 沒有; `hello`, `the` and `API` still come first; after English, English comes first. Words are offered as they are usually written (`API`, `GitHub`).
+- It remembers your Latin words: those you pick, commit as typed, or type in Breezell's code and chat box. A word used twice is found by its start: `breezel` finds `breezell`. So does a word in the code or the conversation. Keys typed in English mode in other programs are never remembered: they could be a password.
+- What you pick moves them: take `my` a few times and it comes first; take 沒有 and it gives way.
+
 ## 1.1.5
 
 - The words offered after a commit no longer stay on screen. In Breezell's chat box and editor (with a Breezell that has this fix) they close when you click elsewhere or the focus moves, on Esc, and by themselves after five seconds, and what you were composing in the chat box closes the same way. Once they are gone, Tab is Tab again, in the Windows input method too.

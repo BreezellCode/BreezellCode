@@ -296,9 +296,11 @@ export class KeySession {
 			}
 		} else if (c.takes(k.key, false)) {
 			this.highlight = 0;
-			const ctx = context ?? this.recent;
-			if (ctx) {
-				await c.setContext(ctx);
+			// The caller's ends at the caret; what went in lately may be from anywhere.
+			if (context !== undefined) {
+				await c.setContext(context);
+			} else if (this.recent) {
+				await c.setContext(this.recent, false);
 			}
 			await c.type(k.key);
 			take();

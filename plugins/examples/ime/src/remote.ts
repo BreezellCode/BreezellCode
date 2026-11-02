@@ -285,7 +285,8 @@ export class RemoteComposer implements AsyncComposer {
 		this.pending = '';
 		return { preedit: this.mirror.preedit, candidates: this.mirror.candidates, commit };
 	}
-	async setContext(text: string): Promise<void> { await this.op('context', text); }
+	async setContext(text: string, atCaret = true): Promise<void> { await this.op('context', { text, atCaret }); }
+	async noteLatin(word: string): Promise<void> { await this.op('latin', word); }
 	async forget(): Promise<void> { await this.op('forget'); }
 	async afterOther(): Promise<void> { await this.op('other'); }
 	async undoLastCommit(): Promise<void> { await this.op('undo'); }

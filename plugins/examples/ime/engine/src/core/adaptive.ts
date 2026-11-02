@@ -9,6 +9,8 @@
  *   lexicon lacks) is remembered as one word with its syllables, offered next time.
  * - Context: words of the lexicon that occur in the text around the cursor (the editor's code
  *   and comments, the AI chat) rise while that text is there.
+ * - Latin words: what the user writes among Chinese (breezell), and whether they take such a word
+ *   when it is offered or take Chinese for the same letters (my: 沒有), so typing the start finds it.
  *
  * It holds nothing but counts, its own words and the current context; all of it can be saved,
  * cleared and exported (toJSON / fromJSON).
@@ -47,6 +49,15 @@ export interface LearnedWord {
 	last: number;
 }
 
+export interface LearnedLatin {
+	/** As last written (Breezell). */
+	text: string;
+	uses: number;
+	/** Times Chinese was taken for these letters while it was on offer; a use halves them. */
+	skips: number;
+	last: number;
+}
+
 export interface AdaptiveSnapshot {
 	readonly version: 1;
 	readonly clock: number;
@@ -54,7 +65,14 @@ export interface AdaptiveSnapshot {
 	readonly bi: [string, number][];
 	readonly picks: [string, number][];
 	readonly words: LearnedWord[];
+	/** Absent in files written before Latin words were learned. */
+	readonly latin?: [string, LearnedLatin][];
 }
+
+/** Latin words kept: the least used and oldest go first. */
+const MAX_LATIN = 8000;
+/** Letters of a word worth remembering. */
+const LATIN_WORD = /^[A-Za-z]{2,32}$/;
 
 /** Tuning: mix a word's own count with the context's probability or the word's ("word"). */
 const WORD_MIX = (typeof process !== 'undefined' && process.env?.BZ_WORD_MIX) || 'context';
@@ -75,6 +93,8 @@ export class AdaptiveModel {
 	/** Picks by entry text (the same word picked through another reading counts too). */
 	private picks = new Map<string, number>();
 	private words: LearnedWord[] = [];
+	private latin = new Map<string, LearnedLatin>();
+	private latinUses = 0;
 	private context = '';
 	private readonly contextCache = new Map<string, number>();
 	private version = 0;
@@ -188,6 +208,76 @@ export class AdaptiveModel {
 		this.version++;
 	}
 
+	/** A Latin word the user wrote: `text` as written. */
+	learnLatin(text: string): void {
+		if (!LATIN_WORD.test(text)) {
+			return;
+		}
+		const word = text.toLowerCase();
+		const old = this.latin.get(word);
+		if (old) {
+			old.text = text;
+			old.uses++;
+			old.skips /= 2;
+			old.last = this.clock;
+		} else {
+			this.latin.set(word, { text, uses: 1, skips: 0, last: this.clock });
+			if (this.latin.size > MAX_LATIN) {
+				const keep = [...this.latin].sort((a, b) => b[1].uses - a[1].uses || b[1].last - a[1].last).slice(0, MAX_LATIN * 3 / 4);
+				this.latin = new Map(keep);
+				this.latinUses = keep.reduce((n, [, w]) => n + w.uses, 0) - 1;
+			}
+		}
+		this.latinUses++;
+	}
+
+	/** Chinese was taken for these letters while the word was on offer. */
+	skipLatin(word: string): void {
+		const old = this.latin.get(word);
+		if (old) {
+			old.skips++;
+		} else {
+			this.latin.set(word, { text: word, uses: 0, skips: 1, last: this.clock });
+		}
+	}
+
+	/** The commit of this word was deleted at once: it was not what the user meant. */
+	unlearnLatin(word: string): void {
+		const old = this.latin.get(word);
+		if (old && old.uses > 0) {
+			old.uses--;
+			this.latinUses--;
+			if (!old.uses && !old.skips) {
+				this.latin.delete(word);
+			}
+		}
+	}
+
+	latinWord(word: string): Readonly<LearnedLatin> | undefined {
+		return this.latin.get(word);
+	}
+
+	/** Words the user used at least `minUses` times starting with `prefix`, the most used first. */
+	latinWithPrefix(prefix: string, limit: number, minUses: number): string[] {
+		const found: [string, number][] = [];
+		for (const [word, w] of this.latin) {
+			if (w.uses >= minUses && word.startsWith(prefix)) {
+				found.push([word, w.uses]);
+			}
+		}
+		return found.sort((a, b) => b[1] - a[1]).slice(0, limit).map(f => f[0]);
+	}
+
+	/** Uses of Latin words in all. */
+	get latinTotal(): number {
+		return this.latinUses;
+	}
+
+	/** Chinese tokens committed, as counted now. */
+	get committedTotal(): number {
+		return this.now(this.uniTotal);
+	}
+
 	/** The text around the cursor (editor, chat); '' when there is none. */
 	setContext(text: string): void {
 		const next = text.length > 20000 ? text.slice(-20000) : text;
@@ -256,6 +346,8 @@ export class AdaptiveModel {
 		this.bi.clear();
 		this.picks.clear();
 		this.words = [];
+		this.latin.clear();
+		this.latinUses = 0;
 		this.version++;
 	}
 
@@ -288,11 +380,21 @@ export class AdaptiveModel {
 				this.words.push({ text: w.text, syllables: [...w.syllables], tokens: [...w.tokens], count: w.count, last });
 			}
 		}
+		for (const [word, w] of other.latin ?? []) {
+			const mine = this.latin.get(word);
+			if (mine) {
+				mine.uses += w.uses;
+				mine.skips += w.skips;
+			} else {
+				this.latin.set(word, { ...w, last: this.clock - (other.clock - w.last) });
+			}
+			this.latinUses += w.uses;
+		}
 		this.version++;
 	}
 
 	toJSON(): AdaptiveSnapshot {
-		return { version: 1, clock: this.clock, uni: [...this.uni], bi: [...this.bi], picks: [...this.picks], words: this.words };
+		return { version: 1, clock: this.clock, uni: [...this.uni], bi: [...this.bi], picks: [...this.picks], words: this.words, latin: [...this.latin] };
 	}
 
 	static fromJSON(snapshot: AdaptiveSnapshot, options?: AdaptiveOptions): AdaptiveModel {
@@ -306,6 +408,8 @@ export class AdaptiveModel {
 		m.bi = new Map(snapshot.bi);
 		m.picks = new Map(snapshot.picks);
 		m.words = snapshot.words;
+		m.latin = new Map(snapshot.latin ?? []);
+		m.latinUses = (snapshot.latin ?? []).reduce((n, [, w]) => n + w.uses, 0);
 		return m;
 	}
 }

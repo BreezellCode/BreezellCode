@@ -91,7 +91,7 @@ const tw = timed('zh-tw pack + tones + scripts', () => ({
 	s2tw: new ScriptConverter(readFileSync(`${dir}/model/zh-s2tw.txt`, 'utf8')),
 	t2s: new ScriptConverter(readFileSync(`${dir}/model/zh-t2s.txt`, 'utf8')),
 }));
-const zhSession = (layout, adaptive) => new ZhSession(new ZhDecoder(layout.tw ? combineLexicons([base, tw.pack]) : base, lm, adaptive, layout), undefined, undefined, layout.tw ? { script: tw.s2tw, fold: tw.t2s } : {});
+const zhSession = (layout, adaptive) => new ZhSession(new ZhDecoder(layout.tw ? combineLexicons([base, tw.pack]) : base, lm, adaptive, layout), undefined, layout.tw ? { script: tw.s2tw, fold: tw.t2s } : {});
 {
 	const s = zhSession({}, new AdaptiveModel());
 	const real = lines(`${dir}/testsets/zh-chat.jsonl`, 'input');

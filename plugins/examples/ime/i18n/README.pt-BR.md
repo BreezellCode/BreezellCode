@@ -6,9 +6,10 @@ Um método de entrada que conhece seu código e sua conversa: pinyin, zhuyin, pi
 
 - **Digita frases inteiras.** Digite uma oração de uma vez; um modelo de linguagem a lê no contexto e acerta os caracteres em primeiro lugar com muito mais frequência do que um dicionário sozinho.
 - **Distingue código de comentários.** No código ele digita em inglês. Em comentários, strings ou depois de `///` na linha ele digita no seu idioma, sem você precisar trocar.
-- **Usa o que está ao redor do cursor.** O código que você está editando e a conversa no chat ajudam a escolher as palavras, e nomes como `useState` viram candidatos do jeito que estão escritos lá.
+- **Usa o que está ao redor do cursor.** As palavras antes do cursor, seja quem as tenha digitado, levam ao que você digita; o código que você edita e a conversa ajudam a escolher as palavras, e nomes como `useState` viram candidatos como estão escritos ali.
 - **Perdoa deslizes.** No pinyin, teclas pressionadas na ordem errada, uma tecla vizinha ou uma tecla a mais ou a menos ainda encontram a palavra (`jain` encontra 简).
-- **Mistura inglês.** Digite `hello` no pinyin e ele aparece entre os candidatos.
+- **Mistura inglês.** Digite `hello` no pinyin e ele vem primeiro, na forma habitual (`api`: `API`). Se as mesmas letras também forem uma palavra chinesa frequente (`my`: 没有), enquanto você escreve em chinês o chinês vem primeiro e o inglês logo depois, e o que você escolhe muda a ordem.
+- **Lembra das suas palavras.** Uma palavra latina usada duas vezes é encontrada pelo início: `breezel` encontra `breezell`, e o mesmo vale para palavras do código ou da conversa (`useSt`: `useState`).
 - **Oferece as próximas palavras** depois que você confirma texto em chinês. Elas somem depois de alguns segundos ou ao clicar em outro lugar; **Previsão de palavras** na página dele as desativa.
 - **Aprende com você**, sem deixar que uma escolha isolada se espalhe para todo o resto.
 
@@ -61,7 +62,8 @@ O painel de candidatos no editor e a digitação na caixa de chat precisam de um
 ## Seus dados
 
 - **Nada do que você digita sai do seu computador.** A composição, o contexto ao redor do cursor e o que ele aprende ficam todos nele. O plugin só se conecta para baixar os idiomas que você escolher.
-- **Permissões:** ele não pede nenhuma das permissões de plugin do Breezell. Como método de entrada, ele recebe as teclas que você digita na caixa de chat do Breezell e a conversa recente, para escolher as palavras; o Breezell as entrega só a este plugin.
+- **Permissões:** com a sua permissão, ele lê o código nos seus editores (`editor.read`) e a caixa de chat com as últimas mensagens (`chat.input`), para escolher as palavras. O Breezell pergunta uma vez por cada uma, na primeira vez que você digita ali; se desativar uma na página do plugin, ele não lê aquilo, e você continua digitando. Como método de entrada, ele também recebe as teclas que você digita na caixa de chat, que o Breezell entrega só a este plugin.
+- Ele lembra palavras latinas que você escolhe, confirma como digitou ou digita no código e na caixa de chat do Breezell. Nunca o que você digita em modo inglês em outros programas: pode ser uma senha.
 - O que ele aprendeu fica em `%APPDATA%\BreezellIME` (Windows), `~/Library/Application Support/BreezellIME` (macOS) ou `~/.config/breezell-ime` (Linux). **Limpar palavras aprendidas** na página faz com que ele esqueça.
 - Como todo plugin do Breezell, ele precisa que você esteja conectado à sua conta. O método de entrada do Windows, depois de instalado, continua funcionando quando você sai da conta, então você nunca fica sem poder digitar.
 
@@ -84,6 +86,10 @@ A proporção de orações em que o primeiro candidato está exatamente certo, c
 | Japonês | Legendas | 83.8 | Mozc 74.3, CyIME 35.1 |
 
 Os documentos do Vue e do Python por trás dos conjuntos técnicos nunca foram usados no treinamento. Rime é o rime-ice para pinyin e seu esquema oficial bopomofo para zhuyin. Os números do CyIME são do librime 1.16.1 padrão com seus esquemas e pesos, mais o modelo de gramática Wanxiang; o librime modificado dele e seu reordenador não foram executados, e podem ter resultado melhor. As leituras da Wikipédia e das legendas em japonês foram geradas com o dicionário do Mozc, então o ITA, com leituras feitas por pessoas, é o mais justo dos três.
+
+**As palavras antes do cursor.** Com uma frase cortada antes da última palavra e o resto já escrito, o primeiro candidato acerta em 95,3% das legendas, 94,0% dos documentos técnicos e 90,8% da Wikipédia, contra 81,9%, 86,6% e 78,8% sem lê-las.
+
+**Inglês em meio ao chinês.** Em textos do mesmo tipo não usados no treino, uma palavra latina vem primeiro de 82 a 89% das vezes quando era a pretendida (de 67 a 74% antes da 1.2.0), e tira o primeiro lugar de uma palavra chinesa digitada pelas iniciais de 6 a 7% das vezes (antes, de 15 a 20%).
 
 ## Compilar a partir do código-fonte
 

@@ -3,12 +3,13 @@
  * keys in, the text being composed and its candidates out, and what got committed.
  */
 import {
-	AdaptiveModel, BOS, combineLexicons, DACHEN, doublePinyin, PINYIN, HangulComposer, JaConverter, keysOf, loadCodeTable, loadJaLexicon, loadNgramModel,
+	AdaptiveModel, BOS, combineLexicons, DACHEN, doublePinyin, PINYIN, HangulComposer, JaConverter, keysOf, LatinContext, latinContextOf, LatinOffer, latinOffers, LatinWords, loadCodeTable, loadJaLexicon, loadNgramModel,
 	loadToneTable, loadZhLexicon, NgramModel, PrefixPredictor, RomajiComposer, RomajiTable, ScriptConverter, syllableOf, TableSession, TONES, UNK, ZhDecoder,
 	ZhCandidate, ZhLexicon, ZhSession, ZHUYIN, zhuyinOf,
 } from '../engine/src/index.js';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { LATIN_WORDS } from './latinWords.js';
 
 export interface ImeState {
 	/** What is being composed, as shown under the cursor. */
@@ -32,8 +33,13 @@ export interface Composer {
 	readonly composing: boolean;
 	/** Takes the state (and its commit). */
 	state(): ImeState;
-	/** The text before the cursor, for the words it holds. */
-	setContext(text: string): void;
+	/**
+	 * The text around the cursor, for the words it holds. With `atCaret` (the default) it ends at the
+	 * cursor, so what is typed next follows its last words; without, it is only what went in lately.
+	 */
+	setContext(text: string, atCaret?: boolean): void;
+	/** A Latin word the user wrote past the input method, where Breezell can see it (never system-wide: passwords). */
+	noteLatin?(word: string): void;
 	/** What comes next starts a sentence (punctuation went in, the caret moved, the text changed). */
 	forget?(): void;
 	/** Letters or digits went in past the input method. */
@@ -104,6 +110,9 @@ export class ChineseData {
 		}
 		return this.englishCache ?? undefined;
 	}
+	private latinCache?: LatinWords;
+	/** The Latin words offered among Chinese candidates: how they stand among Chinese, and how common they are in English. */
+	get latin(): LatinWords { return this.latinCache ??= new LatinWords(LATIN_WORDS, this.english); }
 	get lex(): ZhLexicon { return this.lexCache ??= loadZhLexicon(read(this.dir, 'zh.bzlx')); }
 	get tw() {
 		return this.twCache ??= {
@@ -115,19 +124,19 @@ export class ChineseData {
 	}
 }
 
-/** Seen this many times in the English model's text: common enough to come before Chinese readings. */
-const COMMON_ENGLISH = 100;
-
 /** Pinyin, zhuyin and double pinyin: one decoder over the shared lexicon and model. */
 export class ChineseComposer implements Composer {
 	private readonly session: ZhSession;
 	/** The last state: preedit as the session gives it (the open part as typed keys). */
 	private last: { preedit: string; candidates: string[] } = { preedit: '', candidates: [] };
 	private pendingCommit = '';
-	/** The English word among the candidates (hello typed in pinyin), and where. */
-	private english?: { index: number; text: string };
+	/** The Latin words among the candidates (hello typed in pinyin), by their place among the Chinese ones. */
+	private english: LatinOffer[] = [];
 	/** Latin words of the context (the code or the conversation around the caret), by their lowercase. */
-	private contextWords = new Map<string, string>();
+	private contextWords = new Map<string, { text: string; hits: number }>();
+	private latinContext: LatinContext = 'none';
+	/** The last commit was this Latin word (deleted at once, it is taken back). */
+	private lastLatin?: string;
 	/** The last commit was an English word: no Chinese words follow it (聯想). */
 	private afterEnglish = false;
 
@@ -136,7 +145,9 @@ export class ChineseComposer implements Composer {
 		const speller = zhuyin ? ZHUYIN : layout === 'pinyin' ? undefined : doublePinyin(layout);
 		const tw = traditional || zhuyin ? data.tw : undefined;
 		const decoder = new ZhDecoder(tw ? tw.lex : data.lex, data.lm, adaptive, zhuyin ? { speller: ZHUYIN, tones: tw!.tones } : speller ? { speller } : {});
-		this.session = new ZhSession(decoder, undefined, undefined, tw ? { script: tw.s2tw, fold: tw.t2s } : {});
+		this.session = new ZhSession(decoder, undefined, tw ? { script: tw.s2tw, fold: tw.t2s } : {});
+		// Its index of the model's words now, with the models, not on the first key.
+		decoder.historyAfter('的');
 	}
 
 	get composing(): boolean {
@@ -152,38 +163,36 @@ export class ChineseComposer implements Composer {
 	private refresh(): void {
 		const s = this.session.state();
 		this.pendingCommit += s.commit;
-		const candidates = s.candidates.map(c => c.text);
 		this.english = this.englishFor(s.preedit, s.candidates, s.lead);
-		if (this.english) {
-			candidates.splice(this.english.index, 0, this.english.text);
+		const candidates: string[] = [];
+		let offer = 0;
+		for (let i = 0; i <= s.candidates.length; i++) {
+			while (offer < this.english.length && this.english[offer].index === i) {
+				candidates.push(this.english[offer++].text);
+			}
+			if (i < s.candidates.length) {
+				candidates.push(s.candidates[i].text);
+			}
 		}
 		this.last = { preedit: s.preedit, candidates };
 	}
 
-	/**
-	 * The English word the letters typed are (hello, github; a word of the context as written there:
-	 * useState), and where it goes: first when the letters are no clean pinyin (hello is he l lo, an
-	 * initial alone) and the word is common or the context's, else after the whole-sentence readings
-	 * (men, can: 們, 參 first; jai, a name, is most likely pinyin being typed).
-	 */
-	private englishFor(preedit: string, cands: readonly ZhCandidate[], lead: number): { index: number; text: string } | undefined {
-		// Pinyin and double pinyin, the whole input still open (nothing picked: no Chinese in the preedit).
+	/** The Latin words the letters typed may be (zh/latin.ts): pinyin and double pinyin, the whole input still open. */
+	private englishFor(preedit: string, candidates: readonly ZhCandidate[], lead: number): LatinOffer[] {
 		if (!this.mixEnglish || this.layout === 'zhuyin' || !/^[a-z']{2,}$/.test(preedit)) {
-			return undefined;
+			return [];
 		}
-		const word = preedit.replace(/'/g, '');
-		const fromContext = this.contextWords.get(word);
-		const count = this.data.english?.get(word) ?? 0;
-		const text = fromContext ?? (count ? word : undefined);
-		if (!text) {
-			return undefined;
-		}
-		// First: the letters are no clean pinyin, and the word is the context's, or common while the
-		// best Chinese reading needs no slip fixed (jai read as 嗨 is pinyin typed wrong, not a name).
-		const top = cands[0];
-		const first = !(top?.sentence && top.exact) && (!!fromContext || (count >= COMMON_ENGLISH && !top?.slip));
-		// Not first: after the whole-sentence readings, and after the first candidate at least.
-		return { index: first ? 0 : Math.max(lead, Math.min(1, cands.length)), text };
+		return latinOffers({ letters: preedit.replace(/'/g, ''), candidates, lead, context: this.latinContext, here: this.contextWords }, this.data.latin, this.adaptive);
+	}
+
+	/** The Latin word at `index` of the candidates shown, if it is one. */
+	private latinAt(index: number): LatinOffer | undefined {
+		return this.english.find((e, k) => e.index + k === index);
+	}
+
+	/** Where candidate `index` shown stands among the Chinese ones. */
+	private chineseIndex(index: number): number {
+		return index - this.english.filter((e, k) => e.index + k < index).length;
 	}
 
 	type(key: string): void {
@@ -212,18 +221,26 @@ export class ChineseComposer implements Composer {
 	}
 
 	select(index: number): void {
-		const e = this.english;
-		if (e && index === e.index) {
+		const e = this.latinAt(index);
+		if (e) {
 			// The English word: the input is spent, and the model reads it as a Latin run (<x>).
 			this.pendingCommit += e.text;
+			this.adaptive.learnLatin(e.text);
+			this.lastLatin = e.word;
 			this.session.clear();
 			this.session.afterOther();
 			this.afterEnglish = true;
-			this.english = undefined;
+			this.english = [];
 			this.last = { preedit: '', candidates: [] };
 			return;
 		}
-		this.session.select(e && index > e.index ? index - 1 : index);
+		// Chinese for letters that spell a word on offer: this user does not mean it here.
+		const letters = this.last.preedit.replace(/'/g, '');
+		if (this.english.some(o => o.word === letters)) {
+			this.adaptive.skipLatin(letters);
+		}
+		this.lastLatin = undefined;
+		this.session.select(this.chineseIndex(index));
 		this.refresh();
 	}
 
@@ -234,12 +251,21 @@ export class ChineseComposer implements Composer {
 			}
 			return;
 		}
-		this.pendingCommit += this.last.preedit;
+		// As typed: letters that are no reading the user wanted. A word of theirs, if it comes back.
+		const letters = this.last.preedit;
+		this.pendingCommit += letters;
+		if (/^[a-z]{2,}$/.test(letters) && this.mixEnglish) {
+			this.adaptive.learnLatin(letters);
+			this.lastLatin = letters;
+		} else {
+			this.lastLatin = undefined;
+		}
 		this.cancel();
 	}
 
 	cancel(): void {
 		this.session.clear();
+		this.english = [];
 		this.last = { preedit: '', candidates: [] };
 	}
 
@@ -250,15 +276,20 @@ export class ChineseComposer implements Composer {
 		return { preedit, candidates: this.last.candidates, commit };
 	}
 
-	setContext(text: string): void {
-		this.session.setContext(text);
+	setContext(text: string, atCaret = true): void {
+		this.session.setContext(text, atCaret);
+		this.latinContext = latinContextOf(text);
 		// Its Latin words as written (useState, GitHub); a capital that only starts a sentence goes.
 		this.contextWords = new Map();
 		for (const m of text.matchAll(/[A-Za-z]{2,}/g)) {
 			const w = m[0], lower = w.toLowerCase();
-			const plain = w.slice(1) === lower.slice(1) && !!this.data.english?.has(lower);
-			this.contextWords.set(lower, plain ? lower : w);
+			const plain = w.slice(1) === lower.slice(1) && this.data.latin.has(lower);
+			this.contextWords.set(lower, { text: plain ? lower : w, hits: (this.contextWords.get(lower)?.hits ?? 0) + 1 });
 		}
+	}
+
+	noteLatin(word: string): void {
+		this.adaptive.learnLatin(word);
 	}
 
 	forget(): void {
@@ -270,6 +301,10 @@ export class ChineseComposer implements Composer {
 	}
 
 	undoLastCommit(): void {
+		if (this.lastLatin) {
+			this.adaptive.unlearnLatin(this.lastLatin);
+			this.lastLatin = undefined;
+		}
 		this.session.undoLastCommit();
 	}
 
@@ -291,11 +326,11 @@ export class ChineseComposer implements Composer {
 
 	/** Pinyin (double pinyin too: the full spelling), or zhuyin symbols, syllable by syllable: hen jian dan. */
 	reading(index: number): string {
-		const e = this.english;
-		if (e && index === e.index) {
+		const e = this.latinAt(index);
+		if (e) {
 			return e.text;
 		}
-		const r = this.session.reading(e && index > e.index ? index - 1 : index);
+		const r = this.session.reading(this.chineseIndex(index));
 		const zhuyin = this.layout === 'zhuyin';
 		const spelled = r.syllables.map(s => zhuyin ? zhuyinOf(syllableOf(s)) : syllableOf(s));
 		const after = zhuyin ? r.after.replace(/[\x20-\x7e]/g, k => DACHEN[k] ?? (TONES[k] ? TONES[k] : k)) : r.after;
@@ -522,7 +557,9 @@ export interface AsyncComposer {
 	cancel(): Promise<void>;
 	/** Takes the state (and its commit). */
 	state(): ImeState;
-	setContext(text: string): Promise<void>;
+	setContext(text: string, atCaret?: boolean): Promise<void>;
+	/** A Latin word the user wrote past the input method (see Composer.noteLatin). */
+	noteLatin(word: string): Promise<void>;
 	forget(): Promise<void>;
 	afterOther(): Promise<void>;
 	undoLastCommit(): Promise<void>;
@@ -548,7 +585,8 @@ export class LocalComposer implements AsyncComposer {
 	async enter(): Promise<void> { this.inner.enter(); }
 	async cancel(): Promise<void> { this.inner.cancel(); }
 	state(): ImeState { return this.inner.state(); }
-	async setContext(text: string): Promise<void> { this.inner.setContext(text); }
+	async setContext(text: string, atCaret = true): Promise<void> { this.inner.setContext(text, atCaret); }
+	async noteLatin(word: string): Promise<void> { this.inner.noteLatin?.(word); }
 	async forget(): Promise<void> { this.inner.forget?.(); }
 	async afterOther(): Promise<void> { this.inner.afterOther?.(); }
 	async undoLastCommit(): Promise<void> { this.inner.undoLastCommit?.(); }

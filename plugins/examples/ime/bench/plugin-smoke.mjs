@@ -148,6 +148,87 @@ await settle();
 await vscode.commands.executeCommand('breezellIme.cancel');
 await settle();
 
+// Reading the code and the chat box: with the user's leave (a Breezell that has the permissions).
+{
+	const reads = { 'editor.read': 'ask', 'chat.input': 'ask' };
+	const asked = [];
+	let answer = true;
+	let chatBox = { text: '', before: '', recent: '' };
+	let chatReads = 0;
+	vscode.breezell.permissions = ['editor.read', 'chat.input'];
+	vscode.breezell.permissionState = async p => reads[p];
+	vscode.breezell.requestPermission = async p => { asked.push(p); reads[p] = answer ? 'granted' : 'denied'; return answer; };
+	vscode.breezell.chat = { readInput: async () => { chatReads++; return chatBox; } };
+	const changed = [];
+	vscode.breezell.onDidChangePermissions = fn => { changed.push(fn); return { dispose() { } }; };
+	// The plugin was activated before these appeared: a fresh one sees them.
+	const permContext = contextAt(root, 'storage-permissions');
+	const again = await import(`${pathToFileURL(out).href}?permissions`);
+	again.activate(permContext);
+	await settle();
+	await vscode.commands.executeCommand('breezellIme.toggle');
+	await settle();
+	await vscode.commands.executeCommand('breezellIme.surface', true, 'editor');
+	await settle();
+	check('going into the editor asks to read the code, once', asked.join() === 'editor.read' && reads['editor.read'] === 'granted', asked.join());
+	await vscode.commands.executeCommand('breezellIme.surface', false, 'none');
+	await vscode.commands.executeCommand('breezellIme.surface', true, 'editor');
+	await settle();
+	check('and does not ask again', asked.join() === 'editor.read', asked.join());
+	await vscode.commands.executeCommand('breezellIme.surface', true, 'chat');
+	await settle();
+	check('going into the chat box asks to read it', asked.join() === 'editor.read,chat.input', asked.join());
+	chatBox = { text: '我們需要', before: '我們需要', recent: 'earlier words' };
+	const needed = await vscode.commands.executeCommand('breezellIme.chatKey', { key: 'j' });
+	for (const ch of 'iejue') await vscode.commands.executeCommand('breezellIme.chatKey', { key: ch });
+	const solved = await vscode.commands.executeCommand('breezellIme.chatKey', { key: ' ' });
+	check('what the chat box holds is read when a composition starts, once', chatReads === 1 && needed?.composing, String(chatReads));
+	check('and the words before lead into what is typed', solved?.commit === '解決', JSON.stringify(solved?.commit));
+	// Latin typed into the box counts as the user's own word.
+	for (const round of ['放到 breezell ', '放到 breezell 上 breezell ']) {
+		chatBox = { text: round, before: round, recent: '' };
+		await vscode.commands.executeCommand('breezellIme.chatKey', { key: 'n' });
+		await vscode.commands.executeCommand('breezellIme.chatForget', 'FocusLost');
+	}
+	await vscode.commands.executeCommand('breezellIme.chatKey', { key: 'b' });
+	let found;
+	for (const ch of 'reezel') found = await vscode.commands.executeCommand('breezellIme.chatKey', { key: ch });
+	check('a word typed in the chat box is found by its start', found?.candidates?.[0] === 'breezell', JSON.stringify(found?.candidates?.slice(0, 3)));
+	await vscode.commands.executeCommand('breezellIme.chatForget', 'FocusLost');
+	// The chat box does not answer: typing does not wait.
+	const answering = vscode.breezell.chat.readInput;
+	vscode.breezell.chat.readInput = () => new Promise(() => { });
+	const waited = Date.now();
+	const hung = await vscode.commands.executeCommand('breezellIme.chatKey', { key: 'n' });
+	check('a chat box that does not answer holds typing up for a moment at most', hung?.composing && Date.now() - waited < 1000, `${Date.now() - waited} ms`);
+	await vscode.commands.executeCommand('breezellIme.chatForget', 'FocusLost');
+	vscode.breezell.chat.readInput = answering;
+	// Turned off: nothing is read.
+	reads['chat.input'] = 'denied';
+	for (const fn of changed) fn();
+	await settle();
+	const readsBefore = chatReads;
+	await vscode.commands.executeCommand('breezellIme.chatKey', { key: 'n' });
+	check('turned off, the chat box is not read, and typing still works', chatReads === readsBefore, String(chatReads));
+	await vscode.commands.executeCommand('breezellIme.chatForget', 'FocusLost');
+	reads['editor.read'] = 'denied';
+	for (const fn of changed) fn();
+	await settle();
+	await vscode.commands.executeCommand('breezellIme.surface', true, 'editor');
+	const inCode = new vscode.FakeEditor('// 註解裡 ', 'typescript');
+	vscode.window.activeTextEditor = inCode;
+	await vscode.commands.executeCommand('type', { text: 'a' });
+	await settle();
+	check('not allowed to read the code: by the kind of file alone', inCode.text.endsWith('a'), inCode.text);
+	vscode.window.activeTextEditor = prose;
+	// What follows runs on this instance, on a Breezell without these permissions again.
+	delete vscode.breezell.permissionState;
+	delete vscode.breezell.requestPermission;
+	delete vscode.breezell.chat;
+	delete vscode.breezell.onDidChangePermissions;
+	vscode.breezell.permissions = [];
+}
+
 // Code: keys stay English outside comments and strings.
 const code = new vscode.FakeEditor('const x = ', 'typescript');
 vscode.window.activeTextEditor = code;

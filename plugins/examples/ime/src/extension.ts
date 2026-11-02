@@ -104,6 +104,15 @@ interface Panel {
 	readonly lang?: string;
 }
 
+/** What Breezell lets the plugin read, with the user's leave. */
+type ReadPermission = 'editor.read' | 'chat.input';
+const READ_PERMISSIONS: readonly ReadPermission[] = ['editor.read', 'chat.input'];
+/** A Latin word as a whole, letters alone (not part of an identifier with digits, not a one-off abbreviation of two). */
+const TYPED_WORD = /(?<![A-Za-z0-9_])[A-Za-z]{3,32}(?![A-Za-z0-9_])/g;
+const TYPED_WORD_END = /(?<![A-Za-z0-9_])[A-Za-z]{3,32}$/;
+const MAX_TYPED_AT_ONCE = 300;
+const READ_CHAT_TIMEOUT_MS = 300;
+
 class Ime implements vscode.Disposable {
 	private enabled = false;
 	private layout: string;
@@ -120,6 +129,12 @@ class Ime implements vscode.Disposable {
 	private editing = false;
 	/** Where the caret went with this plugin's last edit (its own selection change is no caret move). */
 	private ownCaret?: vscode.Position;
+	/** Where the permissions to read the code and the chat box stand (a Breezell that has them). */
+	private readonly reads = new Map<ReadPermission, string>();
+	private readonly readsKnown: Promise<void>;
+	private readonly asking = new Set<ReadPermission>();
+	/** The chat box's text before the caret when last looked at, with what this plugin put in since. */
+	private chatBefore = '';
 	/** Korean: the word suggestions follow what was just typed, until the caret or the focus goes elsewhere. */
 	private suggestHere = true;
 	/** Ends what is on offer (the words after a commit, the Korean suggestions) when its time is up. */
@@ -211,6 +226,7 @@ class Ime implements vscode.Disposable {
 			this.surfaceInternal = !!internal;
 			this.surface = where;
 			this.host?.updateFocus();
+			void this.askToReadHere();
 			void this.run(() => this.focusMoved());
 		}));
 		if (this.config.get<boolean>('useSystemHost', true)) {
@@ -298,11 +314,52 @@ class Ime implements vscode.Disposable {
 				}
 			}),
 		);
+		this.readsKnown = this.refreshReads();
+		const changedPermissions = vscode.breezell?.onDidChangePermissions?.(() => void this.refreshReads());
+		if (changedPermissions) {
+			this.disposables.push(changedPermissions);
+		}
 		const breezellLanguage = vscode.breezell?.onDidChangeLanguage?.(() => this.languageChanged());
 		if (breezellLanguage) {
 			this.disposables.push(breezellLanguage);
 		}
 		this.updateStatus();
+	}
+
+	/** Whether this Breezell has the permission (one that does not leaves it out: optionalPermissions). */
+	private hasReadPermission(permission: ReadPermission): boolean {
+		return !!vscode.breezell?.permissions?.includes(permission) && !!vscode.breezell.permissionState;
+	}
+
+	/** May the plugin read this? An older Breezell has no such permission: as any extension, it may. */
+	private mayRead(permission: ReadPermission): boolean {
+		return !this.hasReadPermission(permission) || this.reads.get(permission) === 'granted';
+	}
+
+	private async refreshReads(): Promise<void> {
+		for (const permission of READ_PERMISSIONS) {
+			if (this.hasReadPermission(permission)) {
+				this.reads.set(permission, await Promise.resolve(vscode.breezell.permissionState(permission)).catch(() => 'denied'));
+			}
+		}
+	}
+
+	/** The first time the input method is used where the permission matters: Breezell asks the user, once. */
+	private async askToReadHere(): Promise<void> {
+		await this.readsKnown;
+		const permission: ReadPermission | undefined = this.surface === 'editor' ? 'editor.read' : this.surface === 'chat' ? 'chat.input' : undefined;
+		if (!permission || !this.enabled || !this.hasReadPermission(permission) || this.reads.get(permission) !== 'ask' || this.asking.has(permission)) {
+			return;
+		}
+		this.asking.add(permission);
+		try {
+			this.reads.set(permission, await vscode.breezell.requestPermission(permission) ? 'granted' : 'denied');
+			this.log.info(`${permission}: ${this.reads.get(permission)}`);
+		} catch (e) {
+			this.log.warn(`${permission}: ${(e as Error)?.message ?? e}`);
+		} finally {
+			this.asking.delete(permission);
+		}
 	}
 
 	private languageChanged(): void {
@@ -545,6 +602,7 @@ class Ime implements vscode.Disposable {
 			this.typeCommand = undefined;
 		}
 		this.enabled = on;
+		void this.askToReadHere();
 		void this.context.globalState.update('enabled', on);
 		void vscode.commands.executeCommand('setContext', 'breezellIme.enabled', on);
 		this.log.info(on ? `on: ${this.layout}` : 'off');
@@ -707,13 +765,21 @@ class Ime implements vscode.Disposable {
 			return false;
 		}
 		const doc = editor.document;
+		// Not allowed to read it: by the kind of file alone, as if at the start of its code.
+		if (!this.mayRead('editor.read')) {
+			return englishAt(doc.languageId, '', '');
+		}
 		const pos = editor.selection.active;
 		const line = doc.lineAt(pos.line).text.slice(0, pos.character);
 		const before = doc.getText(new vscode.Range(new vscode.Position(Math.max(0, pos.line - 300), 0), pos));
 		return englishAt(doc.languageId, line, before);
 	}
 
-	private textBefore(editor: vscode.TextEditor): string {
+	/** The text before the caret, for choosing the words; undefined when the user does not allow reading it. */
+	private textBefore(editor: vscode.TextEditor): string | undefined {
+		if (!this.mayRead('editor.read')) {
+			return undefined;
+		}
 		const pos = editor.selection.active;
 		const offset = editor.document.offsetAt(pos);
 		return editor.document.getText(new vscode.Range(editor.document.positionAt(Math.max(0, offset - 4000)), pos));
@@ -773,6 +839,7 @@ class Ime implements vscode.Disposable {
 			return this.render();
 		}
 		if (!s.composing && this.englishHere(editor)) {
+			this.noteWordEnded(editor, s, text);
 			await s.passed({ key: text });
 			await this.typeAsIs(text);
 			return this.render();
@@ -788,6 +855,18 @@ class Ime implements vscode.Disposable {
 			}
 		}
 		await this.render();
+	}
+
+	/** A word typed in the code just ended, with this key: one of the user's, in case it comes up among Chinese. */
+	private noteWordEnded(editor: vscode.TextEditor, s: KeySession, key: string): void {
+		if (/[A-Za-z0-9_]/.test(key) || !this.mayRead('editor.read') || !this.config.get<boolean>('learning', true)) {
+			return;
+		}
+		const pos = editor.selection.active;
+		const word = TYPED_WORD_END.exec(editor.document.lineAt(pos.line).text.slice(0, pos.character))?.[0];
+		if (word) {
+			void s.composer.noteLatin(word);
+		}
 	}
 
 	/** Backspace, Escape, Enter, the arrows, the pages while composing. */
@@ -886,7 +965,7 @@ class Ime implements vscode.Disposable {
 		// The chat box draws its own panel: what goes on there does not show in the editor.
 		const s = this.enabled && this.surface !== 'chat' ? this.session : undefined;
 		const v = s ? await s.view() : undefined;
-		this.suggestions = this.layout === 'korean' && this.suggestHere && this.predictionOn && editor && s ? await s.composer.suggestions(this.wordBefore(editor), this.wordsBefore(editor)) : [];
+		this.suggestions = this.layout === 'korean' && this.suggestHere && this.predictionOn && editor && s && this.mayRead('editor.read') ? await s.composer.suggestions(this.wordBefore(editor), this.wordsBefore(editor)) : [];
 		const composing = !!v?.composing;
 		void vscode.commands.executeCommand('setContext', 'breezellIme.composing', composing);
 		void vscode.commands.executeCommand('setContext', 'breezellIme.navigating', composing && v!.candidates.length > 0);
@@ -943,7 +1022,8 @@ class Ime implements vscode.Disposable {
 			return { handled: false, commit: key.length === 1 ? key : '', preedit: '', candidates: [], highlight: 0, composing: false, pageStart: 0 };
 		}
 		const s = await this.ensureSession();
-		const r = await s.key({ key, shift: a.shift, digit: a.digit }, a.context);
+		const starting = !s.composing && s.composer.takes(key, false);
+		const r = await s.key({ key, shift: a.shift, digit: a.digit }, starting ? await this.chatContext(a, s) : undefined);
 		if (!r.eaten) {
 			// The chat box takes it: a character goes in as typed (the bridge held it back), Backspace deletes.
 			return { ...(await this.chatAnswer(s, key.length === 1 ? key : '')), handled: key.length === 1 };
@@ -951,9 +1031,53 @@ class Ime implements vscode.Disposable {
 		return this.chatAnswer(s, r.commit + (r.typeKey && key.length === 1 ? key : ''));
 	}
 
+	/**
+	 * What a composition starting in the chat box follows: the last messages, then the box's text up
+	 * to the caret, so its last words lead into what is typed. Undefined when the user does not allow
+	 * reading the box. An older Breezell sends what it has with the key.
+	 */
+	private async chatContext(a: ChatKey, s: KeySession): Promise<string | undefined> {
+		if (!this.hasReadPermission('chat.input') || !vscode.breezell.chat?.readInput) {
+			return a.context === undefined && a.before === undefined ? undefined : `${a.context ?? ''}\n${a.before ?? ''}`;
+		}
+		if (!this.mayRead('chat.input')) {
+			return undefined;
+		}
+		try {
+			// Typing never waits on it for long: a slow answer means this composition goes without.
+			const input = await Promise.race([
+				vscode.breezell.chat.readInput(),
+				new Promise<undefined>(resolve => setTimeout(() => resolve(undefined), READ_CHAT_TIMEOUT_MS)),
+			]);
+			if (!input) {
+				return undefined;
+			}
+			this.noteChatWords(input.before, s);
+			return `${input.recent}\n${input.before}`;
+		} catch (e) {
+			this.log.warn(`chat box: ${(e as Error)?.message ?? e}`);
+			return undefined;
+		}
+	}
+
+	/** Latin words typed into the chat box since it was last looked at: the user's, for when they come up among Chinese. */
+	private noteChatWords(before: string, s: KeySession): void {
+		const typed = before.startsWith(this.chatBefore) ? before.slice(this.chatBefore.length) : '';
+		this.chatBefore = before;
+		// A lot at once was pasted, not typed.
+		if (typed.length > MAX_TYPED_AT_ONCE || !this.config.get<boolean>('learning', true)) {
+			return;
+		}
+		for (const m of typed.matchAll(TYPED_WORD)) {
+			void s.composer.noteLatin(m[0]);
+		}
+	}
+
 	/** The chat box's answer: what to insert, and the panel. */
 	private async chatAnswer(s: KeySession, commit: string): Promise<ChatAnswer> {
 		this.committed(commit);
+		// What goes in from here is no word typed past the input method.
+		this.chatBefore += commit;
 		const v = await s.view();
 		return {
 			handled: true, commit, preedit: v.preedit, composing: v.composing, predicting: v.predicting,

@@ -5,7 +5,7 @@
  * downloaded for it. Other systems: Breezell's editor and chat only, for now.
  */
 import { execFile } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -101,6 +101,22 @@ export async function uninstallSystem(extensionPath: string): Promise<void> {
 
 const stopHost = () => powershell(`Get-CimInstance Win32_Process -Filter "Name LIKE 'Breezell%'" | Where-Object { $_.CommandLine -like '*host.cjs*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }`);
 
+/** Text service builds older than `build` go. One a running program has loaded stays until it lets go. */
+export function removeOlderTips(tipDir: string, build: number): void {
+	if (!existsSync(tipDir) || !Number.isInteger(build)) {
+		return;
+	}
+	for (const name of readdirSync(tipDir)) {
+		if (/^\d+$/.test(name) && Number(name) < build) {
+			try {
+				rmSync(join(tipDir, name), { recursive: true, force: true });
+			} catch {
+				// Loaded: the next start tries again.
+			}
+		}
+	}
+}
+
 /**
  * After the plugin updated: its host, and a newer text service build for programs to swap to,
  * without the administrator's prompt. The new host is in place before the old one stops: a text
@@ -110,14 +126,16 @@ export async function refreshSystem(extensionPath: string, version: string, log:
 	if (!systemState().installed) {
 		return false;
 	}
+	const from = join(extensionPath, 'dist', 'system');
+	const build = Number(readFileSync(join(from, 'tip-build.txt'), 'utf8').trim());
+	// At every start: a build a program had loaded could not go last time.
+	removeOlderTips(join(userDir(), 'tip'), build);
 	const stamp = join(userDir(), 'installed-by.txt');
 	const was = existsSync(stamp) ? readFileSync(stamp, 'utf8').trim() : '';
 	if (was === version) {
 		return false;
 	}
-	const from = join(extensionPath, 'dist', 'system');
 	copyFileSync(join(from, 'host.cjs'), join(userDir(), 'host.cjs'));
-	const build = Number(readFileSync(join(from, 'tip-build.txt'), 'utf8').trim());
 	const tip = join(userDir(), 'tip', String(build));
 	mkdirSync(tip, { recursive: true });
 	for (const name of ['BreezellIME64.dll', 'BreezellIME32.dll']) {

@@ -2,9 +2,10 @@
  * The download of the languages (src/data.ts), from a small server on this computer that can cut
  * a connection, ignore ranges, redirect and send wrong bytes.
  */
+import { removeOlderTips } from '../../src/system.js';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createServer, IncomingMessage, Server, ServerResponse } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -194,4 +195,19 @@ test('data: which pack a layout needs', () => {
 	assert.equal(packOfLayout('zhuyin'), 'chinese');
 	assert.equal(packOfLayout('japanese'), 'japanese');
 	assert.equal(packOfLayout('korean'), 'korean');
+});
+
+test('old text service builds go; the current one, a newer one and anything else stay', () => {
+	const dir = mkdtempSync(join(tmpdir(), 'bz-tips-'));
+	try {
+		for (const name of ['5', '6', '7', '8', 'notes']) {
+			mkdirSync(join(dir, name));
+			writeFileSync(join(dir, name, 'BreezellIME64.dll'), 'x');
+		}
+		removeOlderTips(dir, 7);
+		assert.deepEqual(readdirSync(dir).sort(), ['7', '8', 'notes']);
+		removeOlderTips(join(dir, 'missing'), 7);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
 });

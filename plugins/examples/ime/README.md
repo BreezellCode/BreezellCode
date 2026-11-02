@@ -9,11 +9,11 @@ Japanese and Korean, in Breezell's editor and chat and, on Windows, in every pro
   the right characters first far more often than a dictionary alone can.
 - **Knows code from comments.** In code it types English. In comments, strings, or after `///` on a
   line it types your own language, without you switching.
-- **Uses what is around the caret.** The code you are editing and the conversation in the chat help
-  choose the words, and names like `useState` become candidates as they are written there.
+- **Uses what is around the caret.** The words before the caret lead into what you type, whoever typed them; the code you are editing and the conversation help choose the words, and names like `useState` become candidates as they are written there.
 - **Forgives slips.** In pinyin, keys pressed in the wrong order, a neighbouring key, or one key too
   many or too few still find the word (`jain` finds 简).
-- **Mixes in English.** Type `hello` in pinyin and it is among the candidates.
+- **Mixes in English.** Type `hello` in pinyin and it comes first, as written where that matters (`api`: `API`). Where the letters also spell a likely Chinese word (`my`: 沒有) the Chinese comes first while you write Chinese, the English right after it, and what you pick moves them.
+- **Remembers your words.** A Latin word you use twice is found by its start: `breezel` finds `breezell`, and so does a word in the code or the conversation (`useSt`: `useState`).
 - **Offers the next words** after you commit Chinese text. They go after a few seconds or when you click elsewhere; **Word predictions** on its page turns them off.
 - **Learns from you**, without letting a one-off pick spill into everything else.
 
@@ -71,9 +71,8 @@ method.
 
 - **Nothing you type leaves your computer.** Composition, the context around the caret and what it
   learns all stay on it. The plugin connects only to download the languages you choose.
-- **Permissions:** it asks for none of Breezell's plugin permissions. As an input method it receives
-  the keys you type in Breezell's chat box and the recent conversation, to choose the words; Breezell
-  gives these to this plugin alone.
+- **Permissions:** with your leave it reads the code in your editors (`editor.read`) and the chat box with the last messages (`chat.input`), to choose the words. Breezell asks once for each, the first time you type there; turn either off on the plugin's page and it does not read that, and typing goes on without it. As an input method it also receives the keys you type in the chat box, which Breezell gives to this plugin alone.
+- It remembers Latin words you pick, commit as typed, or type in Breezell's code and chat box. Never what you type in English mode in other programs: that could be a password.
 - What it learned is in `%APPDATA%\BreezellIME` (Windows), `~/Library/Application Support/BreezellIME`
   (macOS) or `~/.config/breezell-ime` (Linux). **Clear learned words** on the page forgets it.
 - Like every Breezell plugin it needs you to be signed in. The Windows input method, once installed,
@@ -103,6 +102,10 @@ for pinyin and its official bopomofo schema for zhuyin. CyIME's figures are stoc
 its schemas and weights, plus the Wanxiang grammar model; its own modified librime and reranker were
 not run, and may do better. Japanese Wikipedia and subtitle readings were generated from Mozc's
 dictionary, so ITA, with readings by people, is the fairest of the three.
+
+**The words before the caret.** A clause cut before its last word, the rest already there: the first candidate is right for 95.3% of subtitles, 94.0% of technical documents and 90.8% of Wikipedia, against 81.9%, 86.6% and 78.8% without reading them.
+
+**English among Chinese.** On the same kind of kept-out text, a Latin word comes first 82 to 89% of the time when it is what was meant (67 to 74% before 1.2.0), and it takes the first place from a Chinese word typed by its initials 6 to 7% of the time (15 to 20% before).
 
 ## Building from source
 

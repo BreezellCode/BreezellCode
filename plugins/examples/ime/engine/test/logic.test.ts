@@ -4,11 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import {
-	AdaptiveModel, BOS, composeKeys, dachenOf, DOUBLE_PINYIN_SCHEMES, doublePinyin, EdgeKind, HangulComposer, keysOf, loadCodeTable, NgramModel,
-	PrefixPredictor, RomajiComposer, RomajiTable, ScriptConverter, SpellCorrector, syllableGraph, syllableId, SYLLABLES, syllableOf, TableSession,
-	slipsOf, toRomaji, zhuyinGraph, zhuyinOf, ZHUYIN,
-} from '../src/index.js';
+import { AdaptiveModel, BOS, composeKeys, dachenOf, DOUBLE_PINYIN_SCHEMES, doublePinyin, EdgeKind, HangulComposer, keysOf, loadCodeTable, NgramModel, PrefixPredictor, RomajiComposer, RomajiTable, ScriptConverter, SpellCorrector, syllableGraph, syllableId, SYLLABLES, syllableOf, TableSession, slipsOf, toRomaji, zhuyinGraph, zhuyinOf, ZHUYIN, LatinWords, latinContextOf, latinOffers, type ZhCandidate } from '../src/index.js';
 
 /** Every way the graph spells the whole input as syllables (full edges only), as strings. */
 function readings(graph: ReturnType<typeof syllableGraph>, n: number, fullOnly = true): string[] {
@@ -304,4 +300,85 @@ test('user model: another one merged in counts as learned here', () => {
 	assert.equal(a.toJSON().words[0].count, 2);
 	a.merge({ version: 2 } as never);  // not a snapshot it knows: nothing
 	assert.equal(a.toJSON().words.length, 1);
+});
+
+const reading = (text: string, score: number, more: Partial<ZhCandidate> = {}): ZhCandidate => ({ text, score, sentence: true, end: 9, entries: [], ...more });
+const LIST = new LatinWords('API\t10000\nhello\t300\nmy\t250\nmen\t130\nKubernetes\t6000\nkubectl\t900');
+const offers = (letters: string, candidates: ZhCandidate[], context: 'chinese' | 'latin' | 'none', adaptive?: AdaptiveModel, here = new Map<string, { text: string; hits: number }>()) =>
+	latinOffers({ letters, candidates, lead: candidates.length, context, here }, LIST, adaptive);
+
+test('latin: a word goes above the readings it outscores, and is written as usual', () => {
+	assert.deepEqual(offers('api', [reading('派', -16.5, { slip: true })], 'chinese').map(o => [o.text, o.index]), [['API', 0]]);
+	assert.deepEqual(offers('hello', [reading('荷兰咯', -29)], 'chinese').map(o => o.index), [0]);
+	// A likely reading stays first, the word right after it, before the less likely.
+	assert.deepEqual(offers('my', [reading('没有', -12), reading('命运', -15.6)], 'chinese').map(o => o.index), [1]);
+	// Typed in full, a reading has more on its side than the same score typed by initials.
+	assert.deepEqual(offers('men', [reading('们', -17, { exact: true })], 'chinese').map(o => o.index), [1]);
+	assert.deepEqual(offers('men', [reading('们', -17)], 'chinese').map(o => o.index), [0]);
+	// No reading covers the input: nothing to set it against.
+	assert.deepEqual(offers('hello', [{ ...reading('和', -6), sentence: false, end: 2 }], 'chinese').map(o => o.index), [0]);
+});
+
+test('latin: after English, English; what precedes the cursor decides', () => {
+	assert.deepEqual(offers('my', [reading('没有', -12)], 'latin').map(o => o.index), [0]);
+	assert.equal(latinContextOf('你好'), 'chinese');
+	assert.equal(latinContextOf('this is '), 'latin');
+	assert.equal(latinContextOf('你好，'), 'none');
+	assert.equal(latinContextOf(''), 'none');
+});
+
+test('latin: a word the user keeps taking rises, one they keep passing over sinks', () => {
+	const a = new AdaptiveModel();
+	const chinese = [reading('没有', -9.5)];
+	assert.equal(offers('my', chinese, 'chinese', a)[0].index, 1);
+	a.learnLatin('my');
+	assert.equal(offers('my', chinese, 'chinese', a)[0].index, 1, 'one use may be a one-off');
+	a.learnLatin('my');
+	a.learnLatin('my');
+	assert.equal(offers('my', chinese, 'chinese', a)[0].index, 0);
+	for (let i = 0; i < 12; i++) {
+		a.skipLatin('my');
+	}
+	assert.equal(offers('my', chinese, 'chinese', a)[0].index, 1);
+	a.learnLatin('my');
+	assert.ok(a.latinWord('my')!.skips === 6, 'a use weighs against what came before');
+});
+
+test('latin: found by its start: the user\'s after two uses, the context\'s, a common one without a reading typed in full', () => {
+	const junk = [reading('般若', -40)];
+	const a = new AdaptiveModel();
+	a.learnLatin('breezell');
+	assert.deepEqual(offers('breezel', junk, 'chinese', a), [], 'once may be a one-off');
+	assert.equal(offers('breezell', junk, 'chinese', a)[0].text, 'breezell');
+	a.learnLatin('Breezell');
+	assert.deepEqual(offers('breezel', junk, 'chinese', a).map(o => [o.text, o.index]), [['Breezell', 0]]);
+	assert.deepEqual(offers('br', junk, 'chinese', a), [], 'too little typed');
+	const here = new Map([['usestate', { text: 'useState', hits: 2 }]]);
+	assert.equal(offers('usest', junk, 'chinese', undefined, here)[0].text, 'useState');
+	assert.equal(offers('kubern', junk, 'chinese')[0].text, 'Kubernetes');
+	assert.deepEqual(offers('kubern', [reading('库', -9, { exact: true })], 'chinese'), [], 'a reading typed in full: not by its start');
+});
+
+test('latin: saved, merged, cleared, and files from before it still load', () => {
+	const a = new AdaptiveModel();
+	a.learnLatin('Breezell');
+	a.learnLatin('Breezell');
+	a.skipLatin('my');
+	const b = AdaptiveModel.fromJSON(JSON.parse(JSON.stringify(a.toJSON())));
+	assert.equal(b.latinWord('breezell')!.uses, 2);
+	assert.equal(b.latinWord('breezell')!.text, 'Breezell');
+	assert.equal(b.latinTotal, 2);
+	b.merge(a.toJSON());
+	assert.equal(b.latinWord('breezell')!.uses, 4);
+	assert.equal(b.latinWord('my')!.skips, 2);
+	const { latin: _gone, ...old } = a.toJSON();
+	assert.equal(AdaptiveModel.fromJSON(old).latinTotal, 0);
+	a.unlearnLatin('breezell');
+	assert.equal(a.latinWord('breezell')!.uses, 1);
+	a.clear();
+	assert.equal(a.latinWord('breezell'), undefined);
+	assert.equal(a.latinTotal, 0);
+	assert.deepEqual([...new AdaptiveModel().latinWithPrefix('b', 3, 1)], []);
+	a.learnLatin('not a word');
+	assert.equal(a.latinTotal, 0);
 });

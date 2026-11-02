@@ -7,6 +7,7 @@ export { SYLLABLES, syllableGraph, syllableId, syllableOf, prefixRange, slipsOf,
 export { loadZhLexicon, combineLexicons, arcTone, type ZhLexicon, type WordArc } from './zh/lexicon.js';
 export { ZhDecoder, INITIAL_PENALTY, PARTIAL_PENALTY, TONE_PENALTY, type ZhCandidate, type ZhDecodeResult, type ZhLayout } from './zh/decoder.js';
 export { ZhSession, learnFrom, type ZhSessionState, type ZhSessionOptions } from './zh/session.js';
+export { LatinWords, latinContextOf, latinOffers, LATIN_PRIOR, LATIN_PRIOR_AFTER_LATIN, EXACT_MARGIN, type LatinContext, type LatinOffer, type LatinQuery } from './zh/latin.js';
 export { PINYIN, type ZhSpeller } from './zh/speller.js';
 export { ZHUYIN, DACHEN, TONES, zhuyinOf, dachenOf, keysToZhuyin, zhuyinGraph } from './zh/zhuyin.js';
 export { loadToneTable, type ToneTable } from './zh/tones.js';

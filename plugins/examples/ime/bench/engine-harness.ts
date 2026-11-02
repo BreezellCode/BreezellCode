@@ -71,7 +71,7 @@ const adaptive = process.env.BENCH_LEARN === '0' ? undefined : new AdaptiveModel
 });
 const layout = process.env.BENCH_LAYOUT ?? '';
 const decoder = new ZhDecoder(lex, lm, adaptive, zhuyin ? { speller: ZHUYIN, tones } : layout.startsWith('dp:') ? { speller: doublePinyin(layout.slice(3)) } : {});
-const session = new ZhSession(decoder, undefined, undefined, {
+const session = new ZhSession(decoder, undefined, {
 	script, fold,
 	leadingSentences: process.env.BZ_LEAD_SENTENCES ? Number(process.env.BZ_LEAD_SENTENCES) : undefined,
 	sentenceGap: process.env.BZ_SENTENCE_GAP ? Number(process.env.BZ_SENTENCE_GAP) : undefined,

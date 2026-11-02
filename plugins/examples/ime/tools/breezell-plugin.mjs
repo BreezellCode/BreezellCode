@@ -29,7 +29,7 @@ import { fileURLToPath } from 'node:url';
 
 const DEVKIT_VERSION = '1.0.0';
 const API_VERSION = 1;
-const PERMISSIONS = ['chat.events', 'models.request', 'models.select', 'chat.read', 'chat.send', 'chat.approve', 'providers.read', 'agent.tools', 'app.restart', 'app.forceRestart'];
+const PERMISSIONS = ['chat.events', 'models.request', 'models.select', 'chat.read', 'chat.send', 'chat.approve', 'providers.read', 'agent.tools', 'app.restart', 'app.forceRestart', 'editor.read', 'chat.input'];
 /** The chat modes an agent tool can be offered in (contributes.breezell.tools[].modes). */
 const TOOL_MODES = ['chat', 'agent', 'entanglement', 'analyze', 'teams'];
 const MARKET_REPO = 'BreezellCode/BreezellCode';
@@ -357,6 +357,10 @@ function checkPackage(pkg, { forMarket = false, nls } = {}) {
 			if (!PERMISSIONS.includes(p)) {
 				errors.push(`unknown permission "${p}" (known: ${PERMISSIONS.join(', ')})`);
 			}
+		}
+		// Unlike "permissions", an older Breezell leaves out those it does not know, and installs the plugin.
+		if (bz.optionalPermissions !== undefined && (!Array.isArray(bz.optionalPermissions) || bz.optionalPermissions.some(p => !PERMISSIONS.includes(p)))) {
+			errors.push(`"breezell.optionalPermissions" must list known permissions (${PERMISSIONS.join(', ')})`);
 		}
 		if (bz.source !== undefined && bz.source !== 'open' && bz.source !== 'closed') {
 			errors.push('"breezell.source" must be "open" or "closed"');
@@ -696,7 +700,7 @@ function submit(dir, flags) {
 	const repository = typeof pkg.repository === 'string' ? pkg.repository : pkg.repository?.url;
 	const author = typeof pkg.author === 'string' ? { name: pkg.author } : pkg.author ?? { name: pkg.publisher };
 	const versions = (previous?.versions ?? []).filter(v => v.version !== pkg.version);
-	versions.push({ version: pkg.version, path: relPackage, sha256: digest, size: buffer.length, apiVersion: pkg.breezell.apiVersion, permissions: pkg.breezell.permissions ?? [], publishedAt: new Date().toISOString() });
+	versions.push({ version: pkg.version, path: relPackage, sha256: digest, size: buffer.length, apiVersion: pkg.breezell.apiVersion, permissions: pkg.breezell.permissions ?? [], ...(pkg.breezell.optionalPermissions?.length ? { optionalPermissions: pkg.breezell.optionalPermissions } : {}), publishedAt: new Date().toISOString() });
 	versions.sort((a, b) => compareVersions(b.version, a.version));
 	const l10n = marketL10n(pkg, readNls);
 	const meta = {
@@ -746,6 +750,7 @@ function buildIndex(marketRoot) {
 			categories: meta.categories ?? [],
 			tags: meta.tags ?? [],
 			permissions: latest.permissions ?? [],
+			...(latest.optionalPermissions?.length ? { optionalPermissions: latest.optionalPermissions } : {}),
 			source: meta.source,
 			repository: meta.repository,
 			author: meta.author,
@@ -811,6 +816,10 @@ function checkMarket(marketRoot) {
 		const declared = [...(pkg.breezell?.permissions ?? [])].sort().join(',');
 		if (declared !== [...entry.permissions].sort().join(',')) {
 			problems.push(`${where}: permissions differ from the package (${declared})`);
+		}
+		const optional = [...(pkg.breezell?.optionalPermissions ?? [])].sort().join(',');
+		if (optional !== [...(entry.optionalPermissions ?? [])].sort().join(',')) {
+			problems.push(`${where}: optional permissions differ from the package (${optional})`);
 		}
 		if (pkg.breezell?.source !== entry.source) {
 			problems.push(`${where}: source differs from the package (${pkg.breezell?.source})`);

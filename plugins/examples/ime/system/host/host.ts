@@ -32,7 +32,7 @@
  * Breezell window, one user model), one composition per editor id on its connection:
  *   Z <JSON {op, id, arg}> → <JSON {value, state: {composing, preedit, candidates, commit}}> or {error}
  *   ops: open {layout, traditional, smart}, type <key>, space, backspace, select <i>, enter, cancel,
- *   context <text>, forget, other, undo, reading <i>, suggest {wordBefore, previousWords} (Korean),
+ *   context {text, atCaret}, latin <word>, forget, other, undo, reading <i>, suggest {wordBefore, previousWords} (Korean),
  *   predict <count> (聯想: words after what was just committed), takePrediction <i>,
  *   merge {name, snapshot} (what the plugin learned before: into this user model), clear {name}, close.
  *
@@ -472,7 +472,8 @@ function editorRequest(conn: Connection, json: string): string {
 		case 'select': c.select(Number(req.arg)); return reply();
 		case 'enter': c.enter(); return reply();
 		case 'cancel': c.cancel(); return reply();
-		case 'context': c.setContext(String(req.arg ?? '')); return reply();
+		case 'context': c.setContext(String(req.arg?.text ?? ''), req.arg?.atCaret !== false); return reply();
+		case 'latin': c.noteLatin?.(String(req.arg ?? '')); return reply();
 		case 'forget': c.forget?.(); return reply();
 		case 'other': c.afterOther?.(); return reply();
 		case 'undo': c.undoLastCommit?.(); return reply();

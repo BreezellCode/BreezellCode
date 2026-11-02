@@ -49,14 +49,16 @@ export class ZhSession {
 	private carry: [number, number] | null = null;
 	/** The last word committed and the history before it (the input may close it: 做 + 的). */
 	private carryJoin: { entry: number; h2: number; h1: number } | null = null;
+	/** The model's history at the cursor, from the text before it (setContext). */
+	private caret: [number, number] = [BOS, BOS];
+	/** The last word before the cursor, which the input may close. */
+	private caretJoin?: { entry: number; h2: number; h1: number };
 	/** The last commit, so it can be taken back (unlearned) when the user deletes it at once. */
 	private lastLearned: { pieces: { entries: readonly number[]; text: string }[]; previous: number; weight: number } | null = null;
 
 	constructor(
 		private readonly decoder: ZhDecoder,
 		private readonly onLearn: LearnListener = (pieces, previous, chosen) => learnFrom(decoder, pieces, previous, chosen),
-		/** Tokens of the text before the cursor, so the first word fits what precedes it. */
-		private readonly contextHistory: () => [number, number] = () => [BOS, BOS],
 		private readonly options: ZhSessionOptions = {},
 	) { }
 
@@ -112,12 +114,19 @@ export class ZhSession {
 	}
 
 	private startHistory(): [number, number] {
-		return this.carry ?? this.contextHistory();
+		return this.carry ?? this.caret;
 	}
 
-	/** The text around the cursor (editor, chat), for the words it holds. */
-	setContext(text: string): void {
-		this.decoder.adaptive?.setContext(this.options.fold ? this.options.fold.convert(text) : text);
+	/**
+	 * The text around the cursor (editor, chat): the words it holds rise. With `atCaret` it ends where
+	 * the cursor is, so the first word typed follows its last words, whoever typed them.
+	 */
+	setContext(text: string, atCaret = true): void {
+		const folded = this.options.fold ? this.options.fold.convert(text) : text;
+		this.decoder.adaptive?.setContext(folded);
+		const read = atCaret ? this.decoder.readBefore(folded) : undefined;
+		this.caret = read?.history ?? [BOS, BOS];
+		this.caretJoin = read?.join;
 	}
 
 	private get consumed(): number {
@@ -131,7 +140,7 @@ export class ZhSession {
 			this.lead = 0;
 			return;
 		}
-		const join = this.picked.length ? this.joinAfter(this.picked.flatMap(p => p.entries), this.startHistory()) : this.carryJoin ?? undefined;
+		const join = this.picked.length ? this.joinAfter(this.picked.flatMap(p => p.entries), this.startHistory()) : this.carry ? this.carryJoin ?? undefined : this.caretJoin;
 		const { sentences, words } = this.decoder.decode(rest, { history: this.picked.length ? this.history : this.startHistory(), join });
 		const seen = new Set<string>();
 		const list: ZhCandidate[] = [];

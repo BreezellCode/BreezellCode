@@ -3,7 +3,7 @@
 	"publisher": "breezell",
 	"displayName": "%displayName%",
 	"description": "%description%",
-	"version": "1.1.5",
+	"version": "1.2.0",
 	"license": "GPL-3.0-or-later",
 	"author": {
 		"name": "Breezell",
@@ -40,6 +40,10 @@
 	"breezell": {
 		"apiVersion": 1,
 		"permissions": [],
+		"optionalPermissions": [
+			"editor.read",
+			"chat.input"
+		],
 		"source": "open"
 	},
 	"contributes": {
