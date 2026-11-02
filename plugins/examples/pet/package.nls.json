@@ -1,0 +1,9 @@
+{
+	"displayName": "Desk Pet",
+	"description": "A small anime-style wind spirit who sits on the chat box and follows what the AI is doing. It never reads your messages.",
+	"command.category": "Desk Pet",
+	"command.toggle": "Show or Hide",
+	"config.visible": "Show the pet on the chat box.",
+	"config.size": "How big the pet is.",
+	"config.speech": "Let the pet say things in speech bubbles."
+}

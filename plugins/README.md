@@ -48,6 +48,8 @@ A Breezell plugin is a VS Code extension with a `breezell` object in its `packag
 | **AI** | Commands that use the user's chat model | [Doc Writer](examples/doc-writer) | AI command |
 | **Window** | A window of its own with your page and layout; it can also open without the editor | [Focus Timer](examples/focus-timer) | Window |
 | **Conversation** | Reads the user's conversations, sends messages and approves tool calls, shown in its own window or panel | [Chat Mirror](examples/chat-mirror) | Window |
+| **Screens** | Buttons, pages, restyled parts, drawn code fences and modes in Breezell's own screens | [Desk Pet](examples/pet) | — |
+| **Companion** | A pet on the chat box that follows what the AI is doing | [Desk Pet](examples/pet) | — |
 
 The kinds combine: one plugin can bring skills, a panel, AI commands and a window. For a large plugin
 with its own settings page, data downloaded from a GitHub release and a part installed in the system, see
@@ -101,6 +103,10 @@ The typings are in [`devkit/breezell.d.ts`](devkit/breezell.d.ts); the templates
 | `breezell.app.requestRestart({ scope, reason, l10n, force })` | `app.restart`; `app.forceRestart` to force | Ask to restart the plugins, this window or all of Breezell, or restart them without asking (see [Restarting Breezell](#restarting-breezell)) |
 | `breezell.windows.open(id)` | — (the window is declared in `package.json`) | Open one of the plugin's windows; returns it with `postMessage`, `onDidReceiveMessage`, `onDidClose`, `close` |
 | `breezell.tools.register(name, { invoke })` | `agent.tools` | Give Breezell's agent a tool the plugin declares and runs, in the chat modes it picks (see [Agent tools](#agent-tools)) |
+| `breezell.permissionState(permission)`, `requestPermission(permission)`, `onDidChangePermissions` | — (only permissions it declared) | Where a permission stands, asking the user at a moment of the plugin's choosing, and hearing when they change it |
+| `breezell.chat.readInput()` | `chat.input` | What is in the chat box, its part before the caret, and the recent messages of the conversation |
+| `breezell.chat.registerSendHandler(handler)` | `chat.intercept` | See each message before it is sent: change it or stop it (see [A message before it is sent](#a-message-before-it-is-sent)) |
+| `breezell.ui.onDidOpenSurface` | — (the page is declared in `package.json`) | One of the plugin's pages opened; returns it with `context`, `postMessage`, `onDidReceiveMessage`, `onDidClose` (see [Changing Breezell's screens](#changing-breezells-screens)) |
 
 ### Permissions
 
@@ -120,7 +126,16 @@ each plugin declares before it is installed.
 | `agent.tools` | dangerous | "Agent tool registration": asked when the plugin first registers a tool, or when a plugin with MCP servers first runs |
 | `app.restart` | normal | On from the start; the user can turn it off. The user still answers each request |
 | `app.forceRestart` | dangerous | Asked the first time the plugin forces a restart; if refused, the plugin asks each time instead |
+| `editor.read` | dangerous | The plugin asks with `requestPermission`. A plugin is an extension, so VS Code's API reaches open files whatever this says: this is how it says that it does, and how the user tells it not to |
+| `chat.input` | dangerous | Asked for the first time the plugin reads the chat box |
+| `chat.intercept` | dangerous | Asked when the plugin registers a send handler |
+| `ui.contribute` | normal | On from the start; the user can turn it off, which takes the plugin's buttons, pages and modes out of Breezell's screens |
+| `ui.modify` | dangerous | Asked when a plugin that declares `ui.patches` or a companion first runs |
+| `chat.render` | dangerous | Asked when a plugin that declares `ui.renderers` first runs: a drawn code fence hands the plugin its text |
 
+- A permission only some versions of Breezell know goes in `"breezell": { "optionalPermissions": [...] }`:
+  an older Breezell leaves it out and installs the plugin all the same, where a permission it does not
+  know in `permissions` would refuse it. Check before using what it gives.
 - A dangerous permission is asked for once, when the plugin first uses it; the answer is kept. While
   the user has not allowed it, its calls fail with `BreezellPermissionDenied` and the plugin should
   say what it cannot do.
@@ -356,6 +371,223 @@ Every restart goes through the usual shutdown, so unsaved files are kept or aske
 
 An older Breezell does not install a plugin that declares a permission it does not know, so `app.restart` and `app.forceRestart` limit which versions can use the plugin. It ignores `contributes.breezell.restart`, so asking this way works everywhere it can.
 
+## Changing Breezell's screens
+
+A plugin can add to Breezell's screens and change them, in any look and with any framework it likes,
+as far as sign-in, plans, quota, approvals and plugin management stay as they are. It does so by
+**declaring** what it wants in `contributes.breezell.ui`, and Breezell draws it. Its scripts and CSS
+never run in Breezell's own window: only in its own pages, in frames of their own.
+
+All of this needs a Breezell newer than 1.4.41. List its permissions in `optionalPermissions` and an
+older Breezell still installs the plugin, and ignores what it declares here.
+
+| Layer | Declared in | Permission | What it does |
+|---|---|---|---|
+| Buttons | `ui.buttons` | `ui.contribute` | Entries in places Breezell opens, drawn in Breezell's look |
+| Pages | `ui.surfaces` | `ui.contribute` | The plugin's own HTML, with any framework, in an isolated frame |
+| Patches | `ui.patches` | `ui.modify` | Hide, move, restyle or replace named parts of the screens |
+| Fences | `ui.renderers` | `chat.render` | A code fence of a language drawn by one of its pages |
+| Modes | `ui.modes` | `ui.contribute` | An entry in the mode picker: a built-in mode plus the plugin's instructions |
+
+A plugin needs the permission whichever list it is in (`permissions` or `optionalPermissions`), and
+`validate` says when one is missing. An entry that does not pass is left out and the rest stay, so one
+mistake does not cost a plugin everything, and the log says why.
+
+### Buttons
+
+```json
+{ "id": "countLines", "slot": "code.block.actions", "title": "Count lines", "icon": "list-ordered",
+  "command": "acme.countLines", "l10n": { "zh-TW": "計算行數" }, "order": 0 }
+```
+
+| `slot` | Where | The command receives |
+|---|---|---|
+| `chat.input.toolbar` | The row under the chat box | `{ slot, conversationId }` |
+| `chat.message.actions` | The actions under a reply | `{ slot, conversationId, messageIndex }`, the index the turn starts at |
+| `code.block.actions` | A code block's actions | `{ slot, language, code }`: pressing it hands over that block |
+
+- `command` must be in the plugin's own `contributes.commands`, and cannot have `breezell` in its name.
+- `icon` is a [codicon](https://microsoft.github.io/vscode-codicons/dist/codicon.html)'s name.
+- At most 2 of a plugin's buttons in one place and 8 in all. Each shows which plugin it is from, and
+  the user can hide it by right-clicking it.
+
+### Pages
+
+```json
+{ "id": "notes", "title": "Notes", "entry": "ui/notes.html", "slot": "chat.input.above", "height": 64,
+  "network": ["https://api.example.com"] }
+```
+
+| `slot` | Where | Height up to |
+|---|---|---|
+| `chat.input.above` | Above the chat box | 320 |
+| `chat.messages.top` | Above the messages | 320 |
+| `chat.landing` | On the empty chat page | 480 |
+| `chat.input.companion` | Floating on the chat box, see [below](#a-companion-on-the-chat-box) | 240 |
+| none | Only where a patch or a fence puts it | 2000 |
+
+The page runs in a frame with an origin of its own. It cannot reach Breezell's window, its storage or
+its commands, and always shows a line saying which plugin it is from. It loads the plugin's own files
+and nothing else, unless it lists https origins in `network`: those it may connect to and load images
+and media from, but no scripts or styles. A framework is fine: bundle it into the plugin. Breezell's
+theme is available as `--vscode-*` CSS variables.
+
+```js
+const vscode = acquireVsCodeApi();
+addEventListener('message', ({ data }) => {
+	if (data?.type === 'breezell.surface.context') {
+		draw(data.context);                     // where it is, without any extension code
+	}
+});
+vscode.postMessage({ __breezellSurfaceReady: true });    // tell me again, I am listening now
+vscode.postMessage({ __breezellSurfaceHeight: 240 });    // the room it needs, within what its place allows
+```
+
+The context has ids (`conversationId`), and for a fence its `language`, `code` and `messageIndex`. To
+talk to the plugin's code, listen to `vscode.breezell.ui.onDidOpenSurface`.
+
+### A companion on the chat box
+
+A page that floats on top of the chat box with no frame or line of its own, a pet for one. It takes no room, and everything it draws stays inside its rectangle.
+
+```json
+{ "id": "pet", "title": "Desk Pet", "entry": "ui/pet.html", "slot": "chat.input.companion", "width": 96, "height": 96 }
+```
+
+It floats over Breezell's screen, so it needs `ui.modify`, and a plugin has one. While the mouse is on it, Breezell says whose it is. Make your page's background transparent. It shows from the first thing it asks for, and only its rectangle catches the mouse, so keep that small:
+
+```js
+vscode.postMessage({ __breezellCompanion: { width: 96, height: 96, left: 120, lift: 0, ms: 0, hidden: false } });
+```
+
+`left` is from the left end of the box and `lift` up from it, `ms` how long moving there takes. Any of them can be left out. Each request sets the time anew, so don't repeat a place with no `ms` during a move: that ends it at once. Breezell keeps it on the box, between 32 and 240 pixels wide and tall, and answers with where it really is. While something waits on the user it stays on the box at 96 pixels at most, so ask for less then. Nothing else in the message goes anywhere.
+
+Its page is told, with no text from the chat in any of it:
+
+| Message `type` | With | When |
+|---|---|---|
+| `breezell.surface.context` | `context: { conversationId, language }` | At the start |
+| `breezell.companion.layout` | `left`, `lift`, `width`, `height`, `boxWidth`, `maxLift`, `restricted` | It moved, or the room changed |
+| `breezell.companion.pointer` | `x`, `y` from its own corner | The mouse moved over the chat, a few times a second |
+| `breezell.companion.chat` | `activity` (`none`, `thinking`, `writing`, `working`, `waiting`), `tool` while working (`terminal`, `edit`, `search`, `web`, `other`) | What the chat is doing changed. Needs `chat.events` |
+| `breezell.companion.turn` | `outcome` (`done`, `failed`) | A turn in its conversation ended. Needs `chat.events` |
+| `breezell.companion.typing` | | A key was pressed in the chat box, at most ten times a second. Needs `chat.events` |
+
+A page is made for each chat box and starts over when the user changes conversation, so keep what must last in the plugin's code. [Desk Pet](examples/pet) is a whole one.
+
+### Settings in Feature Options
+
+A card with your plugin's settings, in Box > Feature Options, drawn by Breezell and saying whose it is. Box search finds it. It needs `ui.contribute`.
+
+```json
+"options": {
+  "title": "Desk Pet", "l10n": { "zh-TW": "桌面寵物" },
+  "items": [
+    { "setting": "deskPet.visible", "title": "Show on the chat box" },
+    { "setting": "deskPet.size", "title": "Size", "description": "How big she is.", "choices": [
+      { "value": "small", "title": "Small" },
+      { "value": "large", "title": "Large", "l10n": { "zh-TW": "大" } }
+    ] }
+  ]
+}
+```
+
+Each `setting` must be in your own `contributes.configuration`, and a boolean, which shows a switch, or a string with an `enum`, which shows `choices` taken from it. At most 12 settings and 6 choices. Other kinds of setting, and one named after Breezell, are refused. Breezell also checks at run time that your plugin is the one that registered the setting, so it writes only your own. Your code hears of a change as usual, with `onDidChangeConfiguration`.
+
+### Patches
+
+```json
+{ "region": "chat.input.attach", "hide": true }
+{ "region": "chat.input.mcp", "order": -1 }
+{ "region": "chat.message.user", "style": { "borderColor": "var(--vscode-focusBorder)", "borderRadius": "12px" } }
+{ "region": "chat.landing", "replaceWith": "myLanding" }
+```
+
+| Part | What it takes |
+|---|---|
+| `chat.surface` | style: `backgroundColor`, one of the theme's own (below) |
+| `chat.landing` | hide, replace, text style |
+| `chat.landing.hero` | hide, replace |
+| `chat.landing.hints` | hide |
+| `chat.messages` | replace |
+| `chat.rail` | hide |
+| `chat.message.user`, `chat.message.assistant` | text style |
+| `chat.turnStats` | hide, text style, `opacity` |
+| `chat.input.frame` | style: `backgroundColor`, one of the theme's own (below), `borderColor`, `borderRadius`, `borderWidth` |
+| `chat.input.mode` | hide |
+| `chat.input.mention`, `.browser`, `.attach`, `.imageMode`, `.quickPhrases`, `.promptOptimize`, `.mcp` | hide, order |
+
+Text style is `backgroundColor`, `color`, `borderColor`, `borderRadius`, `borderWidth`, `padding`,
+`fontSize` (9 to 32px), `fontWeight`, `fontFamily` and `lineHeight` (1 to 3). A value is one plain value of
+that kind: no `url()`, selectors, `calc()` or a second declaration. `var()` takes `--vscode-*` and
+`--breezell-*`. `borderWidth` goes up to 4px, `padding` and `borderRadius` up to 64px or 4em, and only
+`borderRadius` takes a percentage (up to 50). There is no way to position, size or layer anything.
+
+What is on `chat.surface` and `chat.input.frame` has to stay readable, so their `backgroundColor` is
+`transparent` or `var(--vscode-<x>-background)`, with `<x>` one of `editor`, `sideBar`, `panel`, `input`,
+`editorWidget`, `dropdown`, `menu`, `quickInput`, `notifications`.
+
+When plugins disagree, the plugin whose id sorts first has it, so the outcome does not depend on which
+started first. A part replaced by one plugin stays replaced if another hides it.
+
+A page in place of `chat.messages` or `chat.landing` always offers the user a way back to the original.
+And Breezell's message list comes back by itself while a tool waits for approval, a question waits for
+an answer or an error is showing, and in the modes behind an unlock. The page stays loaded behind it.
+Pages in `chat.messages.top` and `chat.input.above` make room in the same cases, and each of those places
+takes at most a quarter of the chat's panel, however many plugins put a page there.
+
+**No plugin can change** the account, plans, billing, upgrades, quota, custom API settings, the model
+picker, Send and Stop, the context meter, tool approvals, errors, the Box settings, the plugin pages,
+permission dialogs or updates. These are not parts of the list, and naming one gets a clear refusal.
+
+### Code fences
+
+```json
+{ "language": "chart", "surface": "chart" }
+```
+
+A fence in that language is drawn by that page once it is complete: until then it shows as code, and it
+is given the fence's text as its context. A language for code or data, which the user has to be able to
+read, copy and apply, cannot be taken (`typescript` and `ts`, `python`, `json`, `bash`, and so on), nor what
+Breezell draws itself (`mermaid`, `causal`, `diff`, `markdown`, `math`): `validate` tells you. When plugins
+want the same language, the plugin whose id sorts first has it.
+
+### Modes
+
+```json
+{ "id": "reviewer", "title": "Reviewer", "description": "Reads before it writes.", "base": "agent",
+  "icon": "checklist", "instructions": "modes/reviewer.md", "l10n": { "zh-TW": "審查員" },
+  "descriptionL10n": { "zh-TW": "先讀再寫。" } }
+```
+
+`base` is `normal`, `plan`, `analyze` or `agent`. The mode is that mode: its tools, approvals, limits and
+billing are all that mode's, and the file's text (up to 8,000 characters) is added to what the AI is told
+while the mode is picked. The modes behind an unlock cannot be a base. The mode ends when the picker moves
+to another mode, and it does not come back by itself. At most 4 per plugin.
+
+### A message before it is sent
+
+```js
+vscode.breezell.chat.registerSendHandler(({ conversationId, text }) => {
+	if (/sk-[A-Za-z0-9_-]{20,}/.test(text)) {
+		return { cancel: true, reason: 'This message seems to hold a secret key.' };
+	}
+	return { text: text.replace(/\bTODO\b/g, 'to do') };   // or nothing: as it is
+});
+```
+
+Needs `chat.intercept`, one handler per plugin. It covers what the user sends (typed, queued, edited or a
+follow-up they picked), not what Breezell or another plugin writes: a teammate's start, a plan's prompt,
+`chat.send`. The message goes on through the usual send path, so its model, plan and billing are what they
+would have been.
+
+- It sees the text as it reads, with mentions written out (`@file.ts`). Attachments stay as they are.
+- Stopped: the user is told by which plugin and why, and the text stays in the chat box.
+- Changed: what is sent is what shows in the bubble, and it must not be empty or over 400,000 characters.
+- An answer later than 3 seconds, or a failure, passes the message on as it was, and all plugins together get
+  at most 6 seconds.
+- With several plugins they go in id order, each seeing what the one before made of it.
+
 ## Windows
 
 A window plugin declares its windows in `package.json`:
@@ -398,8 +630,10 @@ To protect users and Breezell, plugins get none of these:
 
 - The Breezell sign-in token: `vscode.authentication` gives no `breezell` session.
 - API keys, the API Vault, conversation content, system prompts, cloud prompts, memories.
-- Breezell's internal commands: `breezell.*` and the other Breezell commands are for Breezell and its built-in extensions only.
+- Breezell's internal commands: `breezell.*` and the other Breezell commands are for Breezell and its built-in extensions only. `executeCommand` refuses them, and a `command:` link to one, in a notification, a page or a hover, does nothing.
 - The commands `breezellIme.*`: Breezell hands the chat box's keys to them, so only the Breezell IME plugin (`breezell.ime`) may register them.
+- Breezell's own files: the databases, chat transcripts, memories and the copies of its prompts, for `vscode.workspace.fs`, `openTextDocument`, `workspace.applyEdit` and `fs`, whichever the URI scheme or link. The app's own folders cannot be written to either, and no folder holding any of these can be copied, moved or removed in one go. A plugin's own storage and the user's files are not affected. Do not look for a way around this: review refuses a plugin that does.
+- Breezell's main window: plugin code, HTML and CSS only run in their own pages (see [Changing Breezell's screens](#changing-breezells-screens)).
 
 ## Open or closed source: your choice
 

@@ -1,0 +1,9 @@
+{
+	"displayName": "桌面寵物",
+	"description": "坐在聊天框上的二次元風格小風精靈，跟著 AI 的工作一起動。它從不讀取你的訊息。",
+	"command.category": "桌面寵物",
+	"command.toggle": "顯示或隱藏",
+	"config.visible": "在聊天框上顯示寵物。",
+	"config.size": "寵物的大小。",
+	"config.speech": "讓寵物用對話氣泡說話。"
+}

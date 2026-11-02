@@ -1,0 +1,214 @@
+{
+	"name": "pet",
+	"publisher": "breezell",
+	"displayName": "%displayName%",
+	"description": "%description%",
+	"version": "1.0.0",
+	"license": "MIT",
+	"author": {
+		"name": "Breezell",
+		"url": "https://breezell.com"
+	},
+	"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/pet",
+	"icon": "media/icon.png",
+	"engines": {
+		"vscode": "^1.90.0"
+	},
+	"extensionKind": [
+		"ui",
+		"workspace"
+	],
+	"categories": [
+		"Other"
+	],
+	"keywords": [
+		"anime",
+		"pet",
+		"desk pet",
+		"companion",
+		"chat"
+	],
+	"main": "./dist/extension.js",
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"breezell": {
+		"apiVersion": 1,
+		"permissions": [],
+		"optionalPermissions": [
+			"ui.contribute",
+			"ui.modify",
+			"chat.events"
+		],
+		"source": "open"
+	},
+	"contributes": {
+		"commands": [
+			{
+				"command": "deskPet.toggle",
+				"title": "%command.toggle%",
+				"category": "%command.category%"
+			}
+		],
+		"configuration": {
+			"title": "%displayName%",
+			"properties": {
+				"deskPet.visible": {
+					"type": "boolean",
+					"default": true,
+					"description": "%config.visible%"
+				},
+				"deskPet.size": {
+					"type": "string",
+					"enum": [
+						"small",
+						"medium",
+						"large"
+					],
+					"default": "medium",
+					"description": "%config.size%"
+				},
+				"deskPet.speech": {
+					"type": "boolean",
+					"default": true,
+					"description": "%config.speech%"
+				}
+			}
+		},
+		"breezell": {
+			"ui": {
+				"surfaces": [
+					{
+						"id": "pet",
+						"title": "Desk Pet",
+						"entry": "ui/pet.html",
+						"slot": "chat.input.companion",
+						"width": 201,
+						"height": 208
+					}
+				],
+				"options": {
+					"title": "Desk Pet",
+					"l10n": {
+						"zh-TW": "桌面寵物",
+						"zh-CN": "桌面宠物",
+						"ja": "デスクペット",
+						"ko": "데스크 펫",
+						"ru": "Настольный питомец",
+						"es": "Mascota de escritorio",
+						"pt-BR": "Mascote de mesa"
+					},
+					"items": [
+						{
+							"setting": "deskPet.visible",
+							"title": "Show on the chat box",
+							"l10n": {
+								"zh-TW": "在聊天框上顯示",
+								"zh-CN": "在聊天框上显示",
+								"ja": "チャット欄に表示",
+								"ko": "채팅 입력창에 표시",
+								"ru": "Показывать над полем чата",
+								"es": "Mostrar sobre el cuadro de chat",
+								"pt-BR": "Mostrar sobre a caixa de chat"
+							}
+						},
+						{
+							"setting": "deskPet.size",
+							"title": "Size",
+							"l10n": {
+								"zh-TW": "大小",
+								"zh-CN": "大小",
+								"ja": "大きさ",
+								"ko": "크기",
+								"ru": "Размер",
+								"es": "Tamaño",
+								"pt-BR": "Tamanho"
+							},
+							"choices": [
+								{
+									"value": "small",
+									"title": "Small",
+									"l10n": {
+										"zh-TW": "小",
+										"zh-CN": "小",
+										"ja": "小",
+										"ko": "작게",
+										"ru": "Маленький",
+										"es": "Pequeña",
+										"pt-BR": "Pequeno"
+									}
+								},
+								{
+									"value": "medium",
+									"title": "Medium",
+									"l10n": {
+										"zh-TW": "中",
+										"zh-CN": "中",
+										"ja": "中",
+										"ko": "보통",
+										"ru": "Средний",
+										"es": "Mediana",
+										"pt-BR": "Médio"
+									}
+								},
+								{
+									"value": "large",
+									"title": "Large",
+									"l10n": {
+										"zh-TW": "大",
+										"zh-CN": "大",
+										"ja": "大",
+										"ko": "크게",
+										"ru": "Большой",
+										"es": "Grande",
+										"pt-BR": "Grande"
+									}
+								}
+							]
+						},
+						{
+							"setting": "deskPet.speech",
+							"title": "Speech bubbles",
+							"l10n": {
+								"zh-TW": "對話氣泡",
+								"zh-CN": "对话气泡",
+								"ja": "吹き出し",
+								"ko": "말풍선",
+								"ru": "Реплики в облачках",
+								"es": "Bocadillos",
+								"pt-BR": "Balões de fala"
+							},
+							"description": "Let her say things as the chat goes on.",
+							"descriptionL10n": {
+								"zh-TW": "讓她在對話進行時說說話。",
+								"zh-CN": "让她在对话进行时说说话。",
+								"ja": "チャットの進行に合わせて話します。",
+								"ko": "채팅이 진행되는 동안 말을 합니다.",
+								"ru": "Она говорит по ходу чата.",
+								"es": "Dice cosas mientras avanza el chat.",
+								"pt-BR": "Ela fala enquanto o chat avança."
+							}
+						}
+					]
+				}
+			}
+		}
+	},
+	"scripts": {
+		"build": "node tools/build_page.mjs && node tools/breezell-plugin.mjs build",
+		"typecheck": "tsc -p .",
+		"validate": "node tools/breezell-plugin.mjs validate",
+		"test": "node tools/build_tests.mjs && node --test test/dist/logic.test.cjs test/dist/extension.test.cjs test/dist/page.test.cjs",
+		"package:open": "npm run build && node tools/breezell-plugin.mjs pack --open",
+		"submit": "node tools/breezell-plugin.mjs submit",
+		"art": "python3 tools/prepare_art.py"
+	},
+	"devDependencies": {
+		"@types/jsdom": "^21.1.7",
+		"@types/node": "^20.19.43",
+		"@types/vscode": "^1.90.0",
+		"esbuild": "^0.28.0",
+		"jsdom": "^26.1.0",
+		"typescript": "^5.6.0"
+	}
+}

@@ -1,0 +1,9 @@
+{
+	"displayName": "Mascota de escritorio",
+	"description": "Un pequeño espíritu del viento de estilo anime sobre el cuadro de chat que sigue lo que hace la IA. Nunca lee tus mensajes.",
+	"command.category": "Mascota de escritorio",
+	"command.toggle": "Mostrar u ocultar",
+	"config.visible": "Mostrar la mascota sobre el cuadro de chat.",
+	"config.size": "El tamaño de la mascota.",
+	"config.speech": "Permitir que la mascota hable con bocadillos."
+}

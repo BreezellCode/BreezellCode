@@ -1,6 +1,6 @@
 {
 	"schemaVersion": 1,
-	"updatedAt": "2026-11-02T05:02:39.540Z",
+	"updatedAt": "2026-11-02T14:31:38.621Z",
 	"plugins": [
 		{
 			"id": "breezell.chat-mirror",
@@ -362,6 +362,81 @@
 				"size": 1191242
 			},
 			"updatedAt": "2026-11-02T05:02:39.540Z"
+		},
+		{
+			"id": "breezell.pet",
+			"displayName": "Desk Pet",
+			"description": "A small anime-style wind spirit who sits on the chat box and follows what the AI is doing. It never reads your messages.",
+			"version": "1.0.0",
+			"apiVersion": 1,
+			"categories": [],
+			"tags": [
+				"anime",
+				"pet",
+				"desk pet",
+				"companion",
+				"chat"
+			],
+			"permissions": [],
+			"optionalPermissions": [
+				"ui.contribute",
+				"ui.modify",
+				"chat.events"
+			],
+			"source": "open",
+			"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/pet",
+			"author": {
+				"name": "Breezell",
+				"url": "https://breezell.com"
+			},
+			"license": "MIT",
+			"icon": "packages/breezell.pet/icon.png",
+			"readme": "packages/breezell.pet/README.md",
+			"readmes": {
+				"zh-CN": "packages/breezell.pet/i18n/README.zh-CN.md",
+				"zh-TW": "packages/breezell.pet/i18n/README.zh-TW.md",
+				"ja": "packages/breezell.pet/i18n/README.ja.md",
+				"ko": "packages/breezell.pet/i18n/README.ko.md",
+				"ru": "packages/breezell.pet/i18n/README.ru.md",
+				"es": "packages/breezell.pet/i18n/README.es.md",
+				"pt-BR": "packages/breezell.pet/i18n/README.pt-BR.md"
+			},
+			"l10n": {
+				"zh-CN": {
+					"displayName": "桌面宠物",
+					"description": "坐在聊天框上的二次元风格小风精灵，跟着 AI 的工作一起动。它从不读取你的消息。"
+				},
+				"zh-TW": {
+					"displayName": "桌面寵物",
+					"description": "坐在聊天框上的二次元風格小風精靈，跟著 AI 的工作一起動。它從不讀取你的訊息。"
+				},
+				"ja": {
+					"displayName": "デスクペット",
+					"description": "チャット欄に座るアニメ調の小さな風の精。AI の動きに合わせて動きます。メッセージは決して読みません。"
+				},
+				"ko": {
+					"displayName": "데스크 펫",
+					"description": "채팅 입력창에 앉아 AI의 작업을 따라 움직이는 애니메이션풍의 작은 바람 정령. 메시지는 절대 읽지 않습니다."
+				},
+				"ru": {
+					"displayName": "Настольный питомец",
+					"description": "Маленький дух ветра в стиле аниме на поле чата, который следит за работой ИИ. Он никогда не читает ваши сообщения."
+				},
+				"es": {
+					"displayName": "Mascota de escritorio",
+					"description": "Un pequeño espíritu del viento de estilo anime sobre el cuadro de chat que sigue lo que hace la IA. Nunca lee tus mensajes."
+				},
+				"pt-BR": {
+					"displayName": "Mascote de mesa",
+					"description": "Um pequeno espírito do vento em estilo anime sobre a caixa de chat que acompanha o que a IA está fazendo. Ele nunca lê suas mensagens."
+				}
+			},
+			"package": {
+				"path": "packages/breezell.pet/1.0.0/breezell.pet-1.0.0.vsix",
+				"sha256": "b5e82e9eff995b23842b6c11ae10147a5ec7a800b09cb66acb0dc484516e1996",
+				"size": 208478
+			},
+			"updatedAt": "2026-11-02T14:31:38.621Z"
 		},
 		{
 			"id": "breezell.starter-pack",

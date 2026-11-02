@@ -117,6 +117,42 @@ declare module 'vscode' {
 		 *   the user's own, and they are billed the same way. At most 10 a minute.
 		 * - `chat.approve` (dangerous): approve or reject the tool call a conversation waits for.
 		 */
+		/** A message about to be sent, as a plugin with `chat.intercept` sees it. */
+		export interface SendInput {
+			readonly conversationId: string;
+			readonly text: string;
+		}
+
+		/** `text`: send this instead. `cancel`: do not send it; `reason` is shown to the user. */
+		export type SendAnswer = { readonly text?: string; readonly cancel?: boolean; readonly reason?: string } | undefined | void;
+		export type SendHandler = (input: SendInput) => SendAnswer | Thenable<SendAnswer>;
+
+		/** One open page of a surface the plugin declared in `contributes.breezell.ui.surfaces`. */
+		export interface PluginSurface {
+			readonly surfaceId: string;
+			/** Where it was opened. A code fence drawn with `chat.render` brings its `language` and `code`. */
+			readonly context: { readonly [key: string]: unknown };
+			postMessage(message: unknown): Thenable<boolean>;
+			readonly onDidReceiveMessage: Event<unknown>;
+			readonly onDidClose: Event<void>;
+		}
+
+		export namespace ui {
+			/** One of this plugin's surfaces opened, or was already open when the plugin started listening. */
+			export const onDidOpenSurface: Event<PluginSurface>;
+		}
+
+		/** What the command of a button in `contributes.breezell.ui.buttons` receives: where it was pressed. */
+		export interface ButtonContext {
+			readonly slot: 'chat.input.toolbar' | 'chat.message.actions' | 'code.block.actions';
+			readonly conversationId?: string;
+			/** `chat.message.actions`: the index of the message the turn starts at. */
+			readonly messageIndex?: number;
+			/** `code.block.actions`: the block's language and text. */
+			readonly language?: string;
+			readonly code?: string;
+		}
+
 		/** The chat box, as `chat.readInput` gives it. */
 		export interface ChatInput {
 			/** What is in the box. */
@@ -132,6 +168,11 @@ declare module 'vscode' {
 			export const onDidFinishTurn: Event<TurnFinishEvent>;
 			/** The chat box (`chat.input`): the one with the focus, else the first there is. */
 			export function readInput(): Thenable<ChatInput>;
+			/**
+			 * Each message before it is sent (`chat.intercept`): change it or stop it. An answer later than
+			 * three seconds, or a failure, passes the message on as it was. One handler per plugin.
+			 */
+			export function registerSendHandler(handler: SendHandler): Disposable;
 
 			/** The conversations, the most recently changed first (`chat.read`). */
 			export function listConversations(): Thenable<ConversationSummary[]>;

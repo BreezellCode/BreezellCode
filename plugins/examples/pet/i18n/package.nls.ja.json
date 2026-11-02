@@ -1,0 +1,9 @@
+{
+	"displayName": "デスクペット",
+	"description": "チャット欄に座るアニメ調の小さな風の精。AI の動きに合わせて動きます。メッセージは決して読みません。",
+	"command.category": "デスクペット",
+	"command.toggle": "表示/非表示",
+	"config.visible": "チャット欄にペットを表示します。",
+	"config.size": "ペットの大きさ。",
+	"config.speech": "ペットが吹き出しで話します。"
+}

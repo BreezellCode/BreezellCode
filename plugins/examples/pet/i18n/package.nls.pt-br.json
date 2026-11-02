@@ -1,0 +1,9 @@
+{
+	"displayName": "Mascote de mesa",
+	"description": "Um pequeno espírito do vento em estilo anime sobre a caixa de chat que acompanha o que a IA está fazendo. Ele nunca lê suas mensagens.",
+	"command.category": "Mascote de mesa",
+	"command.toggle": "Mostrar ou ocultar",
+	"config.visible": "Mostrar o mascote sobre a caixa de chat.",
+	"config.size": "O tamanho do mascote.",
+	"config.speech": "Deixar o mascote falar em balões."
+}

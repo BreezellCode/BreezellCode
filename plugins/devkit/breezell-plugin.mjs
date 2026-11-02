@@ -29,7 +29,333 @@ import { fileURLToPath } from 'node:url';
 
 const DEVKIT_VERSION = '1.0.0';
 const API_VERSION = 1;
-const PERMISSIONS = ['chat.events', 'models.request', 'models.select', 'chat.read', 'chat.send', 'chat.approve', 'providers.read', 'agent.tools', 'app.restart', 'app.forceRestart', 'editor.read', 'chat.input'];
+const PERMISSIONS = ['chat.events', 'models.request', 'models.select', 'chat.read', 'chat.send', 'chat.approve', 'providers.read', 'agent.tools', 'app.restart', 'app.forceRestart', 'editor.read', 'chat.input', 'chat.intercept', 'chat.render', 'ui.contribute', 'ui.modify'];
+/**
+ * What Breezell lets a plugin do to its screens (contributes.breezell.ui). Breezell checks all of this
+ * again when it loads a plugin, and what fails there is left out: this is to tell you sooner.
+ */
+const UI_BUTTON_SLOTS = ['chat.input.toolbar', 'chat.message.actions', 'code.block.actions'];
+const UI_SURFACE_SLOTS = ['chat.input.above', 'chat.messages.top', 'chat.landing', 'chat.input.companion'];
+const UI_MODE_BASES = ['normal', 'plan', 'analyze', 'agent'];
+const UI_TEXT_STYLE = ['backgroundColor', 'color', 'borderColor', 'borderRadius', 'borderWidth', 'padding', 'fontSize', 'fontWeight', 'fontFamily', 'lineHeight'];
+const UI_REGIONS = {
+	'chat.surface': { style: ['backgroundColor'] },
+	'chat.landing': { hide: true, replace: true, style: UI_TEXT_STYLE },
+	'chat.landing.hero': { hide: true, replace: true },
+	'chat.landing.hints': { hide: true },
+	'chat.messages': { replace: true },
+	'chat.rail': { hide: true },
+	'chat.message.user': { style: UI_TEXT_STYLE },
+	'chat.message.assistant': { style: UI_TEXT_STYLE },
+	'chat.turnStats': { hide: true, style: [...UI_TEXT_STYLE, 'opacity'] },
+	'chat.input.frame': { style: ['backgroundColor', 'borderColor', 'borderRadius', 'borderWidth'] },
+	'chat.input.mode': { hide: true },
+	'chat.input.mention': { hide: true, order: true },
+	'chat.input.browser': { hide: true, order: true },
+	'chat.input.attach': { hide: true, order: true },
+	'chat.input.imageMode': { hide: true, order: true },
+	'chat.input.quickPhrases': { hide: true, order: true },
+	'chat.input.promptOptimize': { hide: true, order: true },
+	'chat.input.mcp': { hide: true, order: true },
+};
+const UI_PROTECTED = ['account', 'signIn', 'plan', 'billing', 'upgrade', 'quota', 'customApi', 'chat.input.model', 'chat.input.send', 'chat.input.context', 'chat.quota', 'chat.toolApproval', 'chat.error', 'box', 'plugins', 'permissions', 'updates'];
+const UI_FENCES_TAKEN = [
+	'mermaid', 'causal', 'diff', 'patch', 'markdown', 'md', 'mdx', 'text', 'txt', 'plain', 'plaintext', 'latex', 'tex', 'math',
+	'json', 'jsonc', 'yaml', 'yml', 'toml', 'ini', 'xml', 'html', 'svg', 'css', 'scss', 'less', 'sql', 'graphql',
+	'javascript', 'js', 'jsx', 'mjs', 'cjs', 'typescript', 'ts', 'tsx', 'python', 'py', 'bash', 'sh', 'shell', 'zsh', 'fish', 'powershell', 'ps1', 'pwsh', 'bat', 'cmd', 'console',
+	'c', 'h', 'cpp', 'c++', 'cc', 'hpp', 'csharp', 'cs', 'java', 'kotlin', 'kt', 'go', 'golang', 'rust', 'rs', 'ruby', 'rb', 'php', 'swift', 'scala', 'lua', 'dart', 'r', 'perl', 'pl',
+	'dockerfile', 'makefile', 'vue', 'svelte',
+];
+/** On these, what is drawn on it must stay readable: only the theme's own backgrounds. */
+const UI_THEME_BACKGROUND_ONLY = ['chat.surface', 'chat.input.frame'];
+const UI_THEME_BACKGROUNDS = ['editor', 'sideBar', 'panel', 'input', 'editorWidget', 'dropdown', 'menu', 'quickInput', 'notifications'];
+const UI_THEME_BACKGROUND = new RegExp(`^(transparent|var\\(--vscode-(${UI_THEME_BACKGROUNDS.join('|')})-background\\))$`);
+const UI_ID = /^[a-z][a-zA-Z0-9_-]{0,63}$/;
+const UI_CODICON = /^[a-z0-9][a-z0-9-]{0,63}$/;
+const UI_PATH = /^(?!\/)(?!.*(?:^|\/)\.{0,2}(?:\/|$))[A-Za-z0-9._\-/]+$/;
+/** One size: up to `maxPx`, up to 4em or 4rem, and a percentage (up to 50) only where `percent`. */
+function uiLengthOk(value, maxPx, percent) {
+	if (value === '0') {
+		return true;
+	}
+	const size = /^([0-9]{1,3}(?:\.[0-9]{1,3})?)(px|em|rem|%)$/.exec(value);
+	if (!size) {
+		return false;
+	}
+	const n = Number(size[1]);
+	return size[2] === 'px' ? n <= maxPx : size[2] === '%' ? percent && n <= 50 : n <= 4;
+}
+const uiLengthsOk = (value, maxPx, percent) => {
+	const sizes = value.split(/\s/);
+	return sizes.length <= 4 && sizes.every(size => uiLengthOk(size, maxPx, percent));
+};
+
+function uiStyleOk(property, value) {
+	if (typeof value !== 'string' || !value || value.length > 160) {
+		return false;
+	}
+	const v = value.trim();
+	if (property !== 'fontFamily' && /url|expression|image|import|attr|element|paint|@|;|\{|\}|\\|\/\*|<|>|javascript:/i.test(v.replace(/^var\(--(vscode|breezell)-[a-zA-Z0-9-]+\)$/, ''))) {
+		return false;
+	}
+	switch (property) {
+		case 'backgroundColor':
+		case 'color':
+		case 'borderColor':
+			return /^(#[0-9a-f]{3,8}|(rgb|rgba|hsl|hsla)\([0-9.,%\s/]{1,40}\)|transparent|currentcolor|[a-z]{3,24}|var\(--(vscode|breezell)-[a-zA-Z0-9-]{1,80}\))$/i.test(v);
+		case 'borderRadius':
+			return uiLengthsOk(v, 64, true);
+		case 'padding':
+			return uiLengthsOk(v, 64, false);
+		case 'borderWidth':
+			return uiLengthOk(v, 4, false) && !/em$/.test(v);
+		case 'fontSize': {
+			const px = /^([0-9]{1,2}(\.[0-9]{1,2})?)px$/.exec(v);
+			return !!px && Number(px[1]) >= 9 && Number(px[1]) <= 32;
+		}
+		case 'fontWeight':
+			return /^[1-9]00$/.test(v) || v === 'normal' || v === 'bold';
+		case 'fontFamily':
+			return /^[a-zA-Z0-9 ,'"-]{1,120}$/.test(v) && !/url|expression/i.test(v);
+		case 'lineHeight':
+			return /^[0-9](\.[0-9]{1,2})?$/.test(v) && Number(v) >= 1 && Number(v) <= 3;
+		case 'opacity':
+			return /^[01](\.[0-9]{1,2})?$/.test(v) && Number(v) >= 0.3 && Number(v) <= 1;
+		default:
+			return false;
+	}
+}
+
+/** contributes.breezell.ui, and the permissions it needs. */
+/** A plugin's card in Feature Options. Keep in step with readPluginOptions in Breezell. */
+function checkUiOptions(raw, pkg, errors) {
+	if (raw === undefined) {
+		return false;
+	}
+	if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+		errors.push('"ui.options" must be an object');
+		return false;
+	}
+	if (typeof raw.title !== 'string' || !raw.title.trim()) {
+		errors.push('ui.options needs a title');
+		return false;
+	}
+	if (!Array.isArray(raw.items)) {
+		errors.push('"ui.options.items" must be an array');
+		return false;
+	}
+	if (raw.items.length > 12) {
+		errors.push('ui.options.items: at most 12');
+	}
+	const blocks = pkg.contributes?.configuration;
+	const own = Object.assign({}, ...(Array.isArray(blocks) ? blocks : [blocks]).map(block => block?.properties ?? {}));
+	const seen = new Set();
+	let good = 0;
+	for (const item of raw.items.slice(0, 12)) {
+		const where = `ui.options: ${JSON.stringify(item?.setting ?? item)}`;
+		const schema = typeof item?.setting === 'string' ? own[item.setting] : undefined;
+		const known = Array.isArray(schema?.enum) ? schema.enum.filter(v => typeof v === 'string') : undefined;
+		if (!schema) {
+			errors.push(`${where}: "setting" must be one of the plugin's own, in contributes.configuration`);
+		} else if (/breezell/i.test(item.setting)) {
+			errors.push(`${where}: a setting named after Breezell is not for a plugin`);
+		} else if (typeof item.title !== 'string' || !item.title.trim()) {
+			errors.push(`${where} needs a title`);
+		} else if (seen.has(item.setting)) {
+			errors.push(`${where}: listed twice`);
+		} else if (schema.type === 'boolean') {
+			seen.add(item.setting);
+			good++;
+		} else if (known?.length) {
+			seen.add(item.setting);
+			const values = new Set();
+			for (const choice of Array.isArray(item.choices) ? item.choices.slice(0, 6) : []) {
+				if (known.includes(choice?.value) && typeof choice?.title === 'string' && choice.title.trim() && !values.has(choice.value)) {
+					values.add(choice.value);
+				} else {
+					errors.push(`${where}: a choice needs a title and a value among the setting's enum`);
+				}
+			}
+			if (values.size < 2) {
+				errors.push(`${where}: needs at least two choices, at most 6`);
+			} else {
+				good++;
+			}
+		} else {
+			errors.push(`${where}: only a boolean setting or a string with an enum can go here`);
+		}
+	}
+	return good > 0;
+}
+
+function checkUi(ui, pkg, errors, dir) {
+	if (ui === undefined) {
+		return;
+	}
+	if (typeof ui !== 'object' || ui === null || Array.isArray(ui)) {
+		errors.push('"contributes.breezell.ui" must be an object');
+		return;
+	}
+	const list = key => {
+		if (ui[key] !== undefined && !Array.isArray(ui[key])) {
+			errors.push(`"ui.${key}" must be an array`);
+			return [];
+		}
+		return ui[key] ?? [];
+	};
+	const commands = (Array.isArray(pkg.contributes?.commands) ? pkg.contributes.commands : pkg.contributes?.commands ? [pkg.contributes.commands] : []).map(c => c?.command);
+	const declared = [...(pkg.breezell?.permissions ?? []), ...(pkg.breezell?.optionalPermissions ?? [])];
+	const needs = (permission, what) => {
+		if (!declared.includes(permission)) {
+			errors.push(`${what} need the "${permission}" permission: add it to "breezell.permissions" or "breezell.optionalPermissions"`);
+		}
+	};
+	const fileMissing = (relative) => dir && !fs.existsSync(path.join(dir, relative));
+
+	const buttons = list('buttons');
+	const perSlot = new Map();
+	for (const b of buttons) {
+		const where = `ui.buttons: ${JSON.stringify(b?.id ?? b)}`;
+		if (!UI_ID.test(b?.id ?? '') || typeof b?.title !== 'string' || !b.title.trim()) {
+			errors.push(`${where} needs an id (a letter, then letters, digits, _ or -) and a title`);
+		}
+		if (!UI_BUTTON_SLOTS.includes(b?.slot)) {
+			errors.push(`${where}: no place ${JSON.stringify(b?.slot)} (there are ${UI_BUTTON_SLOTS.join(', ')})`);
+		}
+		if (!commands.includes(b?.command)) {
+			errors.push(`${where}: "command" must be one of the plugin's own, in contributes.commands`);
+		} else if (/breezell/i.test(b.command)) {
+			errors.push(`${where}: a command name with "breezell" in it is Breezell's: rename "${b.command}"`);
+		}
+		if (b?.icon !== undefined && !UI_CODICON.test(b.icon)) {
+			errors.push(`${where}: "icon" must be a codicon's name`);
+		}
+		perSlot.set(b?.slot, (perSlot.get(b?.slot) ?? 0) + 1);
+		if (perSlot.get(b?.slot) > 2) {
+			errors.push(`${where}: at most 2 of a plugin's buttons in ${b?.slot}`);
+		}
+	}
+	if (buttons.length > 8) {
+		errors.push('ui.buttons: at most 8');
+	}
+
+	const surfaces = list('surfaces');
+	for (const s of surfaces) {
+		const where = `ui.surfaces: ${JSON.stringify(s?.id ?? s)}`;
+		const entry = typeof s?.entry === 'string' ? s.entry.replace(/^\.\//, '') : '';
+		if (!UI_ID.test(s?.id ?? '') || typeof s?.title !== 'string' || !s.title.trim()) {
+			errors.push(`${where} needs an id and a title`);
+		}
+		if (!UI_PATH.test(entry) || !/\.html?$/i.test(entry)) {
+			errors.push(`${where}: "entry" must be an .html page inside the plugin`);
+		} else if (fileMissing(entry)) {
+			errors.push(`${where}: "${entry}" does not exist`);
+		}
+		if (s?.slot !== undefined && !UI_SURFACE_SLOTS.includes(s.slot)) {
+			errors.push(`${where}: no place ${JSON.stringify(s.slot)} (there are ${UI_SURFACE_SLOTS.join(', ')})`);
+		}
+		if (s?.slot === 'chat.input.companion' && surfaces.indexOf(s) !== surfaces.findIndex(o => o?.slot === 'chat.input.companion')) {
+			errors.push(`${where}: a plugin has one companion`);
+		}
+		for (const origin of s?.network ?? []) {
+			if (!/^https:\/\/[a-z0-9.-]{1,200}(:[0-9]{1,5})?$/i.test(origin)) {
+				errors.push(`${where}: "network" takes https origins, like https://api.example.com; not ${JSON.stringify(origin)}`);
+			}
+		}
+	}
+	if (surfaces.length > 6) {
+		errors.push('ui.surfaces: at most 6');
+	}
+
+	const patches = list('patches');
+	for (const p of patches) {
+		const name = typeof p?.region === 'string' ? p.region : '';
+		const where = `ui.patches: ${JSON.stringify(name || p)}`;
+		if (UI_PROTECTED.some(area => name === area || name.startsWith(`${area}.`))) {
+			errors.push(`${where} is protected: no plugin may change it`);
+			continue;
+		}
+		const region = Object.prototype.hasOwnProperty.call(UI_REGIONS, name) ? UI_REGIONS[name] : undefined;
+		if (!region) {
+			errors.push(`${where}: no such part (there are ${Object.keys(UI_REGIONS).join(', ')})`);
+			continue;
+		}
+		if (p.hide !== undefined && !(p.hide === true && region.hide)) {
+			errors.push(`${where} cannot be hidden`);
+		}
+		if (p.order !== undefined && !(region.order && typeof p.order === 'number' && Number.isFinite(p.order))) {
+			errors.push(`${where}: its order cannot be set`);
+		}
+		if (p.replaceWith !== undefined && !(region.replace && surfaces.some(s => s?.id === p.replaceWith))) {
+			errors.push(`${where}: "replaceWith" must name one of the plugin's surfaces, where a part can be replaced`);
+		}
+		for (const [property, value] of Object.entries(p.style ?? {})) {
+			if (!(region.style ?? []).includes(property)) {
+				errors.push(`${where}: its style does not take "${property}"`);
+			} else if (!uiStyleOk(property, value)) {
+				errors.push(`${where}: ${JSON.stringify(value)} is no valid ${property}`);
+			} else if (property === 'backgroundColor' && UI_THEME_BACKGROUND_ONLY.includes(name) && !UI_THEME_BACKGROUND.test(value.trim())) {
+				errors.push(`${where}: what is on it must stay readable, so "backgroundColor" can only be "transparent" or var(--vscode-<x>-background) with x one of ${UI_THEME_BACKGROUNDS.join(', ')}`);
+			}
+		}
+	}
+	if (patches.length > 32) {
+		errors.push('ui.patches: at most 32');
+	}
+
+	const renderers = list('renderers');
+	for (const r of renderers) {
+		const language = typeof r?.language === 'string' ? r.language.toLowerCase() : '';
+		const where = `ui.renderers: ${JSON.stringify(r?.language ?? r)}`;
+		if (!/^[a-z][a-z0-9_+-]{0,31}$/.test(language)) {
+			errors.push(`${where}: "language" must be a code fence's language`);
+		} else if (UI_FENCES_TAKEN.includes(language)) {
+			errors.push(`${where}: Breezell draws this language itself`);
+		}
+		if (!surfaces.some(s => s?.id === r?.surface)) {
+			errors.push(`${where}: "surface" must name one of the plugin's surfaces`);
+		}
+	}
+	if (renderers.length > 8) {
+		errors.push('ui.renderers: at most 8');
+	}
+
+	const modes = list('modes');
+	for (const m of modes) {
+		const where = `ui.modes: ${JSON.stringify(m?.id ?? m)}`;
+		const instructions = typeof m?.instructions === 'string' ? m.instructions.replace(/^\.\//, '') : '';
+		if (!UI_ID.test(m?.id ?? '') || typeof m?.title !== 'string' || !m.title.trim()) {
+			errors.push(`${where} needs an id and a title`);
+		}
+		if (!UI_MODE_BASES.includes(m?.base)) {
+			errors.push(`${where}: "base" must be one of ${UI_MODE_BASES.join(', ')}`);
+		}
+		if (!UI_PATH.test(instructions)) {
+			errors.push(`${where}: "instructions" must be a file inside the plugin`);
+		} else if (fileMissing(instructions)) {
+			errors.push(`${where}: "${instructions}" does not exist`);
+		}
+		if (m?.icon !== undefined && !UI_CODICON.test(m.icon)) {
+			errors.push(`${where}: "icon" must be a codicon's name`);
+		}
+	}
+	if (modes.length > 4) {
+		errors.push('ui.modes: at most 4');
+	}
+
+	const companion = surfaces.some(s => s?.slot === 'chat.input.companion');
+	const hasOptions = checkUiOptions(ui.options, pkg, errors);
+	if (buttons.length || surfaces.some(s => s?.slot && s.slot !== 'chat.input.companion') || modes.length || hasOptions) {
+		needs('ui.contribute', 'ui.buttons, ui.surfaces, ui.options and ui.modes');
+	}
+	if (patches.length || companion) {
+		needs('ui.modify', 'ui.patches and a companion');
+	}
+	if (renderers.length) {
+		needs('chat.render', 'ui.renderers');
+	}
+}
+
 /** The chat modes an agent tool can be offered in (contributes.breezell.tools[].modes). */
 const TOOL_MODES = ['chat', 'agent', 'entanglement', 'analyze', 'teams'];
 const MARKET_REPO = 'BreezellCode/BreezellCode';
@@ -233,7 +559,7 @@ function readZip(buffer) {
 // package.json checks
 // ---------------------------------------------------------------------------
 
-function checkPackage(pkg, { forMarket = false, nls } = {}) {
+function checkPackage(pkg, { forMarket = false, nls, dir } = {}) {
 	const errors = [];
 	const warnings = [];
 	for (const field of ['displayName', 'description']) {
@@ -342,6 +668,7 @@ function checkPackage(pkg, { forMarket = false, nls } = {}) {
 		if (reachesAgent && !(Array.isArray(pkg.breezell?.permissions) && pkg.breezell.permissions.includes('agent.tools'))) {
 			errors.push('"contributes.breezell.tools" and "mcpServers" reach the agent only with the "agent.tools" permission: add it to "breezell.permissions"');
 		}
+		checkUi(declared.ui, pkg, errors, dir);
 	}
 	if (typeof pkg.main !== 'string' && declared === undefined && !pkg.contributes?.themes) {
 		errors.push('a plugin needs code ("main") or declared contents ("contributes.breezell" skills, rules or MCP servers, or "contributes.themes")');
@@ -507,6 +834,18 @@ function packageFiles(dir, pkg, open) {
 			walk(rel.replace(/^\.\//, '').replace(/\/$/, ''));
 		}
 	}
+	// The pages of contributes.breezell.ui, with what is beside them, and what its modes tell the AI.
+	for (const surface of pkg.contributes?.breezell?.ui?.surfaces ?? []) {
+		if (typeof surface?.entry === 'string') {
+			const entry = surface.entry.replace(/^\.\//, '');
+			walk(path.posix.dirname(entry) === '.' ? entry : path.posix.dirname(entry));
+		}
+	}
+	for (const mode of pkg.contributes?.breezell?.ui?.modes ?? []) {
+		if (typeof mode?.instructions === 'string') {
+			walk(mode.instructions.replace(/^\.\//, ''));
+		}
+	}
 	if (typeof pkg.icon === 'string') {
 		walk(pkg.icon.replace(/^\.\//, ''));
 	}
@@ -559,7 +898,7 @@ async function pack(dir, flags) {
 	}
 	pkg.breezell = { ...pkg.breezell, source: mode };
 	const nlsFile = path.join(dir, 'package.nls.json');
-	const { errors, warnings } = checkPackage(pkg, { nls: fs.existsSync(nlsFile) ? readJson(nlsFile) : undefined });
+	const { errors, warnings } = checkPackage(pkg, { dir, nls: fs.existsSync(nlsFile) ? readJson(nlsFile) : undefined });
 	warnings.forEach(w => log(`warning: ${w}`));
 	if (errors.length) {
 		fail(`package.json:\n  - ${errors.join('\n  - ')}`);
@@ -1024,7 +1363,7 @@ async function main() {
 			return build(dir, { closed: !!flags.closed, watch: !!flags.watch });
 		case 'validate': {
 			const nlsFile = path.join(dir, 'package.nls.json');
-			const { errors, warnings } = checkPackage(readJson(path.join(dir, 'package.json')), { nls: fs.existsSync(nlsFile) ? readJson(nlsFile) : undefined });
+			const { errors, warnings } = checkPackage(readJson(path.join(dir, 'package.json')), { dir, nls: fs.existsSync(nlsFile) ? readJson(nlsFile) : undefined });
 			warnings.forEach(w => log(`warning: ${w}`));
 			if (errors.length) {
 				fail(`package.json:\n  - ${errors.join('\n  - ')}`);

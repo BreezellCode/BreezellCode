@@ -1,0 +1,116 @@
+html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; pointer-events: none; user-select: none; font: 11.5px/1.4 var(--vscode-font-family, system-ui, sans-serif); color: var(--vscode-editorWidget-foreground, var(--vscode-foreground, #ccc)); }
+* { -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; outline: none; }
+::selection { background: transparent; }
+#pet { position: absolute; bottom: 0; touch-action: none; pointer-events: auto; cursor: grab; }
+[data-pet-pose="drag"] { cursor: grabbing; }
+#figure { position: absolute; inset: 0 calc(var(--hair-margin) * -1); transform-origin: 50% 100%; -webkit-mask-image: linear-gradient(#000 96%, transparent); mask-image: linear-gradient(#000 96%, transparent); }
+/* In the air, what the picture leaves out fades away rather than being cut off. */
+[data-air] #figure { -webkit-mask-image: linear-gradient(#000 80%, transparent); mask-image: linear-gradient(#000 80%, transparent); }
+#figure canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+#figure img { position: absolute; left: var(--hair-margin); top: 0; width: calc(100% - var(--hair-margin) * 2); height: 100%; opacity: 0; transition: opacity .14s linear; pointer-events: none; -webkit-user-drag: none; }
+#figure img[data-on] { opacity: 1; }
+/* Blinking: the picture with her eyes shut, for a moment, over the usual one. */
+[data-image="base"] #figure img[data-name="blink"] { transition: none; animation: pet-blink 5.2s steps(1) infinite; }
+/* Asleep with no picture of her own for it: the usual one with her eyes shut. */
+[data-pet-pose="sleep"][data-image="base"] #figure img[data-name="blink"] { animation: none; opacity: 1; }
+#props { position: absolute; inset: 0; pointer-events: none; }
+/* With only her head in the frame there is no room for what floats beside her. */
+[data-restricted] #props { display: none; }
+#props svg { display: block; width: 100%; height: 100%; overflow: visible; }
+#bubble, #card { position: absolute; display: none; box-sizing: border-box; pointer-events: none; background: var(--vscode-editorWidget-background, #252526); border: 1px solid var(--vscode-editorWidget-border, color-mix(in srgb, currentColor 18%, transparent)); border-radius: 10px; }
+#bubble { width: max-content; max-width: 196px; padding: 4px 9px; animation: pet-say .18s ease-out; }
+#card { width: 150px; padding: 7px 8px; pointer-events: auto; cursor: default; line-height: 1.3; }
+#card .head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; margin-bottom: 3px; }
+#card .name { font-weight: 600; font-size: 12.5px; }
+#card .soft { opacity: .75; }
+#card .bar { height: 4px; border-radius: 2px; overflow: hidden; background: color-mix(in srgb, currentColor 12%, transparent); }
+#card .bar > div { height: 100%; border-radius: 2px; }
+#card .mood { display: flex; align-items: center; gap: 6px; margin: 3px 0 1px; }
+#card .mood .bar { flex: 1; }
+#card .actions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+#card button { flex: 1 1 auto; padding: 3px 5px; border: none; white-space: nowrap; border-radius: 6px; cursor: pointer; font: inherit; color: inherit; background: color-mix(in srgb, currentColor 10%, transparent); }
+#card button:hover { background: color-mix(in srgb, currentColor 18%, transparent); }
+
+[data-paused] * { animation-play-state: paused !important; }
+
+#props [data-p] { transform-box: fill-box; transform-origin: 50% 50%; }
+#props [data-p="wisp"] { animation: pet-petals 6s ease-in-out infinite; }
+
+/* All of her moves as one: she stands, and leans with the wind. */
+[data-pet-pose="idle"] [data-p="rig"], [data-pet-pose="watch"] [data-p="rig"], [data-pet-pose="think"] [data-p="rig"], [data-pet-pose="wave"] [data-p="rig"] { animation: pet-stand 4.4s ease-in-out infinite; }
+
+[data-pet-pose="think"] [data-p="dot1"] { animation: pet-pop 1.8s ease-in-out infinite; }
+[data-pet-pose="think"] [data-p="dot2"] { animation: pet-pop 1.8s .25s ease-in-out infinite; }
+[data-pet-pose="think"] [data-p="dot3"] { animation: pet-pop 1.8s .5s ease-in-out infinite; }
+
+[data-pet-pose="write"] [data-p="rig"], [data-pet-pose="work"] [data-p="rig"] { animation: pet-busy 1.6s ease-in-out infinite; }
+
+[data-pet-pose="wait"] [data-p="rig"] { animation: pet-hop 1.3s ease-in-out infinite; }
+[data-pet-pose="wait"] [data-p="sign"] { transform-origin: 30% 100%; animation: pet-ring 1.1s ease-in-out infinite; }
+
+[data-pet-pose="send"] [data-p="rig"] { animation: pet-puff .9s ease-out; }
+[data-pet-pose="send"] [data-p="wind1"] { animation: pet-blow .75s ease-out both; }
+[data-pet-pose="send"] [data-p="wind2"] { animation: pet-blow .75s .08s ease-out both; }
+[data-pet-pose="send"] [data-p="wind3"] { animation: pet-blow .75s .14s ease-out both; }
+
+[data-pet-pose="celebrate"] [data-p="rig"], [data-pet-pose="levelup"] [data-p="rig"] { animation: pet-jump .7s cubic-bezier(.3,.7,.4,1) infinite; }
+[data-pet-pose="celebrate"] [data-p="confetti"] > *, [data-pet-pose="levelup"] [data-p="confetti"] > * { animation: pet-confetti 1.1s ease-in infinite; }
+#props [data-p="c2"] { animation-delay: .15s !important; }
+#props [data-p="c3"] { animation-delay: .32s !important; }
+#props [data-p="c4"] { animation-delay: .46s !important; }
+#props [data-p="c5"] { animation-delay: .6s !important; }
+#props [data-p="c6"] { animation-delay: .75s !important; }
+
+[data-pet-pose="startle"] [data-p="rig"] { animation: pet-startle .65s ease-out; }
+[data-pet-pose="sad"] [data-p="rig"] { animation: pet-sigh 3.6s ease-in-out infinite; }
+
+[data-pet-pose="sleep"] [data-p="rig"] { animation: pet-sigh 4.2s ease-in-out infinite; }
+[data-pet-pose="sleep"] [data-p="z1"] { animation: pet-z 3s ease-in-out infinite; }
+[data-pet-pose="sleep"] [data-p="z2"] { animation: pet-z 3s .7s ease-in-out infinite; }
+[data-pet-pose="sleep"] [data-p="z3"] { animation: pet-z 3s 1.4s ease-in-out infinite; }
+
+[data-pet-pose="wake"] [data-p="rig"] { animation: pet-stretch .9s ease-in-out; }
+
+/* Held by the air, she swings a little from up near her head. */
+[data-pet-pose="drag"] [data-p="rig"] { transform-origin: 50% 12%; animation: pet-dangle 1.1s ease-in-out infinite; }
+
+/* Drifting down, as a wind spirit does. */
+[data-pet-pose="float"] [data-p="rig"] { transform-origin: 50% 12%; animation: pet-dangle 2.2s ease-in-out infinite; }
+
+[data-pet-pose="land"] [data-p="rig"] { animation: pet-land .42s ease-out; }
+
+[data-pet-pose="walk"] [data-p="rig"] { animation: pet-bob .9s ease-in-out infinite; }
+
+[data-pet-pose="eat"] [data-p="rig"] { animation: pet-busy 1s ease-in-out infinite; }
+[data-pet-pose="eat"] [data-p="food"] { animation: pet-eaten 2.2s linear both; }
+
+[data-pet-pose="play"] [data-p="rig"] { animation: pet-jump .8s cubic-bezier(.3,.7,.4,1) infinite; }
+[data-pet-pose="play"] [data-p="ball"] { animation: pet-ball .8s cubic-bezier(.35,0,.65,1) infinite; }
+
+[data-pet-pose="joy"] [data-p="rig"] { animation: pet-wiggle .8s ease-in-out infinite; }
+[data-pet-pose="joy"] [data-p="heart1"] { animation: pet-rise 1.4s ease-out infinite; }
+[data-pet-pose="joy"] [data-p="heart2"] { animation: pet-rise 1.4s .4s ease-out infinite; }
+
+@keyframes pet-say { from { transform: translateY(4px) scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes pet-blink { 0%, 100% { opacity: 0; } 96% { opacity: 1; } 98% { opacity: 0; } }
+@keyframes pet-stand { 0%, 100% { transform: translateY(0) rotate(-.35deg); } 50% { transform: translateY(-.8px) rotate(.45deg); } }
+@keyframes pet-petals { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 50% { transform: translate(-2px, 2px) rotate(8deg); } }
+@keyframes pet-pop { 0%, 100% { transform: scale(.7); opacity: .35; } 45% { transform: scale(1.08); opacity: 1; } }
+@keyframes pet-busy { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-.7px); } }
+@keyframes pet-hop { 0%, 58%, 100% { transform: translateY(0); } 74% { transform: translateY(-3px); } 90% { transform: translateY(.3px); } }
+@keyframes pet-ring { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(6deg) translateY(-.6px); } }
+@keyframes pet-puff { 0% { transform: translateY(0); } 25% { transform: translateY(.6px) rotate(-.6deg); } 60% { transform: translateY(-1.6px) rotate(.4deg); } 100% { transform: none; } }
+@keyframes pet-blow { 0% { transform: translateY(6px) scaleY(.5); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-8px) scaleY(1.1); opacity: 0; } }
+@keyframes pet-jump { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes pet-confetti { 0% { transform: translateY(-4px) rotate(0); opacity: 0; } 18% { opacity: 1; } 100% { transform: translateY(18px) rotate(240deg); opacity: 0; } }
+@keyframes pet-startle { 0% { transform: translateY(0); } 25% { transform: translateY(-6px); } 60% { transform: translateY(1px); } 100% { transform: none; } }
+@keyframes pet-sigh { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(.9px); } }
+@keyframes pet-z { 0% { transform: translate(-4px, 5px) scale(.5); opacity: 0; } 30% { opacity: 1; } 100% { transform: translate(3px, -4px) scale(1.05); opacity: 0; } }
+@keyframes pet-stretch { 0% { transform: translateY(0); } 45% { transform: translateY(-3px); } 100% { transform: none; } }
+@keyframes pet-dangle { 0%, 100% { transform: rotate(-2.4deg); } 50% { transform: rotate(2.4deg); } }
+@keyframes pet-land { 0% { transform: scale(1.025, .96); } 45% { transform: scale(.992, 1.01); } 75% { transform: scale(1.006, .995); } 100% { transform: none; } }
+@keyframes pet-bob { 0%, 100% { transform: translateY(0) rotate(-.7deg); } 50% { transform: translateY(-2px) rotate(.7deg); } }
+@keyframes pet-eaten { 0%, 18% { transform: scale(1); opacity: 1; } 42% { transform: scale(.72); opacity: 1; } 68% { transform: scale(.4); opacity: 1; } 100% { transform: scale(.1); opacity: 0; } }
+@keyframes pet-ball { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+@keyframes pet-wiggle { 0%, 100% { transform: rotate(-.9deg); } 50% { transform: rotate(.9deg); } }
+@keyframes pet-rise { 0% { transform: translateY(4px) scale(.6); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-8px) scale(1); opacity: 0; } }

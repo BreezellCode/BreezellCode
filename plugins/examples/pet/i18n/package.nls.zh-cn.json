@@ -1,0 +1,9 @@
+{
+	"displayName": "桌面宠物",
+	"description": "坐在聊天框上的二次元风格小风精灵，跟着 AI 的工作一起动。它从不读取你的消息。",
+	"command.category": "桌面宠物",
+	"command.toggle": "显示或隐藏",
+	"config.visible": "在聊天框上显示宠物。",
+	"config.size": "宠物的大小。",
+	"config.speech": "让宠物用对话气泡说话。"
+}
