@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { suite, test } from 'node:test';
 import { JSDOM } from 'jsdom';
-import { petFloatSteps, PET_HAIR_MARGIN, PET_LEVEL_XP, petLeft, PET_POSE_MS, PET_SIZES, PET_POSES, PetPose, petWidth, restFrame } from '../src/logic';
+import { petFittedHeight, petFloatSteps, PET_HAIR_MARGIN, PET_HIT_SHARE, PET_LEVEL_XP, petLeft, PET_MARGIN, PET_POSE_MS, PET_SIZES, PET_POSES, PetPose, petWidth, restFrame } from '../src/logic';
 import { PET_STRINGS } from '../src/strings';
 import { petImageFor, petProps } from '../page/art';
 import { PET_IMAGES } from '../page/images.generated';
@@ -187,10 +187,18 @@ suite('coming up', () => {
 		assert.equal(ask.lift, 0);
 		assert.equal(ask.left, Math.round(petLeft(0.86, 600, WIDE) - SIDE));
 	});
-	test('with nothing from the plugin it still comes after a moment, and does not wave', () => {
+	test('the plugin\'s code can take seconds as a window opens: she does not show until it has said how she should', () => {
 		const p = page();
 		p.layout();
-		p.tick(799);
+		p.tick(5000);
+		assert.deepEqual(p.asks(), []);
+		p.init({ settings: { visible: false }, progress: { perch: 0.1 } });
+		assert.deepEqual(p.asks().map(ask => ask.hidden), [true]);
+	});
+	test('with that code broken she comes in the end, and does not wave', () => {
+		const p = page();
+		p.layout();
+		p.tick(14_999);
 		assert.deepEqual(p.asks(), []);
 		p.tick(1);
 		assert.equal(p.asks().length, 1);
@@ -199,7 +207,7 @@ suite('coming up', () => {
 	test('a late word from the plugin brings what it remembers', () => {
 		const p = page();
 		p.layout();
-		p.tick(800);
+		p.tick(15_000);
 		p.init({ progress: { xp: 40, perch: 0.1 } });
 		assert.equal(p.lastAsk().left, Math.round(petLeft(0.1, 600, WIDE) - SIDE));
 	});
@@ -649,6 +657,132 @@ suite('the mouse', () => {
 	});
 });
 
+suite('what catches the mouse', () => {
+	const hitWide = Math.round(WIDE * PET_HIT_SHARE);
+	test('her middle and not the frame: the air and the hair beside her let it through to the chat', () => {
+		const ask = ready().lastAsk();
+		assert.equal(ask.hit.length, 1);
+		const [area] = ask.hit;
+		assert.equal(area.width, hitWide);
+		assert.equal(area.height, PET_SIZES.medium);
+		assert.equal(area.y, REST.height - PET_SIZES.medium);
+		assert.equal(area.x, SIDE + Math.round((WIDE - hitWide) / 2));
+	});
+	test('it says so again when the frame changes, and not when nothing did', () => {
+		const p = ready();
+		const asks = p.asks().length;
+		p.layout();
+		assert.equal(p.asks().length, asks);
+		p.send({ type: 'settings', settings: { visible: true, size: 'large', speech: true } });
+		assert.equal(p.lastAsk().hit[0].height, PET_SIZES.large);
+	});
+	test('her card catches it too, for as long as it is open', () => {
+		const p = ready();
+		p.pointer('contextmenu');
+		assert.equal(p.lastAsk().hit.length, 2);
+		assert.deepEqual([p.lastAsk().hit[1].width, p.lastAsk().hit[1].height], [CARD.width, CARD.height]);
+		p.pointer('pointerleave');
+		p.tick(300);
+		assert.equal(p.lastAsk().hit.length, 1);
+	});
+	test('made small, what catches it stays where she shows', () => {
+		const ask = ready({ layout: { restricted: true } }).lastAsk();
+		assert.equal(ask.hit[0].y, 0);
+		assert.ok(ask.hit[0].x <= ask.width / 2 && ask.hit[0].x + ask.hit[0].width >= ask.width / 2);
+	});
+	test('off her the frame is told to let go', () => {
+		const p = ready();
+		const out = () => p.posted.filter(m => m.__breezellCompanion?.mouseOut === true).length;
+		p.pointer('pointerenter');
+		p.pointer('pointerleave');
+		p.tick(0);
+		assert.equal(out(), 1);
+	});
+	test('from her to her card is not off her', () => {
+		const p = ready();
+		p.pointer('contextmenu');
+		const before = p.posted.filter(m => m.__breezellCompanion?.mouseOut === true).length;
+		p.pointer('pointerleave');
+		p.pointer('pointerenter', {}, p.$('card'));
+		p.tick(0);
+		assert.equal(p.posted.filter(m => m.__breezellCompanion?.mouseOut === true).length, before);
+	});
+	test('while she is held nothing lets go of her', () => {
+		const p = ready();
+		grab(p);
+		p.pointer('pointerleave');
+		p.tick(0);
+		assert.equal(p.posted.filter(m => m.__breezellCompanion?.mouseOut === true).length, 0);
+	});
+	test('the wheel over her is for the chat, in pixels', () => {
+		const p = ready();
+		const wheel = (init: object) => p.$('pet').dispatchEvent(new (p.window as any).WheelEvent('wheel', { bubbles: true, ...init }));
+		const scrolls = () => p.posted.flatMap(m => m.__breezellCompanion?.scroll ? [m.__breezellCompanion.scroll] : []);
+		wheel({ deltaY: 120 });
+		wheel({ deltaY: -3, deltaMode: 1 });
+		wheel({ deltaY: 500, ctrlKey: true }); // that one zooms
+		assert.deepEqual(JSON.parse(JSON.stringify(scrolls())), [{ deltaX: 0, deltaY: 120 }, { deltaX: 0, deltaY: -48 }]);
+	});
+});
+
+suite('what she costs', () => {
+	const paused = (p: Page) => p.window.document.documentElement.hasAttribute('data-paused');
+	test('turned off, nothing runs: no hair, no animations, nothing to paint', () => {
+		const p = ready();
+		p.tick(500);
+		assert.equal(paused(p), false);
+		p.send({ type: 'settings', settings: { visible: false, size: 'medium', speech: true } });
+		const frames = p.hair.frames;
+		p.tick(5000);
+		assert.equal(p.hair.frames, frames);
+		assert.equal(paused(p), true);
+		assert.equal(p.$('pet').style.display, 'none');
+	});
+	test('turned on again it all goes on', () => {
+		const p = ready({ settings: { visible: false } });
+		p.tick(1000);
+		const frames = p.hair.frames;
+		p.send({ type: 'settings', settings: { visible: true, size: 'medium', speech: true } });
+		p.tick(1000);
+		assert.ok(p.hair.frames - frames >= 15, String(p.hair.frames - frames));
+		assert.equal(paused(p), false);
+		assert.equal(p.$('pet').style.display, '');
+	});
+	test('it does not ask for every frame: that keeps a page painting with nothing moved', () => {
+		let asked = 0;
+		const p = page();
+		(p.window as any).requestAnimationFrame = () => void asked++;
+		p.layout();
+		p.init();
+		p.tick(1000);
+		assert.equal(asked, 0);
+		assert.ok(p.hair.frames > 0);
+	});
+});
+
+suite('in a narrow chat', () => {
+	test('a whole smaller pet, and not part of one', () => {
+		for (const boxWidth of [140, 160, 181]) {
+			const p = ready({ layout: { boxWidth } });
+			const height = petFittedHeight(PET_SIZES.medium, boxWidth);
+			assert.ok(height < PET_SIZES.medium, String(boxWidth));
+			assert.equal(p.$('pet').style.height, `${height}px`);
+			assert.ok(petWidth(height) + PET_MARGIN * 2 <= boxWidth + 1, String(boxWidth));
+		}
+	});
+	test('with room she is the size she was set to, however wide', () => {
+		for (const boxWidth of [200, 400, 1200]) {
+			assert.equal(ready({ layout: { boxWidth } }).$('pet').style.height, `${PET_SIZES.medium}px`);
+		}
+	});
+	test('widening the panel gives her size back', () => {
+		const p = ready({ layout: { boxWidth: 140 } });
+		p.layout({ boxWidth: 500 });
+		assert.equal(p.$('pet').style.height, `${PET_SIZES.medium}px`);
+		assert.equal(p.lastAsk().height, REST.height);
+	});
+});
+
 suite('its card', () => {
 	const open = (over: object = {}) => {
 		const p = ready(over);
@@ -824,8 +958,71 @@ suite('its words', () => {
 	});
 });
 
+suite('being held by the mouse', () => {
+	test('at a zoom she stays under the pointer: the screen knows no zoom, the page\'s pixels do', () => {
+		const p = ready({ layout: { zoom: 1.25 } });
+		const left = p.lastAsk().left;
+		grab(p);
+		carry(p, 400, 400);
+		assert.equal(p.lastAsk().left - left, -80);
+		assert.equal(p.lastAsk().lift, 80);
+	});
+	test('without a zoom she moves as far as the pointer', () => {
+		const p = ready();
+		const left = p.lastAsk().left;
+		grab(p);
+		carry(p, 400, 400);
+		assert.equal(p.lastAsk().left - left, -100);
+		assert.equal(p.lastAsk().lift, 100);
+	});
+	test('let go at an end of the box she stays where she was: she does not jump to what she keeps from it', () => {
+		for (const screenX of [-5000, 5000]) {
+			const p = ready();
+			grab(p);
+			carry(p, screenX, 500);
+			const held = p.$('pet').style.left + '|' + p.lastAsk().left;
+			letGo(p, screenX, 500);
+			p.tick(PET_POSE_MS.land);
+			assert.equal(p.$('pet').style.left + '|' + p.lastAsk().left, held, String(screenX));
+		}
+	});
+	test('a click answers whatever the chat is doing, and she goes back to it', () => {
+		for (const [activity, pose] of [['working', 'work'], ['writing', 'write'], ['thinking', 'think'], ['none', 'idle']]) {
+			const p = ready();
+			p.chat(activity);
+			p.tick(PET_POSE_MS.send);
+			assert.equal(p.pose(), pose);
+			grab(p);
+			letGo(p, 500, 500);
+			assert.equal(p.pose(), 'joy', activity);
+			p.tick(PET_POSE_MS.joy);
+			assert.equal(p.pose(), pose);
+		}
+	});
+});
+
+suite('how she faces', () => {
+	test('after a walk to the left she faces left, and what is written over her does not', () => {
+		const p = ready({ random: 0 });
+		p.tick(26_000);
+		assert.equal(p.$('pet').style.transform, 'scaleX(-1)');
+		assert.equal(p.$('pet').hasAttribute('data-mirrored'), true);
+		const css = readFileSync(join(__dirname, '..', '..', 'ui', 'pet.css'), 'utf8');
+		assert.ok(/\[data-mirrored\]\[data-pet-pose="sleep"\] #props \{ transform: scaleX\(-1\)/.test(css));
+	});
+});
+
 suite('something waits on the user', () => {
 	const held = (over: object = {}) => ready({ layout: { restricted: true }, ...over });
+
+	test('she fades at the edges of the frame instead of being cut off by them', () => {
+		const p = held();
+		assert.equal(p.window.document.documentElement.hasAttribute('data-restricted'), true);
+		p.layout({ restricted: false });
+		assert.equal(p.window.document.documentElement.hasAttribute('data-restricted'), false);
+		const css = readFileSync(join(__dirname, '..', '..', 'ui', 'pet.css'), 'utf8');
+		assert.ok(/html\[data-restricted\] body \{[^}]*mask-image/.test(css));
+	});
 
 	test('it keeps inside what Breezell allows then, at every size, sunk to show her from the waist up', () => {
 		for (const size of ['small', 'medium', 'large'] as const) {

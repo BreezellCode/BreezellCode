@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { mergePetProgress, readPetProgress } from './logic';
 import { petStrings } from './strings';
 
 /*
@@ -49,12 +50,15 @@ export function activate(context: vscode.ExtensionContext): void {
 				void surface.postMessage({ type: 'init', progress: context.globalState.get(PROGRESS_KEY), settings: settings(), greet });
 			};
 			const listening = surface.onDidReceiveMessage(message => {
-				const m = (message ?? {}) as { hello?: unknown; save?: unknown; hide?: unknown };
+				const m = (message ?? {}) as { hello?: unknown; save?: unknown; before?: unknown; hide?: unknown };
 				if (m.hello) {
 					init();
 				} else if (m.save) {
-					void context.globalState.update(PROGRESS_KEY, m.save);
-					tellAll({ type: 'progress', progress: m.save }, surface);
+					// Another window may have saved since this page last heard, and its page keeps its own copy too.
+					const now = Date.now();
+					const merged = m.before ? mergePetProgress(readPetProgress(context.globalState.get(PROGRESS_KEY), now), readPetProgress(m.before, now), readPetProgress(m.save, now)) : m.save;
+					void context.globalState.update(PROGRESS_KEY, merged);
+					tellAll({ type: 'progress', progress: merged }, JSON.stringify(merged) === JSON.stringify(m.save) ? surface : undefined);
 				} else if (m.hide) {
 					void setVisible(false);
 					void vscode.window.showInformationMessage(petStrings(breezell.language).hidden);

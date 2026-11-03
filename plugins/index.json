@@ -1,6 +1,6 @@
 {
 	"schemaVersion": 1,
-	"updatedAt": "2026-11-02T14:31:38.621Z",
+	"updatedAt": "2026-11-03T22:11:49.753Z",
 	"plugins": [
 		{
 			"id": "breezell.chat-mirror",
@@ -367,7 +367,7 @@
 			"id": "breezell.pet",
 			"displayName": "Desk Pet",
 			"description": "A small anime-style wind spirit who sits on the chat box and follows what the AI is doing. It never reads your messages.",
-			"version": "1.0.0",
+			"version": "1.0.1",
 			"apiVersion": 1,
 			"categories": [],
 			"tags": [
@@ -432,11 +432,11 @@
 				}
 			},
 			"package": {
-				"path": "packages/breezell.pet/1.0.0/breezell.pet-1.0.0.vsix",
-				"sha256": "b5e82e9eff995b23842b6c11ae10147a5ec7a800b09cb66acb0dc484516e1996",
-				"size": 208478
+				"path": "packages/breezell.pet/1.0.1/breezell.pet-1.0.1.vsix",
+				"sha256": "e48d47d3d58872648a539b3ad15c235fd8e9b60a78a9e64264c813611297d2b5",
+				"size": 216214
 			},
-			"updatedAt": "2026-11-02T14:31:38.621Z"
+			"updatedAt": "2026-11-03T22:11:49.753Z"
 		},
 		{
 			"id": "breezell.starter-pack",

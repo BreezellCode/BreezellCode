@@ -60,6 +60,20 @@
 	},
 	"versions": [
 		{
+			"version": "1.0.1",
+			"path": "packages/breezell.pet/1.0.1/breezell.pet-1.0.1.vsix",
+			"sha256": "e48d47d3d58872648a539b3ad15c235fd8e9b60a78a9e64264c813611297d2b5",
+			"size": 216214,
+			"apiVersion": 1,
+			"permissions": [],
+			"optionalPermissions": [
+				"ui.contribute",
+				"ui.modify",
+				"chat.events"
+			],
+			"publishedAt": "2026-11-03T22:11:49.753Z"
+		},
+		{
 			"version": "1.0.0",
 			"path": "packages/breezell.pet/1.0.0/breezell.pet-1.0.0.vsix",
 			"sha256": "b5e82e9eff995b23842b6c11ae10147a5ec7a800b09cb66acb0dc484516e1996",

@@ -173,6 +173,30 @@ export function applyPetEvent(progress: IPetProgress, event: PetEvent, now: numb
 	}
 }
 
+/**
+ * What a window's save comes to when another window may have saved since: each page keeps its own
+ * copy, so a plain write would undo what the other did. What this window changed goes on top of what
+ * is stored now, from `before`, what it last knew, to `next`.
+ */
+export function mergePetProgress(stored: IPetProgress, before: IPetProgress, next: IPetProgress): IPetProgress {
+	if (JSON.stringify(stored) === JSON.stringify(before)) {
+		return next; // nobody else has been here
+	}
+	const added = (key: 'xp' | 'turns' | 'fed' | 'played') => Math.max(0, stored[key] + next[key] - before[key]);
+	return {
+		xp: added('xp'),
+		turns: added('turns'),
+		fed: added('fed'),
+		played: added('played'),
+		mood: clamp(petMood(stored, next.moodAt) + next.mood - petMood(before, next.moodAt), 0, 100),
+		moodAt: Math.max(stored.moodAt, next.moodAt),
+		bornAt: Math.min(stored.bornAt, next.bornAt),
+		fedAt: Math.max(stored.fedAt, next.fedAt),
+		playedAt: Math.max(stored.playedAt, next.playedAt),
+		perch: next.perch !== before.perch ? next.perch : stored.perch,
+	};
+}
+
 export function petDaysTogether(progress: IPetProgress, now: number): number {
 	return Math.max(1, Math.floor((now - progress.bornAt) / 86_400_000) + 1);
 }
@@ -189,7 +213,19 @@ export type PetSize = keyof typeof PET_SIZES;
 export const petWidth = (height: number): number => Math.round(height * 1024 / 1130);
 export const petSizeOf = (size: unknown): PetSize => size === 'small' || size === 'large' ? size : 'medium';
 
-const MARGIN = 8;
+/** What it keeps from the ends of the box. */
+export const PET_MARGIN = 8;
+const MARGIN = PET_MARGIN;
+/** It gets no smaller than this, however narrow the chat. */
+const PET_MIN_HEIGHT = 90;
+
+/** How tall it is on a box this wide: in a narrow chat a whole smaller pet, not part of one. */
+export function petFittedHeight(height: number, boxWidth: number): number {
+	if (boxWidth <= 0) {
+		return height;
+	}
+	return Math.max(Math.min(height, PET_MIN_HEIGHT), Math.min(height, Math.floor((boxWidth - MARGIN * 2) * 1130 / 1024)));
+}
 
 /** Where a pet stands on a box at `perch`, kept on the box. */
 export function petLeft(perch: number, boxWidth: number, size: number): number {
@@ -206,10 +242,13 @@ export function petPerchAt(left: number, boxWidth: number, size: number): number
 /** What her hair may reach beyond the picture on each side, in pixels. */
 export const PET_HAIR_MARGIN = 10;
 
-/** The frame it asks for with nothing to show but itself, `height` tall: room for her hair and her jumps and little else, as the frame catches the mouse. */
+/** The frame it asks for with nothing to show but itself, `height` tall: room for her hair and her jumps and little else. */
 export function restFrame(height: number): { readonly width: number; readonly height: number } {
 	return { width: petWidth(height) + PET_HAIR_MARGIN * 2, height: Math.min(240, height + 8) };
 }
+
+/** The share of her width, down her middle, that catches the mouse: head and body, and not the hair and the air beside them. */
+export const PET_HIT_SHARE = 0.56;
 
 /**
  * How many steps it takes to float down from `height`. A wind spirit drifts: fast movement over the

@@ -454,20 +454,33 @@ A page that floats on top of the chat box with no frame or line of its own, a pe
 { "id": "pet", "title": "Desk Pet", "entry": "ui/pet.html", "slot": "chat.input.companion", "width": 96, "height": 96 }
 ```
 
-It floats over Breezell's screen, so it needs `ui.modify`, and a plugin has one. While the mouse is on it, Breezell says whose it is. Make your page's background transparent. It shows from the first thing it asks for, and only its rectangle catches the mouse, so keep that small:
+It floats over Breezell's screen, so it needs `ui.modify`, and a plugin has one. While the mouse is on it, Breezell says whose it is. Make your page's background transparent. It shows from the first thing it asks for. Its whole rectangle catches the mouse unless it names the parts that should, so keep that small:
 
 ```js
 vscode.postMessage({ __breezellCompanion: { width: 96, height: 96, left: 120, lift: 0, ms: 0, hidden: false } });
 ```
 
-`left` is from the left end of the box and `lift` up from it, `ms` how long moving there takes. Any of them can be left out. Each request sets the time anew, so don't repeat a place with no `ms` during a move: that ends it at once. Breezell keeps it on the box, between 32 and 240 pixels wide and tall, and answers with where it really is. While something waits on the user it stays on the box at 96 pixels at most, so ask for less then. Nothing else in the message goes anywhere.
+`left` is from the left end of the box and `lift` up from it, `ms` how long moving there takes. Any of them can be left out. Each request sets the time anew, so don't repeat a place with no `ms` during a move: that ends it at once. Breezell keeps it on the box, between 32 and 240 pixels wide and tall, and answers with where it really is. While something waits on the user it stays on the box at 96 pixels at most, so ask for less then. After a failed turn it does the same until the user has seen it: a click on it, which Breezell takes and the page never hears, or leaving the conversation. Nothing else in the message goes anywhere.
+
+A frame catches everything over its rectangle, whatever is drawn there, so what is empty in it blocks the chat beneath. Name the parts that should catch the mouse, and the rest lets it through:
+
+```js
+vscode.postMessage({ __breezellCompanion: { hit: [{ x: 40, y: 8, width: 100, height: 200 }] } });
+```
+
+`hit` is at most 4 rectangles from the frame's top left corner, to send again whenever they change. Without it the whole frame catches the mouse, as a page with buttons anywhere needs. With it Breezell sees the mouse only until it gets onto one of them, so tell it when the mouse leaves. The wheel over your page stays in your page unless you pass it on, and Breezell scrolls the chat only with the mouse over the page:
+
+```js
+element.addEventListener('pointerleave', () => vscode.postMessage({ __breezellCompanion: { mouseOut: true } }));
+document.addEventListener('wheel', e => vscode.postMessage({ __breezellCompanion: { scroll: { deltaX: e.deltaX, deltaY: e.deltaY } } }), { passive: true });
+```
 
 Its page is told, with no text from the chat in any of it:
 
 | Message `type` | With | When |
 |---|---|---|
-| `breezell.surface.context` | `context: { conversationId, language }` | At the start |
-| `breezell.companion.layout` | `left`, `lift`, `width`, `height`, `boxWidth`, `maxLift`, `restricted` | It moved, or the room changed |
+| `breezell.surface.context` | `context: { conversationId, language }` | At the start, and when the language changes |
+| `breezell.companion.layout` | `left`, `lift`, `width`, `height`, `boxWidth`, `maxLift`, `restricted`, `zoom` (the window's: divide a distance in `screenX` or `screenY` by it to get your pixels) | It moved, or the room changed |
 | `breezell.companion.pointer` | `x`, `y` from its own corner | The mouse moved over the chat, a few times a second |
 | `breezell.companion.chat` | `activity` (`none`, `thinking`, `writing`, `working`, `waiting`), `tool` while working (`terminal`, `edit`, `search`, `web`, `other`) | What the chat is doing changed. Needs `chat.events` |
 | `breezell.companion.turn` | `outcome` (`done`, `failed`) | A turn in its conversation ended. Needs `chat.events` |

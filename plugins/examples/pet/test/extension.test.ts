@@ -104,6 +104,23 @@ suite('the plugin keeps what the pet must not forget', () => {
 		assert.equal(a.sent.length, before[0]);
 		assert.deepEqual(b.sent.at(-1), { type: 'progress', progress: { xp: 3 } });
 	});
+	test('a save from a page that knew less goes on top of what is stored: two windows add up', () => {
+		const NOW = Date.now();
+		const base = { xp: 10, turns: 10, fed: 0, played: 0, mood: 70, moodAt: NOW, bornAt: NOW, fedAt: 0, playedAt: 0, perch: 0.5 };
+		const h = harness({ kept: base });
+		const a = h.open();
+		a.say({ save: { ...base, xp: 11, turns: 11 }, before: base });
+		const b = h.open();
+		const told = b.sent.length;
+		// This page opened before that save, as a page in another window does.
+		b.say({ save: { ...base, xp: 11, turns: 11 }, before: base });
+		const stored = h.store.get('deskPet.progress') as typeof base;
+		assert.deepEqual([stored.xp, stored.turns], [12, 12]);
+		// It knew less than there is, so it hears what there is now, and so does the other.
+		assert.equal(((b.sent.at(-1) as { progress: typeof base }).progress).turns, 12);
+		assert.equal(b.sent.length, told + 1);
+		assert.equal(((a.sent.at(-1) as { progress: typeof base }).progress).turns, 12);
+	});
 	test('what is saved reaches a page opened later', () => {
 		const h = harness();
 		h.open().say({ save: { xp: 9 } });

@@ -6,8 +6,8 @@
 import { petImageFor, petProps } from './art';
 import { PET_IMAGES } from './images.generated';
 import {
-	applyPetEvent, clamp, frameAround, IPetProgress, newPetProgress, PetActivity, PetEvent, petDaysTogether, petLeft, petLevel, PetMomentPose, petMood, petPerchAt, petWidth,
-	petFloatLift, petFloatSteps, PET_HAIR_MARGIN, petHairShift, PET_POSE_MS, PET_SIZES, petSizeOf, PetSize, readPetProgress, resolvePetPose, restFrame,
+	applyPetEvent, clamp, frameAround, IPetProgress, newPetProgress, PetActivity, PetEvent, petDaysTogether, petFittedHeight, petLeft, petLevel, PetMomentPose, petMood, petPerchAt, petWidth,
+	petFloatLift, petFloatSteps, PET_HAIR_MARGIN, PET_HIT_SHARE, PET_MARGIN, petHairShift, PET_POSE_MS, PET_SIZES, petSizeOf, PetSize, readPetProgress, resolvePetPose, restFrame,
 } from '../src/logic';
 import { IPetStrings, petStrings } from '../src/strings';
 
@@ -33,8 +33,12 @@ const BORED_BELOW = 35;
 const RESTRICTED_SIZE = 96;
 /** The most Breezell gives a frame. */
 const FRAME_MAX = 240;
-/** The plugin's code says who it is soon; without it the pet still works, and only forgets. */
-const INIT_WAIT_MS = 800;
+/**
+ * It waits for the plugin's code, which says who it is and where and whether it should show at all. That
+ * can take seconds as a window opens, and it does not come at all only if that code is broken: then the
+ * pet still works, and only forgets.
+ */
+const INIT_WAIT_MS = 15_000;
 
 const petEl = document.getElementById('pet') as HTMLElement;
 const figureEl = document.getElementById('figure') as HTMLElement;
@@ -52,6 +56,8 @@ let started = false;
 let boxWidth = 0;
 let maxLift = 0;
 let restricted = false;
+/** The window's zoom: what the mouse's position on the screen is measured against. */
+let zoom = 1;
 
 let activity: PetActivity = 'none';
 let moment: PetMomentPose | undefined;
@@ -75,6 +81,7 @@ let lastDrawn = '';
 let cardHtml = '';
 /** What it has asked for so far. */
 const asked: ICompanionRequest = {};
+let askedHit = '';
 /** When the move under way ends. */
 let moveEnds = 0;
 let walk: { from: number; to: number; since: number; ms: number } | undefined;
@@ -105,6 +112,7 @@ interface ICompanionRequest {
 	lift?: number;
 	ms?: number;
 	hidden?: boolean;
+	hit?: readonly { x: number; y: number; width: number; height: number }[];
 }
 
 /**
@@ -113,14 +121,16 @@ interface ICompanionRequest {
  */
 function ask(request: ICompanionRequest): void {
 	const keys = Object.keys(request) as (keyof ICompanionRequest)[];
-	if (keys.some(key => key !== 'ms' && request[key] !== asked[key])) {
+	const hit = JSON.stringify(request.hit ?? asked.hit ?? null);
+	if (hit !== askedHit || keys.some(key => key !== 'ms' && key !== 'hit' && request[key] !== asked[key])) {
+		askedHit = hit;
 		Object.assign(asked, request);
 		vscode.postMessage({ __breezellCompanion: request });
 	}
 }
 
 /** How tall it is, and how wide. */
-const tall = (): number => PET_SIZES[size];
+const tall = (): number => petFittedHeight(PET_SIZES[size], boxWidth);
 const wide = (): number => petWidth(tall());
 const petAt = (): number => held ? held.at : petLeft(wander ?? progress.perch, boxWidth, wide());
 
@@ -140,10 +150,13 @@ function draw(): void {
 		}
 		hairImage = hairImages.get(image);
 		hairDrawnAt = -Infinity;
+		startHair();
 		propsEl.innerHTML = petProps(pose, food);
 	}
 	petEl.toggleAttribute('data-air', !!held || fallLift !== undefined);
 	petEl.toggleAttribute('data-restricted', restricted);
+	petEl.toggleAttribute('data-mirrored', facing < 0);
+	document.documentElement.toggleAttribute('data-restricted', restricted);
 	petEl.style.transform = facing < 0 ? 'scaleX(-1)' : '';
 }
 
@@ -190,13 +203,21 @@ function place(ms = 0): void {
 	petEl.style.left = `${frame.petX}px`;
 	petEl.style.transition = ms ? `left ${ms}ms linear` : '';
 	// With little room it sinks behind the box and shows from the waist up, rather than shrinking.
-	petEl.style.bottom = `${Math.min(0, height - petTall)}px`;
+	const petBottom = Math.min(0, height - petTall);
+	petEl.style.bottom = `${petBottom}px`;
 	bubbleEl.style.bottom = `${Math.min(petTall + 2, height - bubbleEl.offsetHeight)}px`;
 	cardEl.style.bottom = '2px';
-	cardEl.style.left = `${Math.round((width - cardEl.offsetWidth) / 2)}px`;
+	const cardLeft = Math.round((width - cardEl.offsetWidth) / 2);
+	cardEl.style.left = `${cardLeft}px`;
 	bubbleEl.style.left = roomOnLeft ? '0' : '';
 	bubbleEl.style.right = roomOnLeft ? '' : '0';
-	ask({ hidden: false, width, height, left: frame.left, lift: Math.round(held ? held.lift : fallLift ?? 0), ms });
+	// What catches the mouse: her middle, and her card when it is open. The rest of the frame lets it through to the chat.
+	const hitWide = Math.round(petWide * PET_HIT_SHARE);
+	const hit = [{ x: frame.petX + Math.round((petWide - hitWide) / 2), y: height - petBottom - petTall, width: hitWide, height: petTall }];
+	if (showCard) {
+		hit.push({ x: cardLeft, y: height - 2 - cardEl.offsetHeight, width: cardEl.offsetWidth, height: cardEl.offsetHeight });
+	}
+	ask({ hidden: false, width, height, left: frame.left, lift: Math.round(held ? held.lift : fallLift ?? 0), ms, hit });
 }
 
 function refresh(ms = 0): void {
@@ -213,8 +234,9 @@ function setProgress(next: IPetProgress): void {
 }
 
 function save(next: IPetProgress): void {
+	const before = progress;
 	setProgress(next);
-	vscode.postMessage({ save: next });
+	vscode.postMessage({ save: next, before });
 }
 
 function apply(event: PetEvent): ReturnType<typeof applyPetEvent> {
@@ -339,6 +361,7 @@ function applySettings(raw: unknown): void {
 	if (!speechOn) {
 		speech = undefined;
 	}
+	syncPaused();
 }
 
 window.addEventListener('message', ({ data }) => {
@@ -354,6 +377,7 @@ window.addEventListener('message', ({ data }) => {
 			boxWidth = Number(data.boxWidth) || 0;
 			maxLift = Number(data.maxLift) || 0;
 			restricted = !!data.restricted;
+			zoom = Number(data.zoom) > 0 ? Number(data.zoom) : 1;
 			refresh(); // its size may have changed with that
 			break;
 		case 'breezell.companion.chat':
@@ -413,9 +437,9 @@ petEl.addEventListener('pointerdown', e => {
 
 petEl.addEventListener('pointermove', e => {
 	if (press) {
-		// On the screen: the frame moves under the pointer as it goes.
-		const dx = e.screenX - press.x;
-		const dy = e.screenY - press.y;
+		// On the screen: the frame moves under the pointer as it goes. The screen knows no zoom, the page's pixels do.
+		const dx = (e.screenX - press.x) / zoom;
+		const dy = (e.screenY - press.y) / zoom;
 		if (!press.moved && Math.hypot(dx, dy) < 4) {
 			return;
 		}
@@ -427,7 +451,8 @@ petEl.addEventListener('pointermove', e => {
 		closeCard();
 		wander = undefined;
 		held = {
-			at: clamp(press.at + dx, 0, Math.max(0, boxWidth - wide())),
+			// Within what she keeps from the ends of the box, where she stays when let go.
+			at: clamp(press.at + dx, PET_MARGIN, Math.max(PET_MARGIN, boxWidth - wide() - PET_MARGIN)),
 			lift: clamp(press.lift - dy, 0, Math.max(0, maxLift - frameHeight)),
 		};
 		refresh();
@@ -479,7 +504,8 @@ function endPress(): void {
 	if (!was.moved) {
 		wake();
 		apply('pat');
-		if (activity === 'none' && !moment) {
+		// Whatever the chat is doing: she answers, then goes back to it.
+		if (!moment) {
 			play('joy');
 		}
 		refresh();
@@ -542,6 +568,26 @@ petEl.addEventListener('pointerleave', () => later('card', CARD_HIDE_MS, closeCa
 cardEl.addEventListener('pointerenter', () => cancel('card'));
 cardEl.addEventListener('pointerleave', () => later('card', CARD_HIDE_MS, closeCard));
 document.documentElement.addEventListener('pointerleave', () => later('card', CARD_HIDE_MS, closeCard));
+
+// Off her and off her card the frame has to let go of the mouse, and only this page can see that. From
+// one to the other is not off: leaving comes first and going in right after.
+for (const element of [petEl, cardEl]) {
+	element.addEventListener('pointerenter', () => cancel('mouse'));
+	element.addEventListener('pointerleave', () => later('mouse', 0, () => {
+		if (!press) {
+			vscode.postMessage({ __breezellCompanion: { mouseOut: true } });
+		}
+	}));
+}
+
+// She floats over the chat, and the wheel over her is for the chat, as it is beside her.
+document.addEventListener('wheel', e => {
+	if (e.ctrlKey) {
+		return;
+	}
+	const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? window.innerHeight : 1;
+	vscode.postMessage({ __breezellCompanion: { scroll: { deltaX: e.deltaX * unit, deltaY: e.deltaY * unit } } });
+}, { passive: true });
 document.addEventListener('contextmenu', e => {
 	e.preventDefault();
 	openCard();
@@ -639,9 +685,18 @@ setInterval(() => {
 	}
 }, 1000);
 
-document.addEventListener('visibilitychange', () => {
-	document.documentElement.toggleAttribute('data-paused', document.visibilityState === 'hidden');
-});
+document.addEventListener('visibilitychange', syncPaused);
+
+/** Whether anyone can see her. Turned off she is still a page in the chat, and it should cost nothing. */
+function paused(): boolean {
+	return document.visibilityState === 'hidden' || !visible;
+}
+
+function syncPaused(): void {
+	document.documentElement.toggleAttribute('data-paused', paused());
+	petEl.style.display = visible ? '' : 'none';
+	startHair();
+}
 
 // --- her hair -------------------------------------------------------------------------------------
 
@@ -658,14 +713,34 @@ const hairContext = hairCanvas.getContext('2d');
 const hairImages = new Map<string, HTMLImageElement>();
 let hairImage: HTMLImageElement | undefined;
 let hairDrawnAt = -Infinity;
+let hairRunning = false;
 const stillHair = !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-function drawHair(now: number): void {
-	requestAnimationFrame(drawHair);
-	if (!hairContext || !hairImage?.naturalWidth || document.visibilityState === 'hidden') {
+/** By a timer and not by frames: asking for every frame keeps the page painting whether or not anything moved. */
+function startHair(): void {
+	if (!hairRunning && !paused()) {
+		hairRunning = true;
+		hairTick();
+	}
+}
+
+function hairTick(): void {
+	if (paused()) {
+		hairRunning = false;
 		return;
 	}
-	if (now - hairDrawnAt < 1000 / HAIR_FPS || (stillHair && hairDrawnAt !== -Infinity)) {
+	if (hairContext && hairImage?.naturalWidth && (!stillHair || hairDrawnAt === -Infinity)) {
+		drawHair(Date.now());
+	}
+	if (stillHair && hairDrawnAt !== -Infinity) {
+		hairRunning = false; // drawn, and it stays so: a new picture starts this again
+		return;
+	}
+	setTimeout(hairTick, 1000 / HAIR_FPS);
+}
+
+function drawHair(now: number): void {
+	if (!hairContext || !hairImage) {
 		return;
 	}
 	hairDrawnAt = now;
@@ -703,7 +778,7 @@ for (const name of PET_IMAGES) {
 	figureEl.appendChild(img);
 }
 
-requestAnimationFrame(drawHair);
+startHair();
 
 vscode.postMessage({ __breezellSurfaceReady: true });
 vscode.postMessage({ hello: true });

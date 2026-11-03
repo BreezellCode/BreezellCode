@@ -5,6 +5,7 @@ import { suite, test } from 'node:test';
 import {
 	applyPetEvent, DEFAULT_PERCH, frameAround, IPetProgress, newPetProgress, petDaysTogether, petFloatLift, petFloatSteps, petHairShift, petLeft, petLevel, PET_LEVEL_XP, PET_MAX_LEVEL, petMood,
 	petPerchAt, petWidth, PET_POSES, PET_POSE_MS, PET_SIZES, petSizeOf, readPetProgress, resolvePetPose, restFrame,
+	mergePetProgress, petFittedHeight,
 } from '../src/logic';
 import { PET_STRINGS, petStrings } from '../src/strings';
 
@@ -343,5 +344,59 @@ suite('the files', () => {
 		for (const key of Object.keys(manifest.contributes.configuration.properties)) {
 			assert.doesNotMatch(key, /breezell/i);
 		}
+	});
+});
+
+suite('two windows', () => {
+	const NOW = 1_800_000_000_000;
+	const start = () => ({ ...newPetProgress(NOW), xp: 10, turns: 10, perch: 0.5 });
+	test('a turn in each counts as two: what the other did stays', () => {
+		const stored = start();
+		const a = applyPetEvent(stored, 'turnDone', NOW).progress;
+		const afterA = mergePetProgress(stored, stored, a);
+		const b = applyPetEvent(stored, 'turnDone', NOW + 1).progress;
+		const afterB = mergePetProgress(afterA, stored, b);
+		assert.equal(afterB.turns, 12);
+		assert.equal(afterB.xp, 12);
+	});
+	test('moving her in one is not undone by something else in the other', () => {
+		const stored = start();
+		const moved = mergePetProgress(stored, stored, { ...stored, perch: 0.1 });
+		const b = applyPetEvent(stored, 'turnDone', NOW + 1).progress;
+		assert.equal(mergePetProgress(moved, stored, b).perch, 0.1);
+	});
+	test('the last move wins', () => {
+		const stored = start();
+		const moved = mergePetProgress(stored, stored, { ...stored, perch: 0.1 });
+		assert.equal(mergePetProgress(moved, stored, { ...stored, perch: 0.9 }).perch, 0.9);
+	});
+	test('with one window it comes to what was saved', () => {
+		const stored = start();
+		const next = applyPetEvent(stored, 'play', NOW + 5).progress;
+		assert.deepEqual(mergePetProgress(stored, stored, next), next);
+	});
+	test('her mood takes both, within its limits', () => {
+		const stored = { ...start(), mood: 90 };
+		const a = mergePetProgress(stored, stored, applyPetEvent(stored, 'play', NOW).progress);
+		const both = mergePetProgress(a, stored, applyPetEvent(stored, 'play', NOW).progress);
+		assert.equal(both.mood, 100);
+		const low = { ...start(), mood: 1 };
+		assert.equal(mergePetProgress(low, { ...low, mood: 90 }, { ...low, mood: 0 }).mood, 0);
+	});
+	test('what is counted never goes below nothing, and the times keep the latest and the first', () => {
+		const stored = { ...start(), xp: 0, fedAt: 5, playedAt: 9, bornAt: 3 };
+		const merged = mergePetProgress(stored, { ...stored, xp: 5, fedAt: 1, playedAt: 1, bornAt: 7 }, { ...stored, xp: 1, fedAt: 2, playedAt: 2, bornAt: 7 });
+		assert.equal(merged.xp, 0);
+		assert.deepEqual([merged.fedAt, merged.playedAt, merged.bornAt], [5, 9, 3]);
+	});
+});
+
+suite('a narrow box', () => {
+	test('she fits, down to the smallest she goes', () => {
+		assert.equal(petFittedHeight(PET_SIZES.medium, 1000), PET_SIZES.medium);
+		assert.equal(petFittedHeight(PET_SIZES.medium, 0), PET_SIZES.medium);
+		assert.ok(petWidth(petFittedHeight(PET_SIZES.medium, 150)) <= 150 - 16);
+		assert.equal(petFittedHeight(PET_SIZES.medium, 40), 90);
+		assert.equal(petFittedHeight(60, 40), 60);
 	});
 });

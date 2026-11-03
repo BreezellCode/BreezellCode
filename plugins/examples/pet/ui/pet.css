@@ -1,7 +1,11 @@
 html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; pointer-events: none; user-select: none; font: 11.5px/1.4 var(--vscode-font-family, system-ui, sans-serif); color: var(--vscode-editorWidget-foreground, var(--vscode-foreground, #ccc)); }
 * { -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; outline: none; }
 ::selection { background: transparent; }
-#pet { position: absolute; bottom: 0; touch-action: none; pointer-events: auto; cursor: grab; }
+#pet { position: absolute; bottom: 0; touch-action: none; cursor: grab; }
+/* What catches the mouse: her middle, as the frame says to Breezell (PET_HIT_SHARE), and not the hair and the air beside it. */
+#hit { position: absolute; top: 0; bottom: 0; left: 22%; width: 56%; pointer-events: auto; }
+/* Made small, she fades at the edges of the frame instead of being cut off by them, above all where she meets the box. */
+html[data-restricted] body { -webkit-mask-image: linear-gradient(#000 72%, transparent 92%), linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent); -webkit-mask-composite: source-in; mask-image: linear-gradient(#000 72%, transparent 92%), linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent); mask-composite: intersect; }
 [data-pet-pose="drag"] { cursor: grabbing; }
 #figure { position: absolute; inset: 0 calc(var(--hair-margin) * -1); transform-origin: 50% 100%; -webkit-mask-image: linear-gradient(#000 96%, transparent); mask-image: linear-gradient(#000 96%, transparent); }
 /* In the air, what the picture leaves out fades away rather than being cut off. */
@@ -16,6 +20,8 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 #props { position: absolute; inset: 0; pointer-events: none; }
 /* With only her head in the frame there is no room for what floats beside her. */
 [data-restricted] #props { display: none; }
+/* She is mirrored after a walk to the left. What is written over her is not. */
+[data-mirrored][data-pet-pose="sleep"] #props { transform: scaleX(-1); }
 #props svg { display: block; width: 100%; height: 100%; overflow: visible; }
 #bubble, #card { position: absolute; display: none; box-sizing: border-box; pointer-events: none; background: var(--vscode-editorWidget-background, #252526); border: 1px solid var(--vscode-editorWidget-border, color-mix(in srgb, currentColor 18%, transparent)); border-radius: 10px; }
 #bubble { width: max-content; max-width: 196px; padding: 4px 9px; animation: pet-say .18s ease-out; }
@@ -34,10 +40,11 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 [data-paused] * { animation-play-state: paused !important; }
 
 #props [data-p] { transform-box: fill-box; transform-origin: 50% 50%; }
-#props [data-p="wisp"] { animation: pet-petals 6s ease-in-out infinite; }
+/* Ten changes a second for what moves this little: nothing to see in that, and much less to paint than every frame. */
+#props [data-p="wisp"] { animation: pet-petals 6s steps(30) infinite; }
 
 /* All of her moves as one: she stands, and leans with the wind. */
-[data-pet-pose="idle"] [data-p="rig"], [data-pet-pose="watch"] [data-p="rig"], [data-pet-pose="think"] [data-p="rig"], [data-pet-pose="wave"] [data-p="rig"] { animation: pet-stand 4.4s ease-in-out infinite; }
+[data-pet-pose="idle"] [data-p="rig"], [data-pet-pose="watch"] [data-p="rig"], [data-pet-pose="think"] [data-p="rig"], [data-pet-pose="wave"] [data-p="rig"] { animation: pet-stand 4.4s steps(22) infinite; }
 
 [data-pet-pose="think"] [data-p="dot1"] { animation: pet-pop 1.8s ease-in-out infinite; }
 [data-pet-pose="think"] [data-p="dot2"] { animation: pet-pop 1.8s .25s ease-in-out infinite; }
