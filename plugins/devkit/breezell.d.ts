@@ -123,8 +123,12 @@ declare module 'vscode' {
 			readonly text: string;
 		}
 
-		/** `text`: send this instead. `cancel`: do not send it; `reason` is shown to the user. */
-		export type SendAnswer = { readonly text?: string; readonly cancel?: boolean; readonly reason?: string } | undefined | void;
+		/**
+		 * `text`: send this instead. `cancel`: do not send it; `reason` is shown to the user and the text
+		 * stays in the box. `cancel` with `handled`: it was a command of the plugin's own, dealt with
+		 * here: the box clears, and telling the user what happened is up to the plugin.
+		 */
+		export type SendAnswer = { readonly text?: string; readonly cancel?: boolean; readonly reason?: string; readonly handled?: boolean } | undefined | void;
 		export type SendHandler = (input: SendInput) => SendAnswer | Thenable<SendAnswer>;
 
 		/** One open page of a surface the plugin declared in `contributes.breezell.ui.surfaces`. */
@@ -144,7 +148,7 @@ declare module 'vscode' {
 
 		/** What the command of a button in `contributes.breezell.ui.buttons` receives: where it was pressed. */
 		export interface ButtonContext {
-			readonly slot: 'chat.input.toolbar' | 'chat.message.actions' | 'code.block.actions';
+			readonly slot: 'chat.input.toolbar' | 'chat.message.actions' | 'code.block.actions' | 'chat.input.slash';
 			readonly conversationId?: string;
 			/** `chat.message.actions`: the index of the message the turn starts at. */
 			readonly messageIndex?: number;
@@ -186,8 +190,27 @@ declare module 'vscode' {
 			 * Sends a message as the user would (`chat.send`); without `conversationId`, in a new
 			 * conversation. Resolves once the message is in the conversation; the reply follows
 			 * through onDidChangeConversation. Fails while the conversation is busy.
+			 *
+			 * `automated`: the plugin sends this on its own, not on the user's behalf. It shows in the
+			 * chat labelled with the plugin's name, the AI is told the user did not type it, and it does
+			 * not count as the user's reaction or end up in memories. It fails with
+			 * `BreezellStoppedByUser` after the user pressed Stop on the reply, until they write again,
+			 * and with `BreezellInvalidRequest` while a message of the user's waits in the queue.
 			 */
-			export function send(text: string, options?: { readonly conversationId?: string }): Thenable<{ readonly conversationId: string }>;
+			export function send(text: string, options?: { readonly conversationId?: string; readonly automated?: boolean }): Thenable<{ readonly conversationId: string }>;
+			/**
+			 * Work over many turns (`chat.send`): the turns of this conversation make no done sound or
+			 * system notification until released. Errors still do. It ends by itself when the user
+			 * presses Stop, signs out, or this plugin stops.
+			 */
+			export function holdDoneNotice(conversationId: string): Thenable<void>;
+			/** Ends the hold. `announce`: the work is done, play the notice once (only if this plugin held it). */
+			export function releaseDoneNotice(conversationId: string, options?: { readonly announce?: boolean }): Thenable<void>;
+			/**
+			 * The conversation a turn event was about (`chat.read`), as `listConversations` names it:
+			 * the event's own `conversationId` is not that id. Undefined for a turn too long ago.
+			 */
+			export function conversationOfTurn(turnId: string): Thenable<string | undefined>;
 			/** Approves the tool call the conversation waits for (`chat.approve`). */
 			export function approve(conversationId: string): Thenable<void>;
 			/** Rejects the tool call the conversation waits for (`chat.approve`). */
@@ -206,6 +229,31 @@ declare module 'vscode' {
 			/** It is the conversation open in Breezell's chat. */
 			readonly current: boolean;
 			readonly activity: ConversationActivity;
+			/** How many commands of this conversation run in the background; `willEnd` leaves out servers and watchers. Absent on an older Breezell. */
+			readonly backgroundCommands?: BackgroundCommands;
+		}
+
+		export interface BackgroundCommands {
+			readonly running: number;
+			readonly willEnd: number;
+		}
+
+		/**
+		 * Tokens as the provider reported them: for a budget of your own, not a bill. Some providers
+		 * count cache reads inside `inputTokens`. Subagents and checks that run beside a conversation
+		 * are not in it, and nothing here says what tokens cost.
+		 */
+		export interface TokenUse {
+			readonly inputTokens: number;
+			readonly outputTokens: number;
+			readonly cacheReadTokens: number;
+			readonly cacheWriteTokens: number;
+		}
+
+		/** A conversation's replies added up. `repliesWithoutUsage` were not counted: their provider reported nothing. */
+		export interface ConversationTokenUse extends TokenUse {
+			readonly replies: number;
+			readonly repliesWithoutUsage: number;
 		}
 
 		export interface RecalledMemory {
@@ -238,8 +286,8 @@ declare module 'vscode' {
 		 * A tool's parameters and result are cut at 20,000 characters (`resultLength` is the full length).
 		 */
 		export type ConversationMessage =
-			| { readonly kind: 'user'; readonly index: number; readonly text: string; readonly time?: number; readonly attachments: readonly string[]; readonly recalledMemories: readonly RecalledMemory[]; readonly memoryUse?: MemoryUse }
-			| { readonly kind: 'assistant'; readonly index: number; readonly text: string; readonly reasoning: string }
+			| { readonly kind: 'user'; readonly index: number; readonly text: string; readonly time?: number; readonly attachments: readonly string[]; readonly recalledMemories: readonly RecalledMemory[]; readonly memoryUse?: MemoryUse; readonly automatedBy?: { readonly id: string; readonly name: string } }
+			| { readonly kind: 'assistant'; readonly index: number; readonly text: string; readonly reasoning: string; readonly usage?: TokenUse }
 			/** `mcpServer`: the MCP server of an MCP tool; `plugin`: set for a Breezell plugin's agent tool (server `plugin:<id>`), with the plugin's name. */
 			| { readonly kind: 'tool'; readonly index: number; readonly id: string; readonly name: string; readonly status: ToolCallStatus; readonly params: { readonly [key: string]: unknown }; readonly result: string; readonly resultLength: number; readonly mcpServer?: string; readonly plugin?: { readonly id: string; readonly name: string } }
 			| { readonly kind: 'error'; readonly index: number; readonly text: string };
@@ -255,12 +303,15 @@ declare module 'vscode' {
 		export interface Conversation extends ConversationSummary {
 			readonly messages: readonly ConversationMessage[];
 			readonly streaming?: ConversationStream;
+			/** What this conversation's replies used. Absent on an older Breezell. */
+			readonly usage?: ConversationTokenUse;
 		}
 
 		export interface ConversationChange {
 			readonly conversationId: string;
 			readonly activity: ConversationActivity;
 			readonly streaming?: ConversationStream;
+			readonly backgroundCommands?: BackgroundCommands;
 		}
 
 		export interface ModelMessage {
@@ -282,6 +333,8 @@ declare module 'vscode' {
 		}
 
 		export interface ModelResponse {
+			/** Absent when the provider reported none. */
+			readonly usage?: TokenUse;
 			readonly text: string;
 			/** `provider/model` that answered. */
 			readonly model: string;

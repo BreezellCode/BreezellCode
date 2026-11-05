@@ -1,0 +1,13 @@
+{
+	"displayName": "ゴール",
+	"description": "会話にゴールを与えると、設定した上限の範囲で AI が達成まで作業を続けます。いつでも一時停止や停止ができます。",
+	"command.category": "ゴール",
+	"command.open": "ゴールを設定・管理",
+	"config.maxRounds": "1 つのゴールで自動送信できるメッセージ数。",
+	"config.maxTokens": "1 つのゴールで使える新規トークン数（キャッシュ読み取りを除く）。オフ：制限なし。",
+	"config.maxMinutes": "1 つのゴールの実行時間。オフ：制限なし。",
+	"command.status": "状況を表示",
+	"command.pause": "一時停止",
+	"command.resume": "再開",
+	"command.clear": "クリア"
+}

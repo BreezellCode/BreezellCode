@@ -1,0 +1,13 @@
+{
+	"displayName": "Objetivo",
+	"description": "Dê um objetivo a uma conversa e a IA continua trabalhando até cumprir, dentro dos limites que você definir. Você pode pausar ou parar a qualquer momento.",
+	"command.category": "Objetivo",
+	"command.open": "Definir ou gerenciar o objetivo",
+	"config.maxRounds": "Quantas mensagens um objetivo pode enviar por conta própria.",
+	"config.maxTokens": "Quantos tokens novos um objetivo pode usar (sem contar leituras de cache). Desativado: sem limite.",
+	"config.maxMinutes": "Por quanto tempo um objetivo pode funcionar. Desativado: sem limite.",
+	"command.status": "Ver como está",
+	"command.pause": "Pausar",
+	"command.resume": "Retomar",
+	"command.clear": "Remover"
+}

@@ -50,6 +50,7 @@ A Breezell plugin is a VS Code extension with a `breezell` object in its `packag
 | **Conversation** | Reads the user's conversations, sends messages and approves tool calls, shown in its own window or panel | [Chat Mirror](examples/chat-mirror) | Window |
 | **Screens** | Buttons, pages, restyled parts, drawn code fences and modes in Breezell's own screens | [Desk Pet](examples/pet) | — |
 | **Companion** | A pet on the chat box that follows what the AI is doing | [Desk Pet](examples/pet) | — |
+| **Long-running** | Keeps a conversation going until something is done, with limits and a page of its own | [Goal](examples/goal) | — |
 
 The kinds combine: one plugin can bring skills, a panel, AI commands and a window. For a large plugin
 with its own settings page, data downloaded from a GitHub release and a part installed in the system, see
@@ -95,7 +96,9 @@ The typings are in [`devkit/breezell.d.ts`](devkit/breezell.d.ts); the templates
 | `breezell.language`, `onDidChangeLanguage` | — | Breezell's display language (`en`, `zh-CN`, `zh-TW`, `ja`, `ko`, `ru`, `es`, `pt-BR`), for a plugin's own texts: `vscode.env.language` does not follow it. Check for it: an older Breezell does not have it |
 | `breezell.chat.onDidStartTurn`, `onDidFinishTurn` | `chat.events` | A conversation turn started or finished: mode, outcome (completed, error, stopped) and duration, **never the content** |
 | `breezell.chat.listConversations()`, `getConversation(id)`, `onDidChangeConversation`, `show(id)` | `chat.read` | The conversations of this workspace as the user sees them: messages, replies (with reasoning), tool calls with their parameters, status and result, and the memories used for each message (`recalledMemories`, and `memoryUse` with the chat's resident and relevant counts); the reply being written; open one in Breezell's chat |
-| `breezell.chat.send(text, { conversationId })` | `chat.send` | Send a message as the user would, or start a conversation; the AI answers it like the user's own |
+| `breezell.chat.send(text, { conversationId, automated })` | `chat.send` | Send a message as the user would, or start a conversation; the AI answers it like the user's own. `automated`: the plugin sends it on its own (see [Work over many turns](#work-over-many-turns)) |
+| `breezell.chat.holdDoneNotice(id)`, `releaseDoneNotice(id, { announce })` | `chat.send` | No done sound or system notification until the work is over (see [Work over many turns](#work-over-many-turns)) |
+| `breezell.chat.conversationOfTurn(turnId)` | `chat.read` | The conversation a turn event was about, as `listConversations` names it |
 | `breezell.chat.approve(id)`, `reject(id)` | `chat.approve` | Approve or reject the tool call a conversation waits for |
 | `breezell.models.request({ messages, system, onText, onReasoning }, token)` | `models.request` | Send a request to the user's current chat model, optionally streaming |
 | `breezell.models.list()`, `select({ provider, model })` | `models.select` | The models of Breezell's model picker, and switching the chat model to one of them |
@@ -147,6 +150,8 @@ each plugin declares before it is installed.
   sees, hidden messages or other workspaces' conversations. A tool's parameters and result are cut
   at 20,000 characters. `chat.send` sends at most 10 messages a minute and refuses a busy
   conversation; its messages are billed like the user's own.
+- `chat.read` also says how many commands a conversation runs in the background, and the tokens its
+  replies used as the provider reported them: nothing about money, plans or quota.
 - `providers.read` hands out the custom APIs' keys: a plugin can call those APIs itself, outside
   Breezell, and the providers bill the user. It works only for an account whose Breezell plan
   includes Custom API; otherwise the call fails with `BreezellPlanRequired` and the user is not
@@ -170,6 +175,41 @@ Rules of `models.request`:
 - Errors carry a `name`: `BreezellNotSignedIn`, `BreezellPermissionDenied`, `BreezellRateLimited`,
   `BreezellNoModel`, `BreezellInvalidRequest`, `BreezellModelError`, `BreezellCancelled`,
   `BreezellBlocked` (the plugin is on the [blocklist](#blocklist)).
+
+## Work over many turns
+
+A plugin can keep a conversation going until something is done, as the [Goal](examples/goal) example
+does. All of this needs a Breezell newer than 1.4.41, and every call is checked against the sign-in and
+the plugin's permissions: after a sign-out or a block it hears nothing more and can do nothing more.
+
+```js
+const { chat } = vscode.breezell;
+await chat.holdDoneNotice(id);                               // no "done" sound for each turn
+chat.onDidFinishTurn(async turn => {
+	if (await chat.conversationOfTurn(turn.turnId) !== id) return;
+	if (turn.outcome !== 'completed') { await chat.releaseDoneNotice(id); return; }   // stopped, or it failed
+	const { backgroundCommands, usage } = await chat.getConversation(id);
+	if (backgroundCommands?.willEnd) return;                   // its end starts a turn by itself
+	if (done(usage)) { await chat.releaseDoneNotice(id, { announce: true }); return; }
+	await chat.send('Go on with the tests', { conversationId: id, automated: true });
+});
+```
+
+- **`automated`** is for a message the plugin sends on its own. It shows in the chat labelled with the
+  plugin's name, and the AI is told the user did not type it. It does not count as the user reacting to the
+  last turn and does not end up in their memories. Leave it out only for what a person asked to send.
+- **Stop holds.** After the user presses Stop on the reply, an automated message fails with
+  `BreezellStoppedByUser` until they write again. A message of theirs waiting in the queue goes first: yours
+  fails with `BreezellInvalidRequest`, and the end of that turn is your next chance.
+- **The done notice** can be held back, and comes once when released with `announce`. Errors still sound.
+  A hold ends by itself on Stop, a sign-out, losing `chat.send`, a block, or the plugin stopping.
+- **`backgroundCommands`** (`{ running, willEnd }`) says how many commands run in the background, and how
+  many of them will end by themselves: servers and watchers do not. It is a count, not what they are.
+- **`usage`** on a reply, on a conversation and on a `models.request` answer is the provider's numbers.
+  Some providers count cache reads inside `inputTokens`. Subagents and checks that run beside a
+  conversation are not in it, and `repliesWithoutUsage` says how many replies reported nothing.
+- A turn's `outcome` is `completed`, `error` or `stopped`. A turn waiting for the user's approval has not
+  finished, and a plugin should leave approving to the user.
 
 ## README in several languages
 
@@ -384,6 +424,7 @@ older Breezell still installs the plugin, and ignores what it declares here.
 | Layer | Declared in | Permission | What it does |
 |---|---|---|---|
 | Buttons | `ui.buttons` | `ui.contribute` | Entries in places Breezell opens, drawn in Breezell's look |
+| Slash menu | `ui.slashCommands` | `ui.contribute` | Rows in the menu that opens at `/` in the chat box |
 | Pages | `ui.surfaces` | `ui.contribute` | The plugin's own HTML, with any framework, in an isolated frame |
 | Patches | `ui.patches` | `ui.modify` | Hide, move, restyle or replace named parts of the screens |
 | Fences | `ui.renderers` | `chat.render` | A code fence of a language drawn by one of its pages |
@@ -410,6 +451,22 @@ mistake does not cost a plugin everything, and the log says why.
 - `icon` is a [codicon](https://microsoft.github.io/vscode-codicons/dist/codicon.html)'s name.
 - At most 2 of a plugin's buttons in one place and 8 in all. Each shows which plugin it is from, and
   the user can hide it by right-clicking it.
+
+### The slash menu
+
+```json
+[
+  { "name": "goal", "description": "Set a goal", "icon": "target", "l10n": { "zh-TW": "設定目標" } },
+  { "name": "goal pause", "description": "Pause the goal", "icon": "debug-pause", "command": "acme.pause" }
+]
+```
+
+- `name` is one or two lowercase words without the slash, and cannot have `breezell` in it.
+- With `command` (one of the plugin's own), picking the row runs it with `{ slot: "chat.input.slash", conversationId }`.
+- With none, picking it puts `/name ` in the box to be written on. What is sent then is for the plugin's
+  [send handler](#a-message-before-it-is-sent): without one it goes to the AI as an ordinary message.
+- At most 8 per plugin. Each row says which plugin it is from. Typing a space means the rest are words: the
+  menu keeps only names that go on like that, and closes when none does, so the message can be sent.
 
 ### Pages
 
@@ -445,6 +502,9 @@ vscode.postMessage({ __breezellSurfaceHeight: 240 });    // the room it needs, w
 
 The context has ids (`conversationId`), and for a fence its `language`, `code` and `messageIndex`. To
 talk to the plugin's code, listen to `vscode.breezell.ui.onDidOpenSurface`.
+
+A page in one of the framed places with nothing to show can take no room at all: declare `"height": 0`, or
+send `{ __breezellSurfaceHeight: 0 }`, and ask for room when it has something. It stays loaded meanwhile.
 
 ### A companion on the chat box
 
@@ -596,6 +656,8 @@ would have been.
 
 - It sees the text as it reads, with mentions written out (`@file.ts`). Attachments stay as they are.
 - Stopped: the user is told by which plugin and why, and the text stays in the chat box.
+- A command of the plugin's own: answer `{ cancel: true, handled: true }`. The box clears and nothing is said,
+  so telling the user what happened is up to the plugin. Keep `reason` for an older Breezell, which takes it as stopped.
 - Changed: what is sent is what shows in the bubble, and it must not be empty or over 400,000 characters.
 - An answer later than 3 seconds, or a failure, passes the message on as it was, and all plugins together get
   at most 6 seconds.

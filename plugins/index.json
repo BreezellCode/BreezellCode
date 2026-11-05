@@ -1,6 +1,6 @@
 {
 	"schemaVersion": 1,
-	"updatedAt": "2026-11-03T22:11:49.753Z",
+	"updatedAt": "2026-11-05T09:17:38.858Z",
 	"plugins": [
 		{
 			"id": "breezell.chat-mirror",
@@ -281,6 +281,86 @@
 				"size": 23617
 			},
 			"updatedAt": "2026-10-29T21:30:05.758Z"
+		},
+		{
+			"id": "breezell.goal",
+			"displayName": "Goal",
+			"description": "Give a conversation a goal and the AI keeps working until it is met, within limits you set. You can pause or stop it at any time.",
+			"version": "1.0.0",
+			"apiVersion": 1,
+			"categories": [],
+			"tags": [
+				"goal",
+				"agent",
+				"autonomous",
+				"long-running",
+				"loop"
+			],
+			"permissions": [
+				"chat.events",
+				"chat.read",
+				"chat.send",
+				"models.request",
+				"ui.contribute",
+				"agent.tools"
+			],
+			"optionalPermissions": [
+				"chat.intercept"
+			],
+			"source": "open",
+			"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/goal",
+			"author": {
+				"name": "Breezell",
+				"url": "https://breezell.com"
+			},
+			"license": "MIT",
+			"icon": "packages/breezell.goal/icon.png",
+			"readme": "packages/breezell.goal/README.md",
+			"readmes": {
+				"zh-CN": "packages/breezell.goal/i18n/README.zh-CN.md",
+				"zh-TW": "packages/breezell.goal/i18n/README.zh-TW.md",
+				"ja": "packages/breezell.goal/i18n/README.ja.md",
+				"ko": "packages/breezell.goal/i18n/README.ko.md",
+				"ru": "packages/breezell.goal/i18n/README.ru.md",
+				"es": "packages/breezell.goal/i18n/README.es.md",
+				"pt-BR": "packages/breezell.goal/i18n/README.pt-BR.md"
+			},
+			"l10n": {
+				"zh-CN": {
+					"displayName": "目标",
+					"description": "给对话一个目标，AI 会持续工作直到达成，并遵守你设定的上限。你随时可以暂停或停止。"
+				},
+				"zh-TW": {
+					"displayName": "目標",
+					"description": "給對話一個目標，AI 會持續工作直到達成，並遵守你設定的上限。你隨時可以暫停或停止。"
+				},
+				"ja": {
+					"displayName": "ゴール",
+					"description": "会話にゴールを与えると、設定した上限の範囲で AI が達成まで作業を続けます。いつでも一時停止や停止ができます。"
+				},
+				"ko": {
+					"displayName": "목표",
+					"description": "대화에 목표를 주면 AI가 설정한 한도 안에서 달성할 때까지 계속 작업합니다. 언제든 일시 중지하거나 멈출 수 있습니다."
+				},
+				"ru": {
+					"displayName": "Цель",
+					"description": "Задайте разговору цель, и ИИ будет работать, пока не достигнет её, в рамках заданных вами лимитов. Поставить на паузу или остановить можно в любой момент."
+				},
+				"es": {
+					"displayName": "Objetivo",
+					"description": "Da un objetivo a una conversación y la IA sigue trabajando hasta cumplirlo, dentro de los límites que fijes. Puedes pausarlo o detenerlo en cualquier momento."
+				},
+				"pt-BR": {
+					"displayName": "Objetivo",
+					"description": "Dê um objetivo a uma conversa e a IA continua trabalhando até cumprir, dentro dos limites que você definir. Você pode pausar ou parar a qualquer momento."
+				}
+			},
+			"package": {
+				"path": "packages/breezell.goal/1.0.0/breezell.goal-1.0.0.vsix",
+				"sha256": "c79a15c658203139a4cb2be5381225695cf5bde61466498d19842e6f27b53a1e",
+				"size": 135578
+			},
+			"updatedAt": "2026-11-05T09:17:38.858Z"
 		},
 		{
 			"id": "breezell.ime",

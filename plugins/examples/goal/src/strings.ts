@@ -1,0 +1,568 @@
+import type { LimitKind, PauseReason } from './logic';
+
+export interface GoalStrings {
+	readonly title: string;
+	readonly working: string;
+	readonly checking: string;
+	readonly waiting: string;
+	readonly paused: string;
+	readonly complete: string;
+	readonly blocked: string;
+	readonly limit: string;
+	readonly pausedBecause: Readonly<Record<PauseReason, string>>;
+	readonly limitHit: Readonly<Record<LimitKind, string>>;
+	readonly noProgress: string;
+	readonly cantCheck: string;
+	readonly round: string;
+	readonly tokens: string;
+	readonly tokensOf: string;
+	readonly minutes: string;
+	readonly minutesOf: string;
+	readonly uncounted: string;
+	readonly pause: string;
+	readonly resume: string;
+	readonly clear: string;
+	readonly dismiss: string;
+	readonly edit: string;
+	readonly firstMessage: string;
+	readonly continueMessage: string;
+	readonly continueNoReason: string;
+	readonly resumeMessage: string;
+	readonly started: string;
+	readonly startsLater: string;
+	readonly met: string;
+	readonly stopped: string;
+	readonly limitStopped: string;
+	readonly pausedToast: string;
+	readonly resumedToast: string;
+	readonly clearedToast: string;
+	readonly noGoal: string;
+	readonly needsPermission: string;
+	readonly needsNewer: string;
+	readonly badLimit: string;
+	readonly tooLong: string;
+	readonly stillAtLimit: string;
+	readonly help: string;
+	readonly inputPrompt: string;
+	readonly inputPlaceholder: string;
+	readonly pickPlaceholder: string;
+	readonly noConversation: string;
+}
+
+const EN: GoalStrings = {
+	title: 'Goal',
+	working: 'Working',
+	checking: 'Checking the work',
+	waiting: 'Waiting for {n} background command(s) to end',
+	paused: 'Paused',
+	complete: 'Met',
+	blocked: 'Stopped',
+	limit: 'Limit reached',
+	pausedBecause: {
+		user: 'You paused it.',
+		stop: 'You pressed Stop. Resume when you want it to go on.',
+		error: 'A turn failed. Resume to try again.',
+		signedOut: 'You signed out.',
+		restart: 'Breezell restarted. It does not go on by itself.',
+		permission: 'A permission it needs was turned off.',
+		refused: 'Breezell refused its last request.',
+		notSent: 'Its message could not be sent.',
+	},
+	limitHit: {
+		rounds: 'It sent as many messages as it may.',
+		tokens: 'It used the tokens it may use.',
+		minutes: 'It ran as long as it may.',
+	},
+	noProgress: 'Several turns in a row used no tool, so nothing seems to be moving.',
+	cantCheck: 'The work could not be checked: the model did not answer with a verdict.',
+	round: 'Round {n}/{max}',
+	tokens: '{n} tokens',
+	tokensOf: '{n}/{max} tokens',
+	minutes: '{n} min',
+	minutesOf: '{n}/{max} min',
+	uncounted: 'some replies not counted',
+	pause: 'Pause',
+	resume: 'Resume',
+	clear: 'Clear',
+	dismiss: 'Dismiss',
+	edit: 'Change the goal',
+	firstMessage: 'Goal: {condition}\n\nKeep working until this is met, without waiting for me, unless only I can move it on. When you believe it is met, show what proves it.',
+	continueMessage: 'Not done yet: {reason}\nNext: {next}\n\nGoal: {condition}\n{progress}',
+	continueNoReason: 'Keep working on the goal.\n\nGoal: {condition}\n{progress}',
+	resumeMessage: 'Go on with the goal.\n\nGoal: {condition}',
+	started: 'Goal set. It keeps working until it is met or reaches a limit: {limits}.',
+	startsLater: 'Goal set. It starts when the current reply ends.',
+	met: 'Goal met: {note}',
+	stopped: 'Goal stopped: {note}',
+	limitStopped: 'Goal stopped at its limit: {note} Resume to allow as much again.',
+	pausedToast: 'Goal paused.',
+	resumedToast: 'Goal resumed.',
+	clearedToast: 'Goal cleared.',
+	noGoal: 'This conversation has no goal. Type /goal followed by what should be true when it is done.',
+	needsPermission: 'Goal needs its permissions to run. You can turn them on under Plugins › Installed.',
+	needsNewer: 'Goal needs a newer version of Breezell.',
+	badLimit: 'Goal did not understand {detail}. Use --rounds 20, --tokens 200k or --minutes 30.',
+	tooLong: 'A goal can be at most {max} characters.',
+	stillAtLimit: 'Goal is still over a limit. Raise it, for example /goal resume {flag}.',
+	help: '/goal <what should be true> sets a goal. /goal status, /goal pause, /goal resume, /goal clear. Limits: --rounds 20, --tokens 200k, --minutes 30.',
+	inputPrompt: 'What should be true when this is done?',
+	inputPlaceholder: 'All tests in the parser package pass',
+	pickPlaceholder: 'Goal: {condition}',
+	noConversation: 'Open a conversation first.',
+};
+
+const ZH_TW: GoalStrings = {
+	title: '目標',
+	working: '進行中',
+	checking: '正在檢查成果',
+	waiting: '等待 {n} 個背景命令結束',
+	paused: '已暫停',
+	complete: '已達成',
+	blocked: '已停止',
+	limit: '已達上限',
+	pausedBecause: {
+		user: '你暫停了它。',
+		stop: '你按了停止。想繼續時再按繼續。',
+		error: '有一輪失敗了。按繼續可以再試。',
+		signedOut: '你已登出。',
+		restart: 'Breezell 重新啟動了，目標不會自己繼續。',
+		permission: '它需要的權限被關閉了。',
+		refused: 'Breezell 拒絕了它上一個請求。',
+		notSent: '它的訊息無法送出。',
+	},
+	limitHit: {
+		rounds: '自動傳送的訊息數已達上限。',
+		tokens: '使用的 Token 已達上限。',
+		minutes: '執行時間已達上限。',
+	},
+	noProgress: '連續幾輪都沒有使用工具，看起來沒有進展。',
+	cantCheck: '無法檢查成果：模型沒有給出判定。',
+	round: '第 {n}/{max} 輪',
+	tokens: '{n} Token',
+	tokensOf: '{n}/{max} Token',
+	minutes: '{n} 分鐘',
+	minutesOf: '{n}/{max} 分鐘',
+	uncounted: '部分回覆未計入',
+	pause: '暫停',
+	resume: '繼續',
+	clear: '清除',
+	dismiss: '關閉',
+	edit: '更改目標',
+	firstMessage: '目標：{condition}\n\n請持續工作直到達成，不用等我，除非只有我能推進。當你認為已達成時，請拿出能證明的結果。',
+	continueMessage: '尚未完成：{reason}\n下一步：{next}\n\n目標：{condition}\n{progress}',
+	continueNoReason: '請繼續朝目標工作。\n\n目標：{condition}\n{progress}',
+	resumeMessage: '請繼續朝目標工作。\n\n目標：{condition}',
+	started: '目標已設定。它會持續工作，直到達成或碰到上限：{limits}。',
+	startsLater: '目標已設定，會在目前的回覆結束後開始。',
+	met: '目標已達成：{note}',
+	stopped: '目標已停止：{note}',
+	limitStopped: '目標已達上限而停止：{note} 按繼續可再給一倍的額度。',
+	pausedToast: '目標已暫停。',
+	resumedToast: '目標已繼續。',
+	clearedToast: '目標已清除。',
+	noGoal: '這個對話沒有目標。輸入 /goal 加上完成時應該成立的條件。',
+	needsPermission: '目標需要相關權限才能執行。你可以在「插件 › 已安裝」開啟。',
+	needsNewer: '目標需要較新版本的 Breezell。',
+	badLimit: '目標看不懂 {detail}。請用 --rounds 20、--tokens 200k 或 --minutes 30。',
+	tooLong: '目標最多 {max} 個字元。',
+	stillAtLimit: '目標仍然超過上限。請調高，例如 /goal resume {flag}。',
+	help: '/goal <完成時應成立的條件> 設定目標。/goal status、/goal pause、/goal resume、/goal clear。上限：--rounds 20、--tokens 200k、--minutes 30。',
+	inputPrompt: '完成時應該成立的條件是什麼？',
+	inputPlaceholder: 'parser 套件的所有測試都通過',
+	pickPlaceholder: '目標：{condition}',
+	noConversation: '請先開啟一個對話。',
+};
+
+const ZH_CN: GoalStrings = {
+	title: '目标',
+	working: '进行中',
+	checking: '正在检查成果',
+	waiting: '等待 {n} 个后台命令结束',
+	paused: '已暂停',
+	complete: '已达成',
+	blocked: '已停止',
+	limit: '已达上限',
+	pausedBecause: {
+		user: '你暂停了它。',
+		stop: '你按了停止。想继续时再按继续。',
+		error: '有一轮失败了。按继续可以再试。',
+		signedOut: '你已退出登录。',
+		restart: 'Breezell 重新启动了，目标不会自己继续。',
+		permission: '它需要的权限被关闭了。',
+		refused: 'Breezell 拒绝了它上一个请求。',
+		notSent: '它的消息无法发送。',
+	},
+	limitHit: {
+		rounds: '自动发送的消息数已达上限。',
+		tokens: '使用的 Token 已达上限。',
+		minutes: '运行时间已达上限。',
+	},
+	noProgress: '连续几轮都没有使用工具，看起来没有进展。',
+	cantCheck: '无法检查成果：模型没有给出判定。',
+	round: '第 {n}/{max} 轮',
+	tokens: '{n} Token',
+	tokensOf: '{n}/{max} Token',
+	minutes: '{n} 分钟',
+	minutesOf: '{n}/{max} 分钟',
+	uncounted: '部分回复未计入',
+	pause: '暂停',
+	resume: '继续',
+	clear: '清除',
+	dismiss: '关闭',
+	edit: '更改目标',
+	firstMessage: '目标：{condition}\n\n请持续工作直到达成，不用等我，除非只有我能推进。当你认为已达成时，请拿出能证明的结果。',
+	continueMessage: '尚未完成：{reason}\n下一步：{next}\n\n目标：{condition}\n{progress}',
+	continueNoReason: '请继续朝目标工作。\n\n目标：{condition}\n{progress}',
+	resumeMessage: '请继续朝目标工作。\n\n目标：{condition}',
+	started: '目标已设定。它会持续工作，直到达成或碰到上限：{limits}。',
+	startsLater: '目标已设定，会在当前的回复结束后开始。',
+	met: '目标已达成：{note}',
+	stopped: '目标已停止：{note}',
+	limitStopped: '目标已达上限而停止：{note} 按继续可再给一倍的额度。',
+	pausedToast: '目标已暂停。',
+	resumedToast: '目标已继续。',
+	clearedToast: '目标已清除。',
+	noGoal: '这个对话没有目标。输入 /goal 加上完成时应该成立的条件。',
+	needsPermission: '目标需要相关权限才能运行。你可以在「插件 › 已安装」开启。',
+	needsNewer: '目标需要较新版本的 Breezell。',
+	badLimit: '目标看不懂 {detail}。请用 --rounds 20、--tokens 200k 或 --minutes 30。',
+	tooLong: '目标最多 {max} 个字符。',
+	stillAtLimit: '目标仍然超过上限。请调高，例如 /goal resume {flag}。',
+	help: '/goal <完成时应成立的条件> 设定目标。/goal status、/goal pause、/goal resume、/goal clear。上限：--rounds 20、--tokens 200k、--minutes 30。',
+	inputPrompt: '完成时应该成立的条件是什么？',
+	inputPlaceholder: 'parser 包的所有测试都通过',
+	pickPlaceholder: '目标：{condition}',
+	noConversation: '请先打开一个对话。',
+};
+
+const JA: GoalStrings = {
+	title: 'ゴール',
+	working: '作業中',
+	checking: '成果を確認中',
+	waiting: 'バックグラウンドのコマンド {n} 件の終了待ち',
+	paused: '一時停止中',
+	complete: '達成',
+	blocked: '停止',
+	limit: '上限に到達',
+	pausedBecause: {
+		user: 'あなたが一時停止しました。',
+		stop: '停止が押されました。続けたいときに再開してください。',
+		error: 'ターンが失敗しました。再開するともう一度試します。',
+		signedOut: 'サインアウトしました。',
+		restart: 'Breezell が再起動しました。ゴールは自動では続きません。',
+		permission: '必要な権限がオフになりました。',
+		refused: '直前のリクエストが Breezell に拒否されました。',
+		notSent: 'メッセージを送信できませんでした。',
+	},
+	limitHit: {
+		rounds: '自動送信できるメッセージ数の上限に達しました。',
+		tokens: '使えるトークンの上限に達しました。',
+		minutes: '実行時間の上限に達しました。',
+	},
+	noProgress: 'ツールを使わないターンが続き、進展がないようです。',
+	cantCheck: '成果を確認できませんでした。モデルが判定を返しませんでした。',
+	round: 'ラウンド {n}/{max}',
+	tokens: '{n} トークン',
+	tokensOf: '{n}/{max} トークン',
+	minutes: '{n} 分',
+	minutesOf: '{n}/{max} 分',
+	uncounted: '一部の返信は未集計',
+	pause: '一時停止',
+	resume: '再開',
+	clear: 'クリア',
+	dismiss: '閉じる',
+	edit: 'ゴールを変更',
+	firstMessage: 'ゴール：{condition}\n\n達成するまで、私を待たずに作業を続けてください。私にしか進められない場合を除きます。達成したと判断したら、それを示す結果を見せてください。',
+	continueMessage: 'まだ完了していません：{reason}\n次：{next}\n\nゴール：{condition}\n{progress}',
+	continueNoReason: 'ゴールに向けて作業を続けてください。\n\nゴール：{condition}\n{progress}',
+	resumeMessage: 'ゴールに向けて作業を続けてください。\n\nゴール：{condition}',
+	started: 'ゴールを設定しました。達成するか上限に達するまで作業を続けます：{limits}。',
+	startsLater: 'ゴールを設定しました。現在の返信が終わると始まります。',
+	met: 'ゴール達成：{note}',
+	stopped: 'ゴールを停止しました：{note}',
+	limitStopped: 'ゴールは上限で停止しました：{note} 再開すると同じ分だけ追加します。',
+	pausedToast: 'ゴールを一時停止しました。',
+	resumedToast: 'ゴールを再開しました。',
+	clearedToast: 'ゴールをクリアしました。',
+	noGoal: 'この会話にはゴールがありません。/goal に続けて、完了時に成り立つ条件を入力してください。',
+	needsPermission: 'ゴールの実行には権限が必要です。「プラグイン › インストール済み」でオンにできます。',
+	needsNewer: 'ゴールには新しいバージョンの Breezell が必要です。',
+	badLimit: '{detail} を理解できませんでした。--rounds 20、--tokens 200k、--minutes 30 のように指定してください。',
+	tooLong: 'ゴールは最大 {max} 文字です。',
+	stillAtLimit: 'まだ上限を超えています。/goal resume {flag} のように上げてください。',
+	help: '/goal <完了時に成り立つ条件> でゴールを設定。/goal status、/goal pause、/goal resume、/goal clear。上限：--rounds 20、--tokens 200k、--minutes 30。',
+	inputPrompt: '完了時に成り立っているべき条件は？',
+	inputPlaceholder: 'parser パッケージのテストがすべて通る',
+	pickPlaceholder: 'ゴール：{condition}',
+	noConversation: '先に会話を開いてください。',
+};
+
+const KO: GoalStrings = {
+	title: '목표',
+	working: '진행 중',
+	checking: '결과 확인 중',
+	waiting: '백그라운드 명령 {n}개 종료 대기 중',
+	paused: '일시 중지됨',
+	complete: '달성',
+	blocked: '중단됨',
+	limit: '한도 도달',
+	pausedBecause: {
+		user: '직접 일시 중지했습니다.',
+		stop: '중지를 눌렀습니다. 계속하려면 재개하세요.',
+		error: '턴이 실패했습니다. 재개하면 다시 시도합니다.',
+		signedOut: '로그아웃했습니다.',
+		restart: 'Breezell이 다시 시작되었습니다. 목표는 저절로 계속되지 않습니다.',
+		permission: '필요한 권한이 꺼졌습니다.',
+		refused: 'Breezell이 마지막 요청을 거부했습니다.',
+		notSent: '메시지를 보낼 수 없었습니다.',
+	},
+	limitHit: {
+		rounds: '자동으로 보낼 수 있는 메시지 수에 도달했습니다.',
+		tokens: '사용할 수 있는 토큰 한도에 도달했습니다.',
+		minutes: '실행 시간 한도에 도달했습니다.',
+	},
+	noProgress: '도구를 쓰지 않은 턴이 이어져 진전이 없어 보입니다.',
+	cantCheck: '결과를 확인할 수 없습니다. 모델이 판정을 주지 않았습니다.',
+	round: '라운드 {n}/{max}',
+	tokens: '토큰 {n}',
+	tokensOf: '토큰 {n}/{max}',
+	minutes: '{n}분',
+	minutesOf: '{n}/{max}분',
+	uncounted: '일부 답변은 집계되지 않음',
+	pause: '일시 중지',
+	resume: '재개',
+	clear: '지우기',
+	dismiss: '닫기',
+	edit: '목표 변경',
+	firstMessage: '목표: {condition}\n\n달성할 때까지 나를 기다리지 말고 계속 작업하세요. 나만 진행할 수 있는 경우는 예외입니다. 달성했다고 판단되면 이를 증명하는 결과를 보여 주세요.',
+	continueMessage: '아직 완료되지 않았습니다: {reason}\n다음: {next}\n\n목표: {condition}\n{progress}',
+	continueNoReason: '목표를 향해 계속 작업하세요.\n\n목표: {condition}\n{progress}',
+	resumeMessage: '목표를 향해 계속 작업하세요.\n\n목표: {condition}',
+	started: '목표를 설정했습니다. 달성하거나 한도에 도달할 때까지 계속 작업합니다: {limits}.',
+	startsLater: '목표를 설정했습니다. 현재 답변이 끝나면 시작합니다.',
+	met: '목표 달성: {note}',
+	stopped: '목표 중단: {note}',
+	limitStopped: '목표가 한도에서 멈췄습니다: {note} 재개하면 같은 만큼 더 허용합니다.',
+	pausedToast: '목표를 일시 중지했습니다.',
+	resumedToast: '목표를 재개했습니다.',
+	clearedToast: '목표를 지웠습니다.',
+	noGoal: '이 대화에는 목표가 없습니다. /goal 뒤에 완료 시 성립해야 할 조건을 입력하세요.',
+	needsPermission: '목표를 실행하려면 권한이 필요합니다. 플러그인 › 설치됨에서 켤 수 있습니다.',
+	needsNewer: '목표를 사용하려면 최신 버전의 Breezell이 필요합니다.',
+	badLimit: '{detail}을(를) 이해하지 못했습니다. --rounds 20, --tokens 200k, --minutes 30 처럼 쓰세요.',
+	tooLong: '목표는 최대 {max}자입니다.',
+	stillAtLimit: '아직 한도를 넘었습니다. /goal resume {flag} 처럼 높이세요.',
+	help: '/goal <완료 시 성립할 조건> 으로 목표를 설정합니다. /goal status, /goal pause, /goal resume, /goal clear. 한도: --rounds 20, --tokens 200k, --minutes 30.',
+	inputPrompt: '완료되면 무엇이 성립해야 하나요?',
+	inputPlaceholder: 'parser 패키지의 모든 테스트 통과',
+	pickPlaceholder: '목표: {condition}',
+	noConversation: '먼저 대화를 여세요.',
+};
+
+const RU: GoalStrings = {
+	title: 'Цель',
+	working: 'В работе',
+	checking: 'Проверка результата',
+	waiting: 'Ожидание завершения фоновых команд: {n}',
+	paused: 'На паузе',
+	complete: 'Достигнута',
+	blocked: 'Остановлена',
+	limit: 'Лимит исчерпан',
+	pausedBecause: {
+		user: 'Вы поставили её на паузу.',
+		stop: 'Вы нажали «Стоп». Возобновите, когда захотите продолжить.',
+		error: 'Ход завершился ошибкой. Возобновите, чтобы попробовать снова.',
+		signedOut: 'Вы вышли из аккаунта.',
+		restart: 'Breezell перезапустился. Сама цель не продолжится.',
+		permission: 'Нужное разрешение было отключено.',
+		refused: 'Breezell отклонил её последний запрос.',
+		notSent: 'Не удалось отправить её сообщение.',
+	},
+	limitHit: {
+		rounds: 'Отправлено максимальное число сообщений.',
+		tokens: 'Израсходован лимит токенов.',
+		minutes: 'Исчерпано время работы.',
+	},
+	noProgress: 'Несколько ходов подряд без инструментов: похоже, дело не движется.',
+	cantCheck: 'Не удалось проверить результат: модель не дала вердикта.',
+	round: 'Раунд {n}/{max}',
+	tokens: 'Токенов: {n}',
+	tokensOf: 'Токенов: {n}/{max}',
+	minutes: '{n} мин',
+	minutesOf: '{n}/{max} мин',
+	uncounted: 'часть ответов не учтена',
+	pause: 'Пауза',
+	resume: 'Возобновить',
+	clear: 'Убрать',
+	dismiss: 'Закрыть',
+	edit: 'Изменить цель',
+	firstMessage: 'Цель: {condition}\n\nПродолжай работу, пока она не будет достигнута, не дожидаясь меня, если только дальше не могу продвинуть только я. Когда решишь, что цель достигнута, покажи, что это доказывает.',
+	continueMessage: 'Ещё не готово: {reason}\nДалее: {next}\n\nЦель: {condition}\n{progress}',
+	continueNoReason: 'Продолжай работу над целью.\n\nЦель: {condition}\n{progress}',
+	resumeMessage: 'Продолжай работу над целью.\n\nЦель: {condition}',
+	started: 'Цель задана. Работа продолжится, пока она не будет достигнута или не исчерпается лимит: {limits}.',
+	startsLater: 'Цель задана. Работа начнётся, когда закончится текущий ответ.',
+	met: 'Цель достигнута: {note}',
+	stopped: 'Цель остановлена: {note}',
+	limitStopped: 'Цель остановлена на лимите: {note} Возобновление добавит столько же.',
+	pausedToast: 'Цель на паузе.',
+	resumedToast: 'Цель возобновлена.',
+	clearedToast: 'Цель убрана.',
+	noGoal: 'У этого разговора нет цели. Введите /goal и условие, которое должно выполняться в конце.',
+	needsPermission: 'Цели нужны разрешения. Их можно включить в «Плагины › Установленные».',
+	needsNewer: 'Для цели нужна более новая версия Breezell.',
+	badLimit: 'Не удалось понять {detail}. Используйте --rounds 20, --tokens 200k или --minutes 30.',
+	tooLong: 'Цель может содержать не более {max} символов.',
+	stillAtLimit: 'Лимит всё ещё превышен. Поднимите его, например /goal resume {flag}.',
+	help: '/goal <что должно выполняться в конце> задаёт цель. /goal status, /goal pause, /goal resume, /goal clear. Лимиты: --rounds 20, --tokens 200k, --minutes 30.',
+	inputPrompt: 'Что должно выполняться, когда работа закончена?',
+	inputPlaceholder: 'Все тесты пакета parser проходят',
+	pickPlaceholder: 'Цель: {condition}',
+	noConversation: 'Сначала откройте разговор.',
+};
+
+const ES: GoalStrings = {
+	title: 'Objetivo',
+	working: 'En curso',
+	checking: 'Comprobando el trabajo',
+	waiting: 'Esperando a que terminen {n} comandos en segundo plano',
+	paused: 'En pausa',
+	complete: 'Cumplido',
+	blocked: 'Detenido',
+	limit: 'Límite alcanzado',
+	pausedBecause: {
+		user: 'Lo pausaste tú.',
+		stop: 'Pulsaste Detener. Reanuda cuando quieras que siga.',
+		error: 'Un turno falló. Reanuda para intentarlo de nuevo.',
+		signedOut: 'Cerraste la sesión.',
+		restart: 'Breezell se reinició. El objetivo no sigue por sí solo.',
+		permission: 'Se desactivó un permiso que necesita.',
+		refused: 'Breezell rechazó su última solicitud.',
+		notSent: 'No se pudo enviar su mensaje.',
+	},
+	limitHit: {
+		rounds: 'Envió todos los mensajes que puede.',
+		tokens: 'Usó todos los tokens que puede.',
+		minutes: 'Agotó el tiempo que puede funcionar.',
+	},
+	noProgress: 'Varios turnos seguidos sin usar herramientas: parece que nada avanza.',
+	cantCheck: 'No se pudo comprobar el trabajo: el modelo no dio un veredicto.',
+	round: 'Ronda {n}/{max}',
+	tokens: '{n} tokens',
+	tokensOf: '{n}/{max} tokens',
+	minutes: '{n} min',
+	minutesOf: '{n}/{max} min',
+	uncounted: 'algunas respuestas sin contar',
+	pause: 'Pausar',
+	resume: 'Reanudar',
+	clear: 'Quitar',
+	dismiss: 'Cerrar',
+	edit: 'Cambiar el objetivo',
+	firstMessage: 'Objetivo: {condition}\n\nSigue trabajando hasta cumplirlo, sin esperarme, salvo que solo yo pueda hacerlo avanzar. Cuando creas que está cumplido, muestra lo que lo demuestra.',
+	continueMessage: 'Aún no está hecho: {reason}\nSiguiente: {next}\n\nObjetivo: {condition}\n{progress}',
+	continueNoReason: 'Sigue trabajando en el objetivo.\n\nObjetivo: {condition}\n{progress}',
+	resumeMessage: 'Sigue trabajando en el objetivo.\n\nObjetivo: {condition}',
+	started: 'Objetivo definido. Seguirá trabajando hasta cumplirlo o llegar a un límite: {limits}.',
+	startsLater: 'Objetivo definido. Empieza cuando termine la respuesta actual.',
+	met: 'Objetivo cumplido: {note}',
+	stopped: 'Objetivo detenido: {note}',
+	limitStopped: 'Objetivo detenido en su límite: {note} Al reanudar se permite otro tanto.',
+	pausedToast: 'Objetivo en pausa.',
+	resumedToast: 'Objetivo reanudado.',
+	clearedToast: 'Objetivo quitado.',
+	noGoal: 'Esta conversación no tiene objetivo. Escribe /goal seguido de lo que debe cumplirse al terminar.',
+	needsPermission: 'Objetivo necesita sus permisos. Puedes activarlos en Plugins › Instalados.',
+	needsNewer: 'Objetivo necesita una versión más reciente de Breezell.',
+	badLimit: 'Objetivo no entendió {detail}. Usa --rounds 20, --tokens 200k o --minutes 30.',
+	tooLong: 'Un objetivo puede tener como máximo {max} caracteres.',
+	stillAtLimit: 'Sigue por encima de un límite. Súbelo, por ejemplo /goal resume {flag}.',
+	help: '/goal <lo que debe cumplirse> define un objetivo. /goal status, /goal pause, /goal resume, /goal clear. Límites: --rounds 20, --tokens 200k, --minutes 30.',
+	inputPrompt: '¿Qué debe cumplirse cuando esté terminado?',
+	inputPlaceholder: 'Pasan todas las pruebas del paquete parser',
+	pickPlaceholder: 'Objetivo: {condition}',
+	noConversation: 'Abre primero una conversación.',
+};
+
+const PT_BR: GoalStrings = {
+	title: 'Objetivo',
+	working: 'Em andamento',
+	checking: 'Verificando o trabalho',
+	waiting: 'Aguardando {n} comandos em segundo plano terminarem',
+	paused: 'Pausado',
+	complete: 'Cumprido',
+	blocked: 'Parado',
+	limit: 'Limite atingido',
+	pausedBecause: {
+		user: 'Você pausou.',
+		stop: 'Você apertou Parar. Retome quando quiser que continue.',
+		error: 'Um turno falhou. Retome para tentar de novo.',
+		signedOut: 'Você saiu da conta.',
+		restart: 'O Breezell reiniciou. O objetivo não continua sozinho.',
+		permission: 'Uma permissão necessária foi desativada.',
+		refused: 'O Breezell recusou o último pedido.',
+		notSent: 'Não foi possível enviar a mensagem.',
+	},
+	limitHit: {
+		rounds: 'Enviou todas as mensagens que pode.',
+		tokens: 'Usou todos os tokens que pode.',
+		minutes: 'Esgotou o tempo que pode funcionar.',
+	},
+	noProgress: 'Vários turnos seguidos sem usar ferramentas: parece que nada avança.',
+	cantCheck: 'Não foi possível verificar o trabalho: o modelo não deu um veredito.',
+	round: 'Rodada {n}/{max}',
+	tokens: '{n} tokens',
+	tokensOf: '{n}/{max} tokens',
+	minutes: '{n} min',
+	minutesOf: '{n}/{max} min',
+	uncounted: 'algumas respostas não contadas',
+	pause: 'Pausar',
+	resume: 'Retomar',
+	clear: 'Remover',
+	dismiss: 'Fechar',
+	edit: 'Mudar o objetivo',
+	firstMessage: 'Objetivo: {condition}\n\nContinue trabalhando até cumprir, sem me esperar, a menos que só eu possa fazer avançar. Quando achar que foi cumprido, mostre o que comprova.',
+	continueMessage: 'Ainda não terminou: {reason}\nPróximo: {next}\n\nObjetivo: {condition}\n{progress}',
+	continueNoReason: 'Continue trabalhando no objetivo.\n\nObjetivo: {condition}\n{progress}',
+	resumeMessage: 'Continue trabalhando no objetivo.\n\nObjetivo: {condition}',
+	started: 'Objetivo definido. Continuará trabalhando até cumprir ou chegar a um limite: {limits}.',
+	startsLater: 'Objetivo definido. Começa quando a resposta atual terminar.',
+	met: 'Objetivo cumprido: {note}',
+	stopped: 'Objetivo parado: {note}',
+	limitStopped: 'Objetivo parado no limite: {note} Ao retomar, permite o mesmo tanto outra vez.',
+	pausedToast: 'Objetivo pausado.',
+	resumedToast: 'Objetivo retomado.',
+	clearedToast: 'Objetivo removido.',
+	noGoal: 'Esta conversa não tem objetivo. Digite /goal seguido do que deve valer ao terminar.',
+	needsPermission: 'O Objetivo precisa das permissões. Você pode ativá-las em Plugins › Instalados.',
+	needsNewer: 'O Objetivo precisa de uma versão mais recente do Breezell.',
+	badLimit: 'O Objetivo não entendeu {detail}. Use --rounds 20, --tokens 200k ou --minutes 30.',
+	tooLong: 'Um objetivo pode ter no máximo {max} caracteres.',
+	stillAtLimit: 'Ainda está acima de um limite. Aumente, por exemplo /goal resume {flag}.',
+	help: '/goal <o que deve valer ao terminar> define um objetivo. /goal status, /goal pause, /goal resume, /goal clear. Limites: --rounds 20, --tokens 200k, --minutes 30.',
+	inputPrompt: 'O que deve valer quando terminar?',
+	inputPlaceholder: 'Todos os testes do pacote parser passam',
+	pickPlaceholder: 'Objetivo: {condition}',
+	noConversation: 'Abra uma conversa primeiro.',
+};
+
+export const GOAL_STRINGS: Readonly<Record<string, GoalStrings>> = { 'en': EN, 'zh-TW': ZH_TW, 'zh-CN': ZH_CN, 'ja': JA, 'ko': KO, 'ru': RU, 'es': ES, 'pt-BR': PT_BR };
+
+export function goalStrings(language: string | undefined): GoalStrings {
+	const wanted = (language ?? '').toLowerCase();
+	const exact = Object.keys(GOAL_STRINGS).find(key => key.toLowerCase() === wanted);
+	if (exact) {
+		return GOAL_STRINGS[exact];
+	}
+	if (wanted === 'zh' || wanted.startsWith('zh-hans')) {
+		return ZH_CN;
+	}
+	if (wanted.startsWith('zh')) {
+		return ZH_TW;
+	}
+	return GOAL_STRINGS[Object.keys(GOAL_STRINGS).find(key => key.split('-')[0] === wanted.split('-')[0]) ?? 'en'];
+}
+
+/** Fills `{name}` with what was given, as text: no value is read as a pattern. */
+export function fill(template: string, values: Readonly<Record<string, string | number>>): string {
+	return template.replace(/\{(\w+)\}/g, (whole, name: string) => name in values ? String(values[name]) : whole);
+}

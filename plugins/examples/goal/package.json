@@ -1,0 +1,458 @@
+{
+	"name": "goal",
+	"publisher": "breezell",
+	"displayName": "%displayName%",
+	"description": "%description%",
+	"version": "1.0.0",
+	"license": "MIT",
+	"author": {
+		"name": "Breezell",
+		"url": "https://breezell.com"
+	},
+	"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/goal",
+	"icon": "media/icon.png",
+	"engines": {
+		"vscode": "^1.90.0"
+	},
+	"extensionKind": [
+		"ui",
+		"workspace"
+	],
+	"categories": [
+		"Other"
+	],
+	"keywords": [
+		"goal",
+		"agent",
+		"autonomous",
+		"long-running",
+		"loop"
+	],
+	"main": "./dist/extension.js",
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"breezell": {
+		"apiVersion": 1,
+		"permissions": [
+			"chat.events",
+			"chat.read",
+			"chat.send",
+			"models.request",
+			"ui.contribute",
+			"agent.tools"
+		],
+		"optionalPermissions": [
+			"chat.intercept"
+		],
+		"source": "open"
+	},
+	"contributes": {
+		"commands": [
+			{
+				"command": "goal.open",
+				"title": "%command.open%",
+				"category": "%command.category%"
+			},
+			{
+				"command": "goal.status",
+				"title": "%command.status%",
+				"category": "%command.category%"
+			},
+			{
+				"command": "goal.pause",
+				"title": "%command.pause%",
+				"category": "%command.category%"
+			},
+			{
+				"command": "goal.resume",
+				"title": "%command.resume%",
+				"category": "%command.category%"
+			},
+			{
+				"command": "goal.clear",
+				"title": "%command.clear%",
+				"category": "%command.category%"
+			}
+		],
+		"configuration": {
+			"title": "%displayName%",
+			"properties": {
+				"goal.maxRounds": {
+					"type": "string",
+					"enum": [
+						"10",
+						"20",
+						"50",
+						"100"
+					],
+					"default": "20",
+					"description": "%config.maxRounds%"
+				},
+				"goal.maxTokens": {
+					"type": "string",
+					"enum": [
+						"off",
+						"100k",
+						"500k",
+						"2m"
+					],
+					"default": "off",
+					"description": "%config.maxTokens%"
+				},
+				"goal.maxMinutes": {
+					"type": "string",
+					"enum": [
+						"off",
+						"30",
+						"60",
+						"240"
+					],
+					"default": "off",
+					"description": "%config.maxMinutes%"
+				}
+			}
+		},
+		"breezell": {
+			"tools": [
+				{
+					"name": "goal_get",
+					"displayName": "Read the goal",
+					"description": "Reads the goal of this conversation: what it asks, its status and how much of its limits is left. Only for a conversation that has a goal, and only if you have lost track of it: every message Goal sends already says this.",
+					"inputSchema": {
+						"type": "object",
+						"properties": {
+							"goal_id": {
+								"type": "string",
+								"description": "Only needed when the call says several goals are running."
+							}
+						}
+					},
+					"modes": [
+						"chat",
+						"agent",
+						"entanglement"
+					]
+				},
+				{
+					"name": "goal_update",
+					"displayName": "Report on the goal",
+					"description": "Reports that the goal of this conversation is met, or that it cannot go on without the user. Only for a conversation that has a goal. A reported success is checked against the work before it counts, so give the evidence: the commands run, their results, what changed. End your turn after calling this.",
+					"inputSchema": {
+						"type": "object",
+						"properties": {
+							"status": {
+								"type": "string",
+								"enum": [
+									"complete",
+									"blocked"
+								],
+								"description": "complete: the goal is met. blocked: only the user can move it on."
+							},
+							"evidence": {
+								"type": "string",
+								"description": "What shows it is met, or what is needed from the user."
+							},
+							"goal_id": {
+								"type": "string",
+								"description": "Only needed when the call says several goals are running."
+							}
+						},
+						"required": [
+							"status",
+							"evidence"
+						]
+					},
+					"modes": [
+						"chat",
+						"agent",
+						"entanglement"
+					]
+				}
+			],
+			"ui": {
+				"buttons": [
+					{
+						"id": "open",
+						"slot": "chat.input.toolbar",
+						"title": "Goal",
+						"l10n": {
+							"zh-TW": "目標",
+							"zh-CN": "目标",
+							"ja": "ゴール",
+							"ko": "목표",
+							"ru": "Цель",
+							"es": "Objetivo",
+							"pt-BR": "Objetivo"
+						},
+						"icon": "target",
+						"command": "goal.open",
+						"order": 40
+					}
+				],
+				"surfaces": [
+					{
+						"id": "strip",
+						"title": "Goal",
+						"l10n": {
+							"zh-TW": "目標",
+							"zh-CN": "目标",
+							"ja": "ゴール",
+							"ko": "목표",
+							"ru": "Цель",
+							"es": "Objetivo",
+							"pt-BR": "Objetivo"
+						},
+						"entry": "ui/goal.html",
+						"slot": "chat.input.above",
+						"height": 0
+					}
+				],
+				"options": {
+					"title": "Goal",
+					"l10n": {
+						"zh-TW": "目標",
+						"zh-CN": "目标",
+						"ja": "ゴール",
+						"ko": "목표",
+						"ru": "Цель",
+						"es": "Objetivo",
+						"pt-BR": "Objetivo"
+					},
+					"items": [
+						{
+							"setting": "goal.maxRounds",
+							"title": "Messages it may send on its own",
+							"l10n": {
+								"zh-TW": "可自動傳送的訊息數",
+								"zh-CN": "可自动发送的消息数",
+								"ja": "自動送信できるメッセージ数",
+								"ko": "자동으로 보낼 수 있는 메시지 수",
+								"ru": "Сколько сообщений можно отправить самому",
+								"es": "Mensajes que puede enviar por su cuenta",
+								"pt-BR": "Mensagens que pode enviar por conta própria"
+							},
+							"choices": [
+								{
+									"value": "10",
+									"title": "10"
+								},
+								{
+									"value": "20",
+									"title": "20"
+								},
+								{
+									"value": "50",
+									"title": "50"
+								},
+								{
+									"value": "100",
+									"title": "100"
+								}
+							]
+						},
+						{
+							"setting": "goal.maxTokens",
+							"title": "Token limit per goal",
+							"l10n": {
+								"zh-TW": "每個目標的 Token 上限",
+								"zh-CN": "每个目标的 Token 上限",
+								"ja": "ゴールごとのトークン上限",
+								"ko": "목표당 토큰 한도",
+								"ru": "Лимит токенов на цель",
+								"es": "Límite de tokens por objetivo",
+								"pt-BR": "Limite de tokens por objetivo"
+							},
+							"choices": [
+								{
+									"value": "off",
+									"title": "Off",
+									"l10n": {
+										"zh-TW": "關閉",
+										"zh-CN": "关闭",
+										"ja": "オフ",
+										"ko": "끔",
+										"ru": "Выкл.",
+										"es": "Desactivado",
+										"pt-BR": "Desativado"
+									}
+								},
+								{
+									"value": "100k",
+									"title": "100k"
+								},
+								{
+									"value": "500k",
+									"title": "500k"
+								},
+								{
+									"value": "2m",
+									"title": "2M"
+								}
+							]
+						},
+						{
+							"setting": "goal.maxMinutes",
+							"title": "Time limit per goal",
+							"l10n": {
+								"zh-TW": "每個目標的時間上限",
+								"zh-CN": "每个目标的时间上限",
+								"ja": "ゴールごとの時間上限",
+								"ko": "목표당 시간 한도",
+								"ru": "Лимит времени на цель",
+								"es": "Límite de tiempo por objetivo",
+								"pt-BR": "Limite de tempo por objetivo"
+							},
+							"choices": [
+								{
+									"value": "off",
+									"title": "Off",
+									"l10n": {
+										"zh-TW": "關閉",
+										"zh-CN": "关闭",
+										"ja": "オフ",
+										"ko": "끔",
+										"ru": "Выкл.",
+										"es": "Desactivado",
+										"pt-BR": "Desativado"
+									}
+								},
+								{
+									"value": "30",
+									"title": "30 min",
+									"l10n": {
+										"zh-TW": "30 分鐘",
+										"zh-CN": "30 分钟",
+										"ja": "30 分",
+										"ko": "30분",
+										"ru": "30 мин",
+										"es": "30 min",
+										"pt-BR": "30 min"
+									}
+								},
+								{
+									"value": "60",
+									"title": "1 h",
+									"l10n": {
+										"zh-TW": "1 小時",
+										"zh-CN": "1 小时",
+										"ja": "1 時間",
+										"ko": "1시간",
+										"ru": "1 ч",
+										"es": "1 h",
+										"pt-BR": "1 h"
+									}
+								},
+								{
+									"value": "240",
+									"title": "4 h",
+									"l10n": {
+										"zh-TW": "4 小時",
+										"zh-CN": "4 小时",
+										"ja": "4 時間",
+										"ko": "4시간",
+										"ru": "4 ч",
+										"es": "4 h",
+										"pt-BR": "4 h"
+									}
+								}
+							]
+						}
+					]
+				},
+				"slashCommands": [
+					{
+						"name": "goal",
+						"icon": "target",
+						"description": "Set a goal: the AI keeps working until it is met",
+						"l10n": {
+							"zh-TW": "設定目標：AI 會持續工作直到達成",
+							"zh-CN": "设定目标：AI 会持续工作直到达成",
+							"ja": "ゴールを設定：達成するまで AI が作業を続けます",
+							"ko": "목표 설정: 달성할 때까지 AI가 계속 작업합니다",
+							"ru": "Задать цель: ИИ работает, пока не достигнет её",
+							"es": "Definir un objetivo: la IA sigue hasta cumplirlo",
+							"pt-BR": "Definir um objetivo: a IA continua até cumprir"
+						}
+					},
+					{
+						"name": "goal status",
+						"icon": "info",
+						"command": "goal.status",
+						"description": "How the goal stands",
+						"l10n": {
+							"zh-TW": "查看目標狀況",
+							"zh-CN": "查看目标状况",
+							"ja": "ゴールの状況を表示",
+							"ko": "목표 상태 보기",
+							"ru": "Как обстоит дело с целью",
+							"es": "Cómo va el objetivo",
+							"pt-BR": "Como está o objetivo"
+						}
+					},
+					{
+						"name": "goal pause",
+						"icon": "debug-pause",
+						"command": "goal.pause",
+						"description": "Pause the goal",
+						"l10n": {
+							"zh-TW": "暫停目標",
+							"zh-CN": "暂停目标",
+							"ja": "ゴールを一時停止",
+							"ko": "목표 일시 중지",
+							"ru": "Поставить цель на паузу",
+							"es": "Pausar el objetivo",
+							"pt-BR": "Pausar o objetivo"
+						}
+					},
+					{
+						"name": "goal resume",
+						"icon": "debug-continue",
+						"command": "goal.resume",
+						"description": "Go on with the goal",
+						"l10n": {
+							"zh-TW": "繼續目標",
+							"zh-CN": "继续目标",
+							"ja": "ゴールを再開",
+							"ko": "목표 재개",
+							"ru": "Продолжить работу над целью",
+							"es": "Reanudar el objetivo",
+							"pt-BR": "Retomar o objetivo"
+						}
+					},
+					{
+						"name": "goal clear",
+						"icon": "close",
+						"command": "goal.clear",
+						"description": "Remove the goal",
+						"l10n": {
+							"zh-TW": "清除目標",
+							"zh-CN": "清除目标",
+							"ja": "ゴールをクリア",
+							"ko": "목표 지우기",
+							"ru": "Убрать цель",
+							"es": "Quitar el objetivo",
+							"pt-BR": "Remover o objetivo"
+						}
+					}
+				]
+			}
+		}
+	},
+	"scripts": {
+		"build": "node tools/build_page.mjs && node tools/breezell-plugin.mjs build",
+		"typecheck": "tsc -p .",
+		"validate": "node tools/breezell-plugin.mjs validate",
+		"test": "node tools/build_tests.mjs && node --test test/dist/logic.test.cjs test/dist/strings.test.cjs test/dist/page.test.cjs",
+		"package:open": "npm run build && node tools/breezell-plugin.mjs pack --open",
+		"submit": "node tools/breezell-plugin.mjs submit"
+	},
+	"devDependencies": {
+		"@types/jsdom": "^21.1.7",
+		"@types/node": "^20.19.43",
+		"@types/vscode": "^1.90.0",
+		"esbuild": "^0.28.0",
+		"jsdom": "^26.1.0",
+		"typescript": "^5.6.0"
+	}
+}

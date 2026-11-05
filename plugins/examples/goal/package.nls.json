@@ -1,0 +1,13 @@
+{
+	"displayName": "Goal",
+	"description": "Give a conversation a goal and the AI keeps working until it is met, within limits you set. You can pause or stop it at any time.",
+	"command.category": "Goal",
+	"command.open": "Set or Manage the Goal",
+	"config.maxRounds": "How many messages Goal may send on its own for one goal.",
+	"config.maxTokens": "How many new tokens one goal may use (cache reads not counted). Off: no limit.",
+	"config.maxMinutes": "How long one goal may run. Off: no limit.",
+	"command.status": "Show How It Stands",
+	"command.pause": "Pause",
+	"command.resume": "Resume",
+	"command.clear": "Clear"
+}

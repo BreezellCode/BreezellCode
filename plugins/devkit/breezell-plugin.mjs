@@ -345,8 +345,33 @@ function checkUi(ui, pkg, errors, dir) {
 
 	const companion = surfaces.some(s => s?.slot === 'chat.input.companion');
 	const hasOptions = checkUiOptions(ui.options, pkg, errors);
-	if (buttons.length || surfaces.some(s => s?.slot && s.slot !== 'chat.input.companion') || modes.length || hasOptions) {
-		needs('ui.contribute', 'ui.buttons, ui.surfaces, ui.options and ui.modes');
+	const slashCommands = list('slashCommands');
+	const slashNames = new Set();
+	for (const c of slashCommands) {
+		const where = `ui.slashCommands: ${JSON.stringify(c?.name ?? c)}`;
+		if (typeof c?.name !== 'string' || !/^[a-z][a-z0-9-]{0,23}( [a-z][a-z0-9-]{0,23})?$/.test(c.name)) {
+			errors.push(`${where} needs a name: one or two lowercase words, without the slash`);
+		} else if (/breezell/i.test(c.name)) {
+			errors.push(`${where}: a name cannot pass for one of Breezell's`);
+		} else if (slashNames.has(c.name)) {
+			errors.push(`${where}: the name is used twice`);
+		}
+		slashNames.add(c?.name);
+		if (typeof c?.description !== 'string' || !c.description.trim()) {
+			errors.push(`${where} needs a description`);
+		}
+		if (c?.icon !== undefined && !UI_CODICON.test(c.icon)) {
+			errors.push(`${where}: "icon" must be a codicon's name`);
+		}
+		if (c?.command !== undefined && !(pkg.contributes?.commands ?? []).some(o => o?.command === c.command)) {
+			errors.push(`${where}: "command" must be one of the plugin's own, in contributes.commands`);
+		}
+	}
+	if (slashCommands.length > 8) {
+		errors.push('ui.slashCommands: at most 8');
+	}
+	if (buttons.length || surfaces.some(s => s?.slot && s.slot !== 'chat.input.companion') || modes.length || hasOptions || slashCommands.length) {
+		needs('ui.contribute', 'ui.buttons, ui.surfaces, ui.options, ui.modes and ui.slashCommands');
 	}
 	if (patches.length || companion) {
 		needs('ui.modify', 'ui.patches and a companion');

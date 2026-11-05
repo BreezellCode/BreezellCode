@@ -1,0 +1,13 @@
+{
+	"displayName": "목표",
+	"description": "대화에 목표를 주면 AI가 설정한 한도 안에서 달성할 때까지 계속 작업합니다. 언제든 일시 중지하거나 멈출 수 있습니다.",
+	"command.category": "목표",
+	"command.open": "목표 설정 또는 관리",
+	"config.maxRounds": "목표 하나가 자동으로 보낼 수 있는 메시지 수입니다.",
+	"config.maxTokens": "목표 하나가 사용할 수 있는 새 토큰 수입니다(캐시 읽기 제외). 끔: 제한 없음.",
+	"config.maxMinutes": "목표 하나의 실행 시간입니다. 끔: 제한 없음.",
+	"command.status": "상태 보기",
+	"command.pause": "일시 중지",
+	"command.resume": "재개",
+	"command.clear": "지우기"
+}

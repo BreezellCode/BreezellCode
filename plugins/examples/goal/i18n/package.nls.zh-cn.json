@@ -1,0 +1,13 @@
+{
+	"displayName": "目标",
+	"description": "给对话一个目标，AI 会持续工作直到达成，并遵守你设定的上限。你随时可以暂停或停止。",
+	"command.category": "目标",
+	"command.open": "设定或管理目标",
+	"config.maxRounds": "一个目标可自动发送的消息数。",
+	"config.maxTokens": "一个目标可使用的新 Token 数（不含缓存读取）。关闭：不限制。",
+	"config.maxMinutes": "一个目标可运行的时间。关闭：不限制。",
+	"command.status": "查看状况",
+	"command.pause": "暂停",
+	"command.resume": "继续",
+	"command.clear": "清除"
+}
