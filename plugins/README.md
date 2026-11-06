@@ -96,16 +96,19 @@ The typings are in [`devkit/breezell.d.ts`](devkit/breezell.d.ts); the templates
 | `breezell.language`, `onDidChangeLanguage` | — | Breezell's display language (`en`, `zh-CN`, `zh-TW`, `ja`, `ko`, `ru`, `es`, `pt-BR`), for a plugin's own texts: `vscode.env.language` does not follow it. Check for it: an older Breezell does not have it |
 | `breezell.chat.onDidStartTurn`, `onDidFinishTurn` | `chat.events` | A conversation turn started or finished: mode, outcome (completed, error, stopped) and duration, **never the content** |
 | `breezell.chat.listConversations()`, `getConversation(id)`, `onDidChangeConversation`, `show(id)` | `chat.read` | The conversations of this workspace as the user sees them: messages, replies (with reasoning), tool calls with their parameters, status and result, and the memories used for each message (`recalledMemories`, and `memoryUse` with the chat's resident and relevant counts); the reply being written; open one in Breezell's chat |
-| `breezell.chat.send(text, { conversationId, automated })` | `chat.send` | Send a message as the user would, or start a conversation; the AI answers it like the user's own. `automated`: the plugin sends it on its own (see [Work over many turns](#work-over-many-turns)) |
+| `breezell.chat.send(text, { conversationId, automated, mode, model, attachments })` | `chat.send` | Send a message as the user would, or start a conversation; the AI answers it like the user's own. `automated`: the plugin sends it on its own (see [Work over many turns](#work-over-many-turns)). `mode` (`normal`, `agent`, `plan`) and `model` (one of `models.list`) as the pickers set them; `attachments`: up to 10 files or folders of the workspace |
+| `breezell.chat.stop(id)` | `chat.send` | Stop the reply a conversation is writing, as Stop does. It is not the user's Stop: `automated` messages may follow |
 | `breezell.chat.holdDoneNotice(id)`, `releaseDoneNotice(id, { announce })` | `chat.send` | No done sound or system notification until the work is over (see [Work over many turns](#work-over-many-turns)) |
 | `breezell.chat.conversationOfTurn(turnId)` | `chat.read` | The conversation a turn event was about, as `listConversations` names it |
 | `breezell.chat.approve(id)`, `reject(id)` | `chat.approve` | Approve or reject the tool call a conversation waits for |
-| `breezell.models.request({ messages, system, onText, onReasoning }, token)` | `models.request` | Send a request to the user's current chat model, optionally streaming |
+| `breezell.models.request({ messages, system, model, responseFormat, maxOutputTokens, onText, onReasoning }, token)` | `models.request` | Send a request to the user's current chat model, or to `model` (one of `models.list`), optionally streaming. User messages may carry `images` (base64, up to 8). `responseFormat: 'json'` gives the answer parsed in `json`; `maxOutputTokens` caps the answer |
 | `breezell.models.list()`, `select({ provider, model })` | `models.select` | The models of Breezell's model picker, and switching the chat model to one of them |
 | `breezell.providers.listCustom()` | `providers.read` | The user's custom APIs as their settings page shows them: base URL, protocol, request address, **API key**, request headers, account pool, models and prices |
+| `breezell.providers.list()` | `providers.list` | The same custom APIs **without** keys, header values or paths: name, protocol, host, header names, models |
 | `breezell.app.requestRestart({ scope, reason, l10n, force })` | `app.restart`; `app.forceRestart` to force | Ask to restart the plugins, this window or all of Breezell, or restart them without asking (see [Restarting Breezell](#restarting-breezell)) |
 | `breezell.windows.open(id)` | — (the window is declared in `package.json`) | Open one of the plugin's windows; returns it with `postMessage`, `onDidReceiveMessage`, `onDidClose`, `close` |
 | `breezell.tools.register(name, { invoke })` | `agent.tools` | Give Breezell's agent a tool the plugin declares and runs, in the chat modes it picks (see [Agent tools](#agent-tools)) |
+| `breezell.tools.registerCallHandler(handler)`, `onDidRunTool` | `agent.hooks` | See each tool call of the agent before it runs, and refuse it; hear how each went (see [The agent's tool calls](#the-agents-tool-calls)) |
 | `breezell.permissionState(permission)`, `requestPermission(permission)`, `onDidChangePermissions` | — (only permissions it declared) | Where a permission stands, asking the user at a moment of the plugin's choosing, and hearing when they change it |
 | `breezell.chat.readInput()` | `chat.input` | What is in the chat box, its part before the caret, and the recent messages of the conversation |
 | `breezell.chat.registerSendHandler(handler)` | `chat.intercept` | See each message before it is sent: change it or stop it (see [A message before it is sent](#a-message-before-it-is-sent)) |
@@ -126,14 +129,16 @@ each plugin declares before it is installed.
 | `chat.send` | dangerous | Asked for the first time the plugin uses it |
 | `chat.approve` | dangerous | Asked for the first time the plugin uses it |
 | `providers.read` | dangerous | Asked for the first time the plugin uses it, and only for an account whose plan includes Custom API |
+| `providers.list` | normal | On from the start; the user can turn it off. Never a key |
 | `agent.tools` | dangerous | "Agent tool registration": asked when the plugin first registers a tool, or when a plugin with MCP servers first runs |
+| `agent.hooks` | dangerous | Asked when the plugin first registers a tool call handler or listens to tool runs: it sees what the agent passes (file paths, edits, commands) and the results |
 | `app.restart` | normal | On from the start; the user can turn it off. The user still answers each request |
 | `app.forceRestart` | dangerous | Asked the first time the plugin forces a restart; if refused, the plugin asks each time instead |
 | `editor.read` | dangerous | The plugin asks with `requestPermission`. A plugin is an extension, so VS Code's API reaches open files whatever this says: this is how it says that it does, and how the user tells it not to |
 | `chat.input` | dangerous | Asked for the first time the plugin reads the chat box |
 | `chat.intercept` | dangerous | Asked when the plugin registers a send handler |
 | `ui.contribute` | normal | On from the start; the user can turn it off, which takes the plugin's buttons, pages and modes out of Breezell's screens |
-| `ui.modify` | dangerous | Asked when a plugin that declares `ui.patches` or a companion first runs |
+| `ui.modify` | dangerous | Asked when a plugin that declares `ui.patches`, `ui.tokens`, `ui.variants`, `ui.fonts`, `ui.stylesheet` or a companion first runs |
 | `chat.render` | dangerous | Asked when a plugin that declares `ui.renderers` first runs: a drawn code fence hands the plugin its text |
 
 - A permission only some versions of Breezell know goes in `"breezell": { "optionalPermissions": [...] }`:
@@ -367,6 +372,30 @@ context.subscriptions.push(vscode.breezell.tools.register('get_weather', {
 [Chat Mirror](examples/chat-mirror) has two: `pin_note` (Chat, Agent, Entanglement) and `list_notes`
 (every mode).
 
+### The agent's tool calls
+
+With `agent.hooks` a plugin sees each tool call of the agent after Breezell's own checks and before it
+runs or asks for approval, and can refuse it:
+
+```js
+vscode.breezell.tools.registerCallHandler(call => {
+	if (call.name === 'run_terminal_cmd' && /rm -rf/.test(String(call.params.command))) {
+		return { deny: true, reason: 'No deleting in this repository.' };
+	}
+	// or nothing: the call goes on
+});
+vscode.breezell.tools.onDidRunTool(run => console.log(run.name, run.status, run.resultLength));
+```
+
+- A call is `{ conversationId, toolCallId, name, params, mcpServer, mode }`; each text in `params` is cut at
+  20,000 characters. `conversationId` is the one `listConversations` uses.
+- A refused call never runs. The agent reads your plugin's reason, is told not to repeat the call, and the user
+  sees it as your plugin's. Repeating the same refused call counts toward Breezell's loop guard.
+- An answer later than 3 seconds, or a failure, lets the call go on; all plugins together get at most 6 seconds,
+  in id order, and the first refusal decides. A Stop pressed meanwhile ends the call.
+- `onDidRunTool` reports each call once its row has finished: `done`, `failed` or `rejected` (by the user), with
+  what the chat shows of the result (cut at 20,000 characters, `resultLength` the full length).
+
 ## Restarting Breezell
 
 A plugin can ask to restart, or with the user's leave restart without asking. It chooses what:
@@ -418,8 +447,10 @@ as far as sign-in, plans, quota, approvals and plugin management stay as they ar
 **declaring** what it wants in `contributes.breezell.ui`, and Breezell draws it. Its scripts and CSS
 never run in Breezell's own window: only in its own pages, in frames of their own.
 
-All of this needs a Breezell newer than 1.4.41. List its permissions in `optionalPermissions` and an
-older Breezell still installs the plugin, and ignores what it declares here.
+All of this needs a Breezell newer than 1.4.41; tokens, fonts, the stylesheet, variants, the number, text
+and colour settings, and the parts and properties marked *new* below come in a later version still. List
+its permissions in `optionalPermissions` and an older Breezell still installs the plugin, and ignores what
+it declares here that it does not know.
 
 | Layer | Declared in | Permission | What it does |
 |---|---|---|---|
@@ -427,6 +458,10 @@ older Breezell still installs the plugin, and ignores what it declares here.
 | Slash menu | `ui.slashCommands` | `ui.contribute` | Rows in the menu that opens at `/` in the chat box |
 | Pages | `ui.surfaces` | `ui.contribute` | The plugin's own HTML, with any framework, in an isolated frame |
 | Patches | `ui.patches` | `ui.modify` | Hide, move, restyle or replace named parts of the screens |
+| Tokens | `ui.tokens` | `ui.modify` | Set Breezell's own design variables: every screen's palette, the accent, cards, the chat's font and bubbles |
+| Fonts | `ui.fonts` | `ui.modify` | Font files of the plugin's, for its tokens and patches |
+| Stylesheet | `ui.stylesheet` | `ui.modify` | Tokens and patches written as a CSS file |
+| Variants | `ui.variants`, `when` | `ui.modify` | Looks that follow one of the plugin's own settings |
 | Fences | `ui.renderers` | `chat.render` | A code fence of a language drawn by one of its pages |
 | Modes | `ui.modes` | `ui.contribute` | An entry in the mode picker: a built-in mode plus the plugin's instructions |
 
@@ -565,40 +600,66 @@ A card with your plugin's settings, in Box > Feature Options, drawn by Breezell 
 }
 ```
 
-Each `setting` must be in your own `contributes.configuration`, and a boolean, which shows a switch, or a string with an `enum`, which shows `choices` taken from it. At most 12 settings and 6 choices. Other kinds of setting, and one named after Breezell, are refused. Breezell also checks at run time that your plugin is the one that registered the setting, so it writes only your own. Your code hears of a change as usual, with `onDidChangeConfiguration`.
+Each `setting` must be in your own `contributes.configuration`, and one of these:
+
+| Setting | Shows |
+|---|---|
+| `"type": "boolean"` | A switch |
+| `"type": "string"` with an `enum` | `choices` taken from it (2 to 6) |
+| `"type": "number"` or `"integer"` with `minimum` and `maximum` (and `multipleOf` for the step) | A slider *(new)* |
+| `"type": "string"`, `"format": "color-hex"` | A colour picker, `#rrggbb` *(new)* |
+| `"type": "string"` | A text field, up to its `maxLength` or 200 characters *(new)* |
+
+At most 12 settings. One named after Breezell is refused. Breezell also checks at run time that your plugin is the one that registered the setting, so it writes only your own. Your code hears of a change as usual, with `onDidChangeConfiguration`.
 
 ### Patches
 
 ```json
 { "region": "chat.input.attach", "hide": true }
 { "region": "chat.input.mcp", "order": -1 }
-{ "region": "chat.message.user", "style": { "borderColor": "var(--vscode-focusBorder)", "borderRadius": "12px" } }
+{ "region": "chat.message.user", "style": { "borderColor": "var(--vscode-focusBorder)", "borderRadius": "12px", "maxWidth": "80%" } }
 { "region": "chat.landing", "replaceWith": "myLanding" }
 ```
 
 | Part | What it takes |
 |---|---|
-| `chat.surface` | style: `backgroundColor`, one of the theme's own (below) |
+| `chat.surface` | style: `backgroundColor`, one of the theme's own (below), `backgroundImage` |
 | `chat.landing` | hide, replace, text style |
 | `chat.landing.hero` | hide, replace |
 | `chat.landing.hints` | hide |
 | `chat.messages` | replace |
 | `chat.rail` | hide |
-| `chat.message.user`, `chat.message.assistant` | text style |
+| `chat.message.user`, `chat.message.assistant` | text style, `width`, `minWidth`, `maxWidth` |
 | `chat.turnStats` | hide, text style, `opacity` |
-| `chat.input.frame` | style: `backgroundColor`, one of the theme's own (below), `borderColor`, `borderRadius`, `borderWidth` |
+| `chat.input.frame` | frame style, `backgroundColor` one of the theme's own |
 | `chat.input.mode` | hide |
 | `chat.input.mention`, `.browser`, `.attach`, `.imageMode`, `.quickPhrases`, `.promptOptimize`, `.mcp` | hide, order |
+| `box.page` *(new)* | The page behind every Box page: `backgroundColor` one of the theme's own, `backgroundImage` |
+| `quickEdit.widget` *(new)* | The Ctrl+K box: frame style, `backgroundColor` one of the theme's own |
+| `tooltip` *(new)* | Breezell's tooltips: frame style, `color`, `fontSize`, `fontFamily`, `padding` |
 
-Text style is `backgroundColor`, `color`, `borderColor`, `borderRadius`, `borderWidth`, `padding`,
-`fontSize` (9 to 32px), `fontWeight`, `fontFamily` and `lineHeight` (1 to 3). A value is one plain value of
-that kind: no `url()`, selectors, `calc()` or a second declaration. `var()` takes `--vscode-*` and
-`--breezell-*`. `borderWidth` goes up to 4px, `padding` and `borderRadius` up to 64px or 4em, and only
-`borderRadius` takes a percentage (up to 50). There is no way to position, size or layer anything.
+Text style is `backgroundColor`, `backgroundImage`, `color`, `borderColor`, `borderRadius`, `borderWidth`,
+`padding`, `margin`, `gap`, `boxShadow`, `fontSize` (9 to 32px), `fontWeight`, `fontFamily`, `lineHeight` (1 to 3),
+`textAlign`, `letterSpacing`, `textTransform` and `transition`. Frame style is `backgroundColor`, `borderColor`,
+`borderRadius`, `borderWidth`, `boxShadow` and `transition`.
 
-What is on `chat.surface` and `chat.input.frame` has to stay readable, so their `backgroundColor` is
-`transparent` or `var(--vscode-<x>-background)`, with `<x>` one of `editor`, `sideBar`, `panel`, `input`,
-`editorWidget`, `dropdown`, `menu`, `quickInput`, `notifications`.
+A value is one plain value of that kind: no `url()`, selectors, `calc()` or a second declaration. `var()` takes
+`--vscode-*` and `--breezell-*`.
+
+- `borderWidth` goes up to 4px; `padding`, `margin`, `gap` and `borderRadius` up to 64px or 4em; only
+  `borderRadius` takes a percentage (up to 50).
+- `width` and `height` go up to 2000px or 100% and down to 48px or 20%, so a part cannot be made to vanish
+  that way; a minimum may be 0.
+- `boxShadow`: up to three layers, offsets up to 16px, blur up to 48px, spread up to 8px, so a shadow cannot
+  cover what is beside its part.
+- `backgroundImage`: a gradient, or an image file of your plugin's as `plugin:assets/paper.png` (png, jpg, gif,
+  webp or avif, up to 2 MB).
+- `transition` animates only what a plugin can set (colours, shadow, opacity), for up to a second.
+- There is still no way to position, layer, transform, clip or hide anything with style.
+
+What is on `chat.surface`, `chat.input.frame`, `box.page` and `quickEdit.widget` has to stay readable, so their
+`backgroundColor` is `transparent` or `var(--vscode-<x>-background)`, with `<x>` one of `editor`, `sideBar`, `panel`,
+`input`, `editorWidget`, `dropdown`, `menu`, `quickInput`, `notifications`.
 
 When plugins disagree, the plugin whose id sorts first has it, so the outcome does not depend on which
 started first. A part replaced by one plugin stays replaced if another hides it.
@@ -610,8 +671,96 @@ Pages in `chat.messages.top` and `chat.input.above` make room in the same cases,
 takes at most a quarter of the chat's panel, however many plugins put a page there.
 
 **No plugin can change** the account, plans, billing, upgrades, quota, custom API settings, the model
-picker, Send and Stop, the context meter, tool approvals, errors, the Box settings, the plugin pages,
-permission dialogs or updates. These are not parts of the list, and naming one gets a clear refusal.
+picker, Send and Stop, the context meter, tool approvals, errors, the Box's cards about these, the plugin
+pages, permission dialogs or updates. These are not parts of the list, and naming one gets a clear refusal.
+Tokens reach them only as the theme reaches them, and what the user must read keeps its contrast (below).
+
+### Breezell's variables (tokens) *(new)*
+
+```json
+"tokens": {
+  "bg-1": "#fffbe8", "bg-2": "#f6f1e3", "fg-1": "#2b2b2b", "border-2": "#e2d9c3",
+  "accent": "#7a4b1f", "accent-fg": "#ffffff",
+  "chat-font-family": "Lora, Georgia, serif", "bubble-radius": "18px", "card-shadow": "0 2px 8px rgba(0,0,0,.08)"
+}
+```
+
+A token is one of Breezell's own design variables, written with or without `--breezell-`. Breezell's screens
+read them where they would read the theme, so a plugin can repaint every screen at once; a token nobody sets
+changes nothing.
+
+| Tokens | What they colour or shape |
+|---|---|
+| `bg-1`, `bg-1-alt`, `bg-2`, `bg-2-alt`, `bg-2-hover`, `bg-3` | Backgrounds of every screen |
+| `fg-0` to `fg-4` | Text, from strongest to faintest |
+| `border-1` to `border-4`, `field-bg`, `field-border`, `field-border-focus`, `ring-color`, `link-color`, `warning` | Lines, fields, focus, links |
+| `accent` + `accent-fg` | Buttons and the current choice (a pair, below) |
+| `card`, `card-border`, `card-shadow` | Box cards and the chat's floating panels |
+| `chat-font-family`, `chat-font-size`, `chat-background` | The chat panel; `chat-background` is a gradient or `plugin:` image |
+| `bubble-radius`, `bubble-padding` | The user's message bubbles |
+| `input-radius`, `input-shadow` | The chat box |
+| `send-bg` + `send-fg`, `approve-bg` + `approve-fg`, `reject-bg` + `reject-fg`, `error-bg` + `error-fg` | Send, Apply and Reject on tool calls, error cards (pairs) |
+
+Each takes a value of its kind, checked as a style is. **The pairs** colour what the user must always be able to
+read: they are set together, both as written-out colours (`#rrggbb`, `rgb()`, `hsl()`), opaque, and with a contrast
+of at least 4.5 (WCAG AA); otherwise neither is used. An error card keeps the theme's text colours whatever your
+palette is, unless you set the error pair. A token may also take its value from one of your own settings, such as
+a colour the user picks in Feature Options: `"link-color": { "setting": "myPlugin.accent" }` (not for a pair).
+When plugins set the same token, the plugin whose id sorts first has it.
+
+### Fonts and images *(new)*
+
+```json
+"fonts": [{ "family": "Lora", "file": "fonts/Lora.woff2" }, { "family": "Lora", "file": "fonts/Lora-Bold.woff2", "weight": "700" }]
+```
+
+A font is a `.woff2`, `.woff`, `.ttf` or `.otf` file in your plugin, up to 2 MB, at most 8. Breezell reads the file
+and loads it under a name of its own, so a `fontFamily` or token of yours that names `Lora` gets your font, and no
+plugin can replace a font the rest of the screen uses. An image is named as `plugin:<path>` in `backgroundImage`
+or `chat-background`, read from your plugin the same way. Nothing is fetched from an address.
+
+### A stylesheet *(new)*
+
+```json
+"stylesheet": "look.css"
+```
+
+```css
+:root { --breezell-bg-1: #fffbe8; --breezell-fg-1: #2b2b2b; --breezell-chat-font-family: Lora, serif; }
+::part(chat.message.user), ::part(chat.message.assistant) { border-radius: 16px; padding: 10px 14px; }
+::part(box.page) { background-image: linear-gradient(#fffbe8, #f6f1e3); }
+```
+
+The file (up to 64 KB) is another way of writing tokens and patches, not CSS the screen runs: Breezell reads
+`:root` rules of its variables and `::part(<name>)` rules of the parts above, with comments, and checks every value
+as in `package.json`. Any other selector, an at-rule (`@import`, `@font-face`, `@media`) or `!important` is left out,
+and `validate` lists each. What `package.json` declares wins over the stylesheet.
+
+### Looks that follow your settings *(new)*
+
+A patch or a set of tokens can hold only while one of your own settings has a value:
+
+```json
+"patches": [{ "region": "chat.landing", "style": { "padding": "8px" }, "when": { "setting": "myPlugin.dense", "value": true } }],
+"tokens": [
+  { "values": { "bg-1": "#fffbe8" } },
+  { "values": { "bg-1": "#101418", "fg-1": "#e6e6e6" }, "when": { "setting": "myPlugin.theme", "value": "night" } }
+],
+"variants": {
+  "setting": "myPlugin.theme",
+  "values": {
+    "paper": { "tokens": { "accent": "#7a4b1f", "accent-fg": "#ffffff" } },
+    "night": { "tokens": { "accent": "#c8a97e", "accent-fg": "#101418" }, "patches": [{ "region": "chat.surface", "style": { "backgroundColor": "var(--vscode-editor-background)" } }] }
+  }
+}
+```
+
+`variants` is the same as a `when` on each of its tokens and patches. The setting must be in your own
+`contributes.configuration`, and the value of its type. Put the setting in Feature Options (`ui.options`) and
+the user switches your looks there; your code can switch them too, by writing its setting, and Breezell redraws.
+Within your plugin a later set of tokens wins over an earlier one, so a variant wins over the base. At most 16
+sets of tokens and 32 patches in all.
+
 
 ### Code fences
 
@@ -654,7 +803,11 @@ follow-up they picked), not what Breezell or another plugin writes: a teammate's
 `chat.send`. The message goes on through the usual send path, so its model, plan and billing are what they
 would have been.
 
-- It sees the text as it reads, with mentions written out (`@file.ts`). Attachments stay as they are.
+- It sees the text as it reads, with mentions written out (`@file.ts`), and `attachments`: the names of what goes with it. Attachments stay as they are.
+- Context for the AI: answer `{ context: '...' }` (alone or with `text`), up to 20,000 characters, 50,000 from all
+  plugins together. The AI reads it with the message and is told it came from your plugin; the user does not see
+  it in the chat and `chat.read` does not show it. It stays in the conversation's history, and an edit of the
+  message asks your handler again and replaces it.
 - Stopped: the user is told by which plugin and why, and the text stays in the chat box.
 - A command of the plugin's own: answer `{ cancel: true, handled: true }`. The box clears and nothing is said,
   so telling the user what happened is up to the plugin. Keep `reason` for an older Breezell, which takes it as stopped.

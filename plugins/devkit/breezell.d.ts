@@ -57,9 +57,10 @@ declare module 'vscode' {
 		/**
 		 * The permissions this plugin declared in `breezell.permissions`, as an Android app declares
 		 * its permissions: nothing undeclared is ever usable. A `normal` permission is
-		 * on unless the user turns it off (`chat.events`, `models.select`). A `dangerous` one
-		 * (`models.request`, `chat.read`, `chat.send`, `chat.approve`, `providers.read`, `agent.tools`) is asked for
-		 * the first time the plugin uses it; while the user
+		 * on unless the user turns it off (`chat.events`, `models.select`, `providers.list`, `app.restart`,
+		 * `ui.contribute`). A `dangerous` one (`models.request`, `chat.read`, `chat.send`, `chat.approve`,
+		 * `providers.read`, `agent.tools`, `agent.hooks`, `editor.read`, `chat.input`, `chat.intercept`,
+		 * `chat.render`, `ui.modify`, `app.forceRestart`) is asked for the first time the plugin uses it; while the user
 		 * has not allowed it, its calls fail with `BreezellPermissionDenied`. The user can switch each
 		 * permission on and off, or all at once, on the plugin's page in Plugins › Installed.
 		 */
@@ -113,22 +114,51 @@ declare module 'vscode' {
 		 * - `chat.read` (dangerous: asked the first time): the conversations of this workspace as the
 		 *   user sees them, including tool calls with their results and the memories recalled for
 		 *   each message; `show` opens one in Breezell's chat.
-		 * - `chat.send` (dangerous): send messages, and start conversations. The AI answers them like
-		 *   the user's own, and they are billed the same way. At most 10 a minute.
+		 * - `chat.send` (dangerous): send messages, and start conversations, in a mode and with a model
+		 *   and files of their own; stop a reply. The AI answers them like the user's own, and they are
+		 *   billed the same way. At most 10 a minute.
 		 * - `chat.approve` (dangerous): approve or reject the tool call a conversation waits for.
 		 */
 		/** A message about to be sent, as a plugin with `chat.intercept` sees it. */
 		export interface SendInput {
 			readonly conversationId: string;
 			readonly text: string;
+			/** The names of what goes with it (files, folders, images), as `ConversationMessage` names them. Empty on an older Breezell. */
+			readonly attachments: readonly string[];
 		}
 
 		/**
 		 * `text`: send this instead. `cancel`: do not send it; `reason` is shown to the user and the text
 		 * stays in the box. `cancel` with `handled`: it was a command of the plugin's own, dealt with
 		 * here: the box clears, and telling the user what happened is up to the plugin.
+		 *
+		 * `context`: text the AI reads with this message (at most 20,000 characters; 50,000 from all
+		 * plugins together). The user does not see it in the chat, `chat.read` does not show it, and the
+		 * AI is told it came from this plugin. It stays in the conversation's history like the message.
 		 */
-		export type SendAnswer = { readonly text?: string; readonly cancel?: boolean; readonly reason?: string; readonly handled?: boolean } | undefined | void;
+		export type SendAnswer = { readonly text?: string; readonly cancel?: boolean; readonly reason?: string; readonly handled?: boolean; readonly context?: string } | undefined | void;
+
+		/** What `chat.send` may ask for besides the text. */
+		export interface SendOptions {
+			/** Without it, in a new conversation. */
+			readonly conversationId?: string;
+			readonly automated?: boolean;
+			/**
+			 * The mode of the turn: `normal` (Chat), `agent` or `plan`. As the user would pick it: in the
+			 * conversation open in the chat the mode picker switches; another conversation keeps it as
+			 * its own. Entanglement, Agent Teams and Dark Selene stay the user's choice.
+			 */
+			readonly mode?: 'normal' | 'agent' | 'plan';
+			/** One of `models.list`'s models, for this conversation from now on, as its model picker sets it. */
+			readonly model?: { readonly provider: string; readonly model: string };
+			/**
+			 * Up to 10 files or folders of the workspace, by absolute path or relative to its first folder.
+			 * Images (png, jpg, gif, webp, at most 10 MB) go as images. Links, anything outside the
+			 * workspace folders and what Breezell keeps from plugins (sign-ins, stored conversations, the
+			 * Super Memory) are refused.
+			 */
+			readonly attachments?: readonly string[];
+		}
 		export type SendHandler = (input: SendInput) => SendAnswer | Thenable<SendAnswer>;
 
 		/** One open page of a surface the plugin declared in `contributes.breezell.ui.surfaces`. */
@@ -197,7 +227,12 @@ declare module 'vscode' {
 			 * `BreezellStoppedByUser` after the user pressed Stop on the reply, until they write again,
 			 * and with `BreezellInvalidRequest` while a message of the user's waits in the queue.
 			 */
-			export function send(text: string, options?: { readonly conversationId?: string; readonly automated?: boolean }): Thenable<{ readonly conversationId: string }>;
+			export function send(text: string, options?: SendOptions): Thenable<{ readonly conversationId: string }>;
+			/**
+			 * Stops the reply the conversation is writing (`chat.send`), as Stop does. It is not the
+			 * user's Stop: `automated` messages may follow it. Nothing happens when it is not writing.
+			 */
+			export function stop(conversationId: string): Thenable<void>;
 			/**
 			 * Work over many turns (`chat.send`): the turns of this conversation make no done sound or
 			 * system notification until released. Errors still do. It ends by itself when the user
@@ -314,14 +349,34 @@ declare module 'vscode' {
 			readonly backgroundCommands?: BackgroundCommands;
 		}
 
+		/** An image for the model: base64 without the `data:` prefix, at most 8,000,000 characters. */
+		export interface ModelImage {
+			readonly mimeType: 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp';
+			readonly data: string;
+		}
+
 		export interface ModelMessage {
 			readonly role: 'user' | 'assistant';
 			readonly content: string;
+			/** On a user message: images it shows the model (8 per request at most). A model known not to read images refuses them. */
+			readonly images?: readonly ModelImage[];
 		}
 
 		export interface ModelRequest {
 			readonly messages: readonly ModelMessage[];
 			readonly system?: string;
+			/** One of `models.list`'s models instead of the chat model. It needs no `models.select`. */
+			readonly model?: { readonly provider: string; readonly model: string };
+			/**
+			 * `json`: the answer is one JSON value, parsed into `ModelResponse.json`. The model is told so;
+			 * an answer that holds no JSON fails with `BreezellModelError`.
+			 */
+			readonly responseFormat?: 'json';
+			/**
+			 * At most this many tokens of answer, from 16 to 65,536; for a model that reasons, its
+			 * reasoning counts too. Some relays (OpenAI Responses) do not apply it.
+			 */
+			readonly maxOutputTokens?: number;
 			/** Called with the whole text so far while the reply streams. */
 			readonly onText?: (textSoFar: string) => void;
 			/**
@@ -338,6 +393,8 @@ declare module 'vscode' {
 			readonly text: string;
 			/** `provider/model` that answered. */
 			readonly model: string;
+			/** With `responseFormat: 'json'`: the answer, parsed. */
+			readonly json?: unknown;
 		}
 
 		/**
@@ -431,8 +488,28 @@ declare module 'vscode' {
 		 * `BreezellPlanRequired` and nobody is asked. Requests a plugin sends with these keys go to
 		 * the provider directly and are billed to the user by it.
 		 */
+		/** A custom API without its keys, as `providers.list` gives it. */
+		export interface ProviderSummary {
+			readonly id: string;
+			readonly name: string;
+			/** `openai`, `openai-responses` or `anthropic`. */
+			readonly protocol: string;
+			/** The host requests go to, without path or query. */
+			readonly host: string;
+			/** The names of the request headers it adds; never their values. */
+			readonly headerNames: readonly string[];
+			/** How many accounts its pool takes in turn; absent without a pool. */
+			readonly poolAccounts?: number;
+			readonly models: readonly { readonly id: string; readonly enabled: boolean; readonly current: boolean }[];
+		}
+
 		export namespace providers {
 			export function listCustom(): Thenable<CustomApi[]>;
+			/**
+			 * The user's custom APIs without their keys, header values or addresses beyond the host
+			 * (`providers.list`, normal: on unless the user turns it off). Any plan.
+			 */
+			export function list(): Thenable<ProviderSummary[]>;
 		}
 
 		export namespace windows {
@@ -475,9 +552,43 @@ declare module 'vscode' {
 		 * registered but unused, and turning the permission on later brings the tools back. The same
 		 * permission lets the MCP servers the plugin declares (`contributes.breezell.mcpServers`) start.
 		 */
+		/** A tool call of the agent, as `agent.hooks` shows it. */
+		export interface ToolCall {
+			/** As `listConversations` names it; a subagent's or teammate's call has an id of its own. */
+			readonly conversationId: string;
+			readonly toolCallId: string;
+			readonly name: string;
+			/** As the agent passed them; each text is cut at 20,000 characters. */
+			readonly params: { readonly [key: string]: unknown };
+			/** The MCP server of an MCP tool (`plugin:<id>` for a plugin's). */
+			readonly mcpServer?: string;
+			/** The chat mode of the turn, e.g. `agent`, `plan`. */
+			readonly mode: string;
+		}
+
+		/** `deny`: the call does not run; the agent and the user see `reason` as this plugin's. */
+		export type ToolCallAnswer = { readonly deny?: boolean; readonly reason?: string } | undefined | void;
+		export type ToolCallHandler = (call: ToolCall) => ToolCallAnswer | Thenable<ToolCallAnswer>;
+
+		export interface ToolRun extends ToolCall {
+			readonly status: 'done' | 'failed' | 'rejected';
+			/** What the chat shows of the result, cut at 20,000 characters. */
+			readonly result: string;
+			readonly resultLength: number;
+		}
+
 		export namespace tools {
 			/** Registers the code of a declared tool; disposing it takes the tool away from the agent. */
 			export function register(name: string, tool: Tool): Disposable;
+			/**
+			 * Each tool call of the agent before it runs, approval or not (`agent.hooks`, dangerous: asked
+			 * the first time): refuse it with `{ deny: true, reason }`. An answer later than three seconds,
+			 * or a failure, lets the call go on. One handler per plugin; with several plugins, the first
+			 * refusal (in plugin id order) decides.
+			 */
+			export function registerCallHandler(handler: ToolCallHandler): Disposable;
+			/** A tool call the plugins were asked about finished: done, failed, or rejected by the user (`agent.hooks`). */
+			export const onDidRunTool: Event<ToolRun>;
 		}
 	}
 }

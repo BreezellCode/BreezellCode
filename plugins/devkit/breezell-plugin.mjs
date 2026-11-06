@@ -29,7 +29,7 @@ import { fileURLToPath } from 'node:url';
 
 const DEVKIT_VERSION = '1.0.0';
 const API_VERSION = 1;
-const PERMISSIONS = ['chat.events', 'models.request', 'models.select', 'chat.read', 'chat.send', 'chat.approve', 'providers.read', 'agent.tools', 'app.restart', 'app.forceRestart', 'editor.read', 'chat.input', 'chat.intercept', 'chat.render', 'ui.contribute', 'ui.modify'];
+const PERMISSIONS = ['chat.events', 'models.request', 'models.select', 'chat.read', 'chat.send', 'chat.approve', 'providers.read', 'providers.list', 'agent.tools', 'agent.hooks', 'app.restart', 'app.forceRestart', 'editor.read', 'chat.input', 'chat.intercept', 'chat.render', 'ui.contribute', 'ui.modify'];
 /**
  * What Breezell lets a plugin do to its screens (contributes.breezell.ui). Breezell checks all of this
  * again when it loads a plugin, and what fails there is left out: this is to tell you sooner.
@@ -37,18 +37,35 @@ const PERMISSIONS = ['chat.events', 'models.request', 'models.select', 'chat.rea
 const UI_BUTTON_SLOTS = ['chat.input.toolbar', 'chat.message.actions', 'code.block.actions'];
 const UI_SURFACE_SLOTS = ['chat.input.above', 'chat.messages.top', 'chat.landing', 'chat.input.companion'];
 const UI_MODE_BASES = ['normal', 'plan', 'analyze', 'agent'];
-const UI_TEXT_STYLE = ['backgroundColor', 'color', 'borderColor', 'borderRadius', 'borderWidth', 'padding', 'fontSize', 'fontWeight', 'fontFamily', 'lineHeight'];
+const UI_FENCES_TAKEN = [
+	'mermaid', 'causal', 'diff', 'patch', 'markdown', 'md', 'mdx', 'text', 'txt', 'plain', 'plaintext', 'latex', 'tex', 'math',
+	'json', 'jsonc', 'yaml', 'yml', 'toml', 'ini', 'xml', 'html', 'svg', 'css', 'scss', 'less', 'sql', 'graphql',
+	'javascript', 'js', 'jsx', 'mjs', 'cjs', 'typescript', 'ts', 'tsx', 'python', 'py', 'bash', 'sh', 'shell', 'zsh', 'fish', 'powershell', 'ps1', 'pwsh', 'bat', 'cmd', 'console',
+	'c', 'h', 'cpp', 'c++', 'cc', 'hpp', 'csharp', 'cs', 'java', 'kotlin', 'kt', 'go', 'golang', 'rust', 'rs', 'ruby', 'rb', 'php', 'swift', 'scala', 'lua', 'dart', 'r', 'perl', 'pl',
+	'dockerfile', 'makefile', 'vue', 'svelte',
+];
+const UI_ID = /^[a-z][a-zA-Z0-9_-]{0,63}$/;
+const UI_CODICON = /^[a-z0-9][a-z0-9-]{0,63}$/;
+const UI_PATH = /^(?!\/)(?!.*(?:^|\/)\.{0,2}(?:\/|$))[A-Za-z0-9._\-/]+$/;
+const UI_SURFACE_STYLE = ['backgroundColor', 'backgroundImage'];
+/** A frame around something of Breezell's: its box, never what is written in it. */
+const UI_FRAME_STYLE = ['backgroundColor', 'borderColor', 'borderRadius', 'borderWidth', 'boxShadow', 'transition'];
+const UI_TEXT_STYLE = ['backgroundColor', 'backgroundImage', 'color', 'borderColor', 'borderRadius', 'borderWidth', 'padding', 'margin', 'gap', 'boxShadow', 'fontSize', 'fontWeight', 'fontFamily', 'lineHeight', 'textAlign', 'letterSpacing', 'textTransform', 'transition'];
+/** A message: its text, and how wide it may get. */
+const UI_BLOCK_STYLE = [...UI_TEXT_STYLE, 'width', 'minWidth', 'maxWidth'];
+const UI_STYLE_PROPERTIES = ['backgroundColor', 'color', 'borderColor', 'borderRadius', 'borderWidth', 'padding', 'fontSize', 'fontWeight', 'fontFamily', 'lineHeight', 'opacity',
+	'margin', 'gap', 'boxShadow', 'backgroundImage', 'width', 'minWidth', 'maxWidth', 'height', 'minHeight', 'maxHeight', 'textAlign', 'letterSpacing', 'textTransform', 'transition'];
 const UI_REGIONS = {
-	'chat.surface': { style: ['backgroundColor'] },
+	'chat.surface': { style: UI_SURFACE_STYLE, themeBackgroundOnly: true },
 	'chat.landing': { hide: true, replace: true, style: UI_TEXT_STYLE },
 	'chat.landing.hero': { hide: true, replace: true },
 	'chat.landing.hints': { hide: true },
 	'chat.messages': { replace: true },
 	'chat.rail': { hide: true },
-	'chat.message.user': { style: UI_TEXT_STYLE },
-	'chat.message.assistant': { style: UI_TEXT_STYLE },
+	'chat.message.user': { style: UI_BLOCK_STYLE },
+	'chat.message.assistant': { style: UI_BLOCK_STYLE },
 	'chat.turnStats': { hide: true, style: [...UI_TEXT_STYLE, 'opacity'] },
-	'chat.input.frame': { style: ['backgroundColor', 'borderColor', 'borderRadius', 'borderWidth'] },
+	'chat.input.frame': { style: UI_FRAME_STYLE, themeBackgroundOnly: true },
 	'chat.input.mode': { hide: true },
 	'chat.input.mention': { hide: true, order: true },
 	'chat.input.browser': { hide: true, order: true },
@@ -57,28 +74,26 @@ const UI_REGIONS = {
 	'chat.input.quickPhrases': { hide: true, order: true },
 	'chat.input.promptOptimize': { hide: true, order: true },
 	'chat.input.mcp': { hide: true, order: true },
+	'box.page': { style: UI_SURFACE_STYLE, themeBackgroundOnly: true },
+	'quickEdit.widget': { style: UI_FRAME_STYLE, themeBackgroundOnly: true },
+	'tooltip': { style: [...UI_FRAME_STYLE, 'color', 'fontSize', 'fontFamily', 'padding'] },
 };
-const UI_PROTECTED = ['account', 'signIn', 'plan', 'billing', 'upgrade', 'quota', 'customApi', 'chat.input.model', 'chat.input.send', 'chat.input.context', 'chat.quota', 'chat.toolApproval', 'chat.error', 'box', 'plugins', 'permissions', 'updates'];
-const UI_FENCES_TAKEN = [
-	'mermaid', 'causal', 'diff', 'patch', 'markdown', 'md', 'mdx', 'text', 'txt', 'plain', 'plaintext', 'latex', 'tex', 'math',
-	'json', 'jsonc', 'yaml', 'yml', 'toml', 'ini', 'xml', 'html', 'svg', 'css', 'scss', 'less', 'sql', 'graphql',
-	'javascript', 'js', 'jsx', 'mjs', 'cjs', 'typescript', 'ts', 'tsx', 'python', 'py', 'bash', 'sh', 'shell', 'zsh', 'fish', 'powershell', 'ps1', 'pwsh', 'bat', 'cmd', 'console',
-	'c', 'h', 'cpp', 'c++', 'cc', 'hpp', 'csharp', 'cs', 'java', 'kotlin', 'kt', 'go', 'golang', 'rust', 'rs', 'ruby', 'rb', 'php', 'swift', 'scala', 'lua', 'dart', 'r', 'perl', 'pl',
-	'dockerfile', 'makefile', 'vue', 'svelte',
-];
-/** On these, what is drawn on it must stay readable: only the theme's own backgrounds. */
-const UI_THEME_BACKGROUND_ONLY = ['chat.surface', 'chat.input.frame'];
+/** The Box's own frame (box.page) can be restyled; its cards about these cannot. */
+const UI_PROTECTED = ['account', 'signIn', 'plan', 'billing', 'upgrade', 'quota', 'customApi', 'chat.input.model', 'chat.input.send', 'chat.input.context', 'chat.quota', 'chat.toolApproval', 'chat.error',
+	'box.account', 'box.plan', 'box.billing', 'box.plugins', 'box.permissions', 'box.updates', 'box.customApi', 'plugins', 'permissions', 'updates'];
+const uiProtected = name => UI_PROTECTED.some(area => name === area || name.startsWith(`${area}.`));
 const UI_THEME_BACKGROUNDS = ['editor', 'sideBar', 'panel', 'input', 'editorWidget', 'dropdown', 'menu', 'quickInput', 'notifications'];
 const UI_THEME_BACKGROUND = new RegExp(`^(transparent|var\\(--vscode-(${UI_THEME_BACKGROUNDS.join('|')})-background\\))$`);
-const UI_ID = /^[a-z][a-zA-Z0-9_-]{0,63}$/;
-const UI_CODICON = /^[a-z0-9][a-z0-9-]{0,63}$/;
-const UI_PATH = /^(?!\/)(?!.*(?:^|\/)\.{0,2}(?:\/|$))[A-Za-z0-9._\-/]+$/;
+const UI_UNSAFE_CSS = /url|expression|image|import|attr|element|paint|@|;|\{|\}|\\|\/\*|<|>|javascript:/i;
+const UI_COLOR = /^(#[0-9a-f]{3,8}|(rgb|rgba|hsl|hsla)\([0-9.,%\s/]{1,40}\)|transparent|currentcolor|[a-z]{3,24}|var\(--(vscode|breezell)-[a-zA-Z0-9-]{1,80}\))$/i;
+const UI_LITERAL_COLOR = /^(#[0-9a-f]{3,8}|(rgb|rgba|hsl|hsla)\([0-9.,%\s/]{1,40}\))$/i;
+const UI_MAX_PX = { padding: 64, margin: 64, gap: 64, borderRadius: 64, borderWidth: 4, size: 2000 };
 /** One size: up to `maxPx`, up to 4em or 4rem, and a percentage (up to 50) only where `percent`. */
 function uiLengthOk(value, maxPx, percent) {
 	if (value === '0') {
 		return true;
 	}
-	const size = /^([0-9]{1,3}(?:\.[0-9]{1,3})?)(px|em|rem|%)$/.exec(value);
+	const size = /^([0-9]{1,4}(?:\.[0-9]{1,3})?)(px|em|rem|%)$/.exec(value);
 	if (!size) {
 		return false;
 	}
@@ -89,26 +104,116 @@ const uiLengthsOk = (value, maxPx, percent) => {
 	const sizes = value.split(/\s/);
 	return sizes.length <= 4 && sizes.every(size => uiLengthOk(size, maxPx, percent));
 };
+/** A width or height: up to 2000px or 100%, at least 48px or 20% (a minimum may be 0), auto, or none for a maximum. */
+function uiSizeOk(value, property) {
+	const isMinimum = /^min/.test(property);
+	if (value === 'auto' || (value === 'none' && /^max/.test(property)) || (value === '0' && isMinimum)) {
+		return true;
+	}
+	const size = /^([0-9]{1,4}(?:\.[0-9]{1,2})?)(px|%)$/.exec(value);
+	if (!size) {
+		return false;
+	}
+	const n = Number(size[1]);
+	return size[2] === 'px' ? n <= UI_MAX_PX.size && (isMinimum || n >= 48) : n <= 100 && (isMinimum || n >= 20);
+}
+function uiSplitTopLevel(value, separator) {
+	const out = [];
+	let depth = 0;
+	let current = '';
+	for (const char of value) {
+		if (char === '(') {
+			depth++;
+		} else if (char === ')') {
+			depth = Math.max(0, depth - 1);
+		}
+		if (char === separator && depth === 0) {
+			out.push(current);
+			current = '';
+		} else {
+			current += char;
+		}
+	}
+	out.push(current);
+	return out;
+}
+const uiShadowPx = value => value === '0' ? 0 : /^-?[0-9]{1,3}(\.[0-9]{1,2})?px$/.test(value) ? Number(value.slice(0, -2)) : undefined;
+/** Up to three layers of `[inset] <x> <y> [blur] [spread] <colour>`: offsets up to 16px, blur up to 48px, spread up to 8px. */
+function uiShadowOk(value) {
+	if (value === 'none') {
+		return true;
+	}
+	const layers = uiSplitTopLevel(value, ',');
+	return layers.length >= 1 && layers.length <= 3 && layers.every(layer => {
+		const parts = uiSplitTopLevel(layer.trim(), ' ').filter(Boolean);
+		const sizes = parts.map(uiShadowPx).filter(n => n !== undefined);
+		const colors = parts.filter(part => uiShadowPx(part) === undefined && part !== 'inset' && UI_COLOR.test(part));
+		const insets = parts.filter(part => part === 'inset');
+		if (colors.length > 1 || insets.length > 1 || sizes.length < 2 || sizes.length > 4 || colors.length + sizes.length + insets.length !== parts.length) {
+			return false;
+		}
+		const [x, y, blur = 0, spread = 0] = sizes;
+		return Math.abs(x) <= 16 && Math.abs(y) <= 16 && blur >= 0 && blur <= 48 && Math.abs(spread) <= 8;
+	});
+}
+const UI_IMAGE_FILE = /\.(png|jpe?g|gif|webp|avif)$/i;
+/** `plugin:<path>` with a path inside the plugin to an image file: the path, or undefined. */
+function uiAssetPath(value) {
+	if (typeof value !== 'string' || !value.startsWith('plugin:')) {
+		return undefined;
+	}
+	const path = value.slice('plugin:'.length).replace(/^\.\//, '');
+	return UI_PATH.test(path) && UI_IMAGE_FILE.test(path) ? path : undefined;
+}
+const UI_GRADIENT = /^(repeating-)?(linear|radial|conic)-gradient\([a-z0-9#%.,\s()\-/]{1,400}\)$/i;
+const UI_TRANSITION_PROPERTIES = ['all', 'background-color', 'color', 'border-color', 'opacity', 'box-shadow', 'background'];
+function uiTransitionOk(value) {
+	if (value === 'none') {
+		return true;
+	}
+	return uiSplitTopLevel(value, ',').every(part => {
+		const words = part.trim().split(/\s+/);
+		const duration = /^([0-9]{1,4})(ms|s)$/.exec(words[1] ?? '');
+		return words.length >= 2 && words.length <= 3 && UI_TRANSITION_PROPERTIES.includes(words[0]) && !!duration
+			&& (duration[2] === 'ms' ? Number(duration[1]) <= 1000 : Number(duration[1]) <= 1)
+			&& (words.length === 2 || /^(ease|linear|ease-in|ease-out|ease-in-out)$/.test(words[2]));
+	});
+}
 
 function uiStyleOk(property, value) {
-	if (typeof value !== 'string' || !value || value.length > 160) {
+	if (typeof value !== 'string' || !value || value.length > (property === 'backgroundImage' || property === 'boxShadow' ? 400 : 160)) {
 		return false;
 	}
 	const v = value.trim();
-	if (property !== 'fontFamily' && /url|expression|image|import|attr|element|paint|@|;|\{|\}|\\|\/\*|<|>|javascript:/i.test(v.replace(/^var\(--(vscode|breezell)-[a-zA-Z0-9-]+\)$/, ''))) {
+	if (property !== 'fontFamily' && UI_UNSAFE_CSS.test(v.replace(/^var\(--(vscode|breezell)-[a-zA-Z0-9-]+\)$/, '').replace(/^plugin:[A-Za-z0-9._\-/]+$/, ''))) {
 		return false;
 	}
 	switch (property) {
 		case 'backgroundColor':
 		case 'color':
 		case 'borderColor':
-			return /^(#[0-9a-f]{3,8}|(rgb|rgba|hsl|hsla)\([0-9.,%\s/]{1,40}\)|transparent|currentcolor|[a-z]{3,24}|var\(--(vscode|breezell)-[a-zA-Z0-9-]{1,80}\))$/i.test(v);
+			return UI_COLOR.test(v);
 		case 'borderRadius':
-			return uiLengthsOk(v, 64, true);
+			return uiLengthsOk(v, UI_MAX_PX.borderRadius, true);
 		case 'padding':
-			return uiLengthsOk(v, 64, false);
+			return uiLengthsOk(v, UI_MAX_PX.padding, false);
+		case 'margin':
+			return uiLengthsOk(v, UI_MAX_PX.margin, false);
+		case 'gap':
+			return v.split(/\s/).length <= 2 && uiLengthsOk(v, UI_MAX_PX.gap, false);
 		case 'borderWidth':
-			return uiLengthOk(v, 4, false) && !/em$/.test(v);
+			return uiLengthOk(v, UI_MAX_PX.borderWidth, false) && !/em$/.test(v);
+		case 'boxShadow':
+			return uiShadowOk(v);
+		case 'backgroundImage':
+			return v === 'none' || UI_GRADIENT.test(v) || uiAssetPath(v) !== undefined;
+		case 'width':
+		case 'minWidth':
+		case 'maxWidth':
+		case 'height':
+		case 'minHeight':
+		case 'maxHeight':
+			return uiSizeOk(v, property);
 		case 'fontSize': {
 			const px = /^([0-9]{1,2}(\.[0-9]{1,2})?)px$/.exec(v);
 			return !!px && Number(px[1]) >= 9 && Number(px[1]) <= 32;
@@ -119,11 +224,326 @@ function uiStyleOk(property, value) {
 			return /^[a-zA-Z0-9 ,'"-]{1,120}$/.test(v) && !/url|expression/i.test(v);
 		case 'lineHeight':
 			return /^[0-9](\.[0-9]{1,2})?$/.test(v) && Number(v) >= 1 && Number(v) <= 3;
+		case 'textAlign':
+			return /^(left|right|center|start|end)$/.test(v);
+		case 'letterSpacing': {
+			const spacing = /^(-?[0-9](\.[0-9]{1,2})?)(px|em)$/.exec(v);
+			return v === 'normal' || (!!spacing && (spacing[3] === 'px' ? Math.abs(Number(spacing[1])) <= 4 : Math.abs(Number(spacing[1])) <= 0.3));
+		}
+		case 'textTransform':
+			return /^(none|uppercase|lowercase|capitalize)$/.test(v);
+		case 'transition':
+			return uiTransitionOk(v);
 		case 'opacity':
 			return /^[01](\.[0-9]{1,2})?$/.test(v) && Number(v) >= 0.3 && Number(v) <= 1;
 		default:
 			return false;
 	}
+}
+
+/**
+ * Breezell's variables a plugin may set (`--breezell-<name>`), with the kind of value each takes. The
+ * pairs colour what the user must always read: both colours written out, with a contrast of 4.5.
+ */
+const UI_TOKENS = {
+	'bg-1': 'color', 'bg-1-alt': 'color', 'bg-2': 'color', 'bg-2-alt': 'color', 'bg-2-hover': 'color', 'bg-3': 'color',
+	'fg-0': 'color', 'fg-1': 'color', 'fg-2': 'color', 'fg-3': 'color', 'fg-4': 'color',
+	'warning': 'color',
+	'border-1': 'color', 'border-2': 'color', 'border-3': 'color', 'border-4': 'color',
+	'field-bg': 'color', 'field-border': 'color', 'field-border-focus': 'color',
+	'ring-color': 'color', 'link-color': 'color',
+	'accent': 'color', 'accent-fg': 'color',
+	'card': 'color', 'card-border': 'color', 'card-shadow': 'shadow',
+	'chat-font-family': 'fontFamily', 'chat-font-size': 'fontSize', 'chat-background': 'background',
+	'bubble-radius': 'radius', 'bubble-padding': 'length',
+	'input-radius': 'radius', 'input-shadow': 'shadow',
+	'send-bg': 'color', 'send-fg': 'color', 'approve-bg': 'color', 'approve-fg': 'color',
+	'reject-bg': 'color', 'reject-fg': 'color', 'error-bg': 'color', 'error-fg': 'color',
+};
+const UI_TOKEN_PAIRS = { 'accent': 'accent-fg', 'accent-fg': 'accent', 'send-bg': 'send-fg', 'send-fg': 'send-bg', 'approve-bg': 'approve-fg', 'approve-fg': 'approve-bg', 'reject-bg': 'reject-fg', 'reject-fg': 'reject-bg', 'error-bg': 'error-fg', 'error-fg': 'error-bg' };
+const UI_TOKEN_MIN_CONTRAST = 4.5;
+function uiTokenOk(name, value) {
+	const kind = Object.prototype.hasOwnProperty.call(UI_TOKENS, name) ? UI_TOKENS[name] : undefined;
+	if (!kind || typeof value !== 'string') {
+		return false;
+	}
+	const v = value.trim();
+	switch (kind) {
+		case 'color': return UI_TOKEN_PAIRS[name] ? UI_LITERAL_COLOR.test(v) && uiParseColor(v) !== undefined : uiStyleOk('color', v);
+		case 'length': return uiStyleOk('padding', v);
+		case 'radius': return uiStyleOk('borderRadius', v);
+		case 'shadow': return uiStyleOk('boxShadow', v);
+		case 'fontFamily': return uiStyleOk('fontFamily', v);
+		case 'fontSize': return uiStyleOk('fontSize', v);
+		case 'background': return uiStyleOk('backgroundImage', v);
+	}
+	return false;
+}
+/** A colour as [r, g, b, a]; undefined for anything but hex, rgb() and hsl(). */
+function uiParseColor(value) {
+	const v = value.trim().toLowerCase();
+	const hex = /^#([0-9a-f]{3,8})$/.exec(v);
+	if (hex) {
+		const h = hex[1];
+		if (h.length === 3 || h.length === 4) {
+			const parts = [...h].map(c => parseInt(c + c, 16));
+			return [parts[0], parts[1], parts[2], h.length === 4 ? parts[3] / 255 : 1];
+		}
+		if (h.length === 6 || h.length === 8) {
+			const parts = [0, 2, 4, 6].map(i => parseInt(h.slice(i, i + 2), 16));
+			return [parts[0], parts[1], parts[2], h.length === 8 ? parts[3] / 255 : 1];
+		}
+		return undefined;
+	}
+	const fn = /^(rgba?|hsla?)\((.*)\)$/.exec(v);
+	if (!fn) {
+		return undefined;
+	}
+	const numbers = fn[2].split(/[\s,/]+/).filter(Boolean);
+	if (numbers.length < 3 || numbers.length > 4) {
+		return undefined;
+	}
+	const channel = (text, max) => {
+		const n = Number(text.replace('%', ''));
+		if (!Number.isFinite(n)) {
+			return undefined;
+		}
+		return text.endsWith('%') ? Math.min(max, Math.max(0, n / 100 * max)) : Math.min(max, Math.max(0, n));
+	};
+	const alpha = numbers.length === 4 ? channel(numbers[3], 1) : 1;
+	if (alpha === undefined) {
+		return undefined;
+	}
+	if (fn[1].startsWith('rgb')) {
+		const [r, g, b] = numbers.slice(0, 3).map(n => channel(n, 255));
+		return r === undefined || g === undefined || b === undefined ? undefined : [r, g, b, alpha];
+	}
+	const hue = Number(numbers[0].replace(/deg$/, ''));
+	const s = channel(numbers[1], 1);
+	const l = channel(numbers[2], 1);
+	if (!Number.isFinite(hue) || s === undefined || l === undefined || !numbers[1].endsWith('%') || !numbers[2].endsWith('%')) {
+		return undefined;
+	}
+	const k = n => (n + ((hue % 360) + 360) % 360 / 30) % 12;
+	const a = s * Math.min(l, 1 - l);
+	const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+	return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255), alpha];
+}
+function uiContrast(a, b) {
+	const luminance = c => {
+		const [r, g, bl] = c.slice(0, 3).map(v => {
+			const s = v / 255;
+			return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+		});
+		return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+	};
+	const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+	return (light + 0.05) / (dark + 0.05);
+}
+/** Why a pair token cannot go as it is with the values beside it; undefined when it reads. */
+function uiTokenPairProblem(name, values) {
+	const pair = UI_TOKEN_PAIRS[name];
+	if (!pair) {
+		return undefined;
+	}
+	const own = uiParseColor(values[name] ?? '');
+	const other = uiParseColor(values[pair] ?? '');
+	if (!own || !other) {
+		return `${name} colours a part the user must be able to read: set it together with ${pair}, both as written-out colours (#rrggbb, rgb(), hsl())`;
+	}
+	if (own[3] < 1 || other[3] < 1) {
+		return `${name} and ${pair} must be opaque, so their contrast can be checked`;
+	}
+	const ratio = uiContrast(own, other);
+	return ratio < UI_TOKEN_MIN_CONTRAST ? `${name} and ${pair} have a contrast of ${ratio.toFixed(1)}: readable text needs ${UI_TOKEN_MIN_CONTRAST}` : undefined;
+}
+
+/** The plugin's own settings (contributes.configuration), by name. */
+function uiOwnSettings(pkg) {
+	const blocks = pkg.contributes?.configuration;
+	return Object.assign({}, ...(Array.isArray(blocks) ? blocks : [blocks]).map(block => block?.properties ?? {}));
+}
+/** `{ setting, value }` on one of the plugin's own settings, with a value of its type: true when it is. */
+function uiConditionOk(raw, settings, where, errors) {
+	const schema = typeof raw?.setting === 'string' ? settings[raw.setting] : undefined;
+	if (!schema) {
+		errors.push(`${where}: "when.setting" must be one of the plugin's own, in contributes.configuration`);
+		return false;
+	}
+	if (/breezell/i.test(raw.setting)) {
+		errors.push(`${where}: a setting named after Breezell is not for a plugin`);
+		return false;
+	}
+	const value = raw.value;
+	const fits = schema.type === 'boolean' ? typeof value === 'boolean' : schema.type === 'number' || schema.type === 'integer' ? typeof value === 'number' && Number.isFinite(value) : typeof value === 'string';
+	if (!fits) {
+		errors.push(`${where}: "when.value" must be a ${String(schema.type ?? 'string')} the setting can hold`);
+		return false;
+	}
+	return true;
+}
+/** A set of tokens: names with or without --breezell-, values of their kind or { setting } of the plugin's own. */
+function uiTokenSetOk(raw, settings, where, errors) {
+	if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+		errors.push(`${where} must be an object of token names and values`);
+		return false;
+	}
+	const literal = {};
+	let good = 0;
+	for (const [rawName, value] of Object.entries(raw)) {
+		const name = rawName.startsWith('--breezell-') ? rawName.slice('--breezell-'.length) : rawName;
+		if (!Object.prototype.hasOwnProperty.call(UI_TOKENS, name)) {
+			errors.push(`${where}: no token "${rawName}" (there are ${Object.keys(UI_TOKENS).join(', ')})`);
+		} else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+			if (UI_TOKEN_PAIRS[name]) {
+				errors.push(`${where}: ${name} takes written-out colours only, so their contrast can be checked`);
+			} else if (typeof value.setting !== 'string' || !settings || !settings[value.setting] || /breezell/i.test(value.setting)) {
+				errors.push(`${where}: ${name}: "setting" must be one of the plugin's own, in contributes.configuration`);
+			} else {
+				good++;
+			}
+		} else if (!uiTokenOk(name, value)) {
+			errors.push(`${where}: ${JSON.stringify(value)} is no valid value of ${name} (${UI_TOKENS[name]})`);
+		} else {
+			literal[name] = value.trim();
+			good++;
+		}
+	}
+	for (const name of Object.keys(literal)) {
+		const problem = uiTokenPairProblem(name, literal);
+		if (problem) {
+			errors.push(`${where}: ${problem}`);
+		}
+	}
+	return good > 0;
+}
+/** One patch, as Breezell reads it (checkPluginPatch); `surfaces` for replaceWith. */
+function uiPatchOk(p, surfaces, errors, where = `ui.patches: ${JSON.stringify((typeof p?.region === 'string' && p.region) || p)}`) {
+	const name = typeof p?.region === 'string' ? p.region : '';
+	if (uiProtected(name)) {
+		errors.push(`${where} is protected: no plugin may change it`);
+		return false;
+	}
+	const region = Object.prototype.hasOwnProperty.call(UI_REGIONS, name) ? UI_REGIONS[name] : undefined;
+	if (!region) {
+		errors.push(`${where}: no such part (there are ${Object.keys(UI_REGIONS).join(', ')})`);
+		return false;
+	}
+	let changes = 0;
+	if (p.hide !== undefined) {
+		if (p.hide === true && region.hide) changes++; else errors.push(`${where} cannot be hidden`);
+	}
+	if (p.order !== undefined) {
+		if (region.order && typeof p.order === 'number' && Number.isFinite(p.order)) changes++; else errors.push(`${where}: its order cannot be set`);
+	}
+	if (p.replaceWith !== undefined) {
+		if (region.replace && surfaces.some(s => s?.id === p.replaceWith)) changes++; else errors.push(`${where}: "replaceWith" must name one of the plugin's surfaces, where a part can be replaced`);
+	}
+	for (const [property, value] of Object.entries(typeof p.style === 'object' && p.style !== null ? p.style : {})) {
+		if (!(region.style ?? []).includes(property)) {
+			errors.push(`${where}: its style does not take "${property}"`);
+		} else if (!uiStyleOk(property, value)) {
+			errors.push(`${where}: ${JSON.stringify(value)} is no valid ${property}`);
+		} else if (property === 'backgroundColor' && region.themeBackgroundOnly && !UI_THEME_BACKGROUND.test(value.trim())) {
+			errors.push(`${where}: what is on it must stay readable, so "backgroundColor" can only be "transparent" or var(--vscode-<x>-background) with x one of ${UI_THEME_BACKGROUNDS.join(', ')}`);
+		} else {
+			changes++;
+		}
+	}
+	return changes > 0;
+}
+/**
+ * The plugin's stylesheet, read as Breezell reads it (parsePluginStylesheet): `:root` with Breezell's
+ * variables and `::part(<name>)` rules, nothing else.
+ */
+function uiStylesheetOk(css, errors) {
+	const text = css.slice(0, 64 * 1024).replace(/\/\*[\s\S]*?\*\//g, ' ');
+	const rule = /([^{}]*)\{([^{}]*)\}/g;
+	let consumed = 0;
+	const tokens = {};
+	for (let match = rule.exec(text); match; match = rule.exec(text)) {
+		const between = text.slice(consumed, match.index).trim();
+		consumed = match.index + match[0].length;
+		if (between) {
+			errors.push(`ui.stylesheet: Breezell leaves out "${between.slice(0, 60)}"`);
+		}
+		const selector = match[1].trim();
+		const declarations = uiDeclarations(match[2]);
+		if (selector.startsWith('@')) {
+			errors.push(`ui.stylesheet: at-rules are left out ("${selector.slice(0, 40)}")`);
+			continue;
+		}
+		if (selector === ':root') {
+			for (const [property, value] of declarations) {
+				if (!property.startsWith('--breezell-')) {
+					errors.push(`ui.stylesheet: :root takes Breezell's variables only (--breezell-...), not "${property}"`);
+				} else if (/!important/i.test(value)) {
+					errors.push(`ui.stylesheet: ${property}: !important is left out`);
+				} else {
+					tokens[property] = value;
+				}
+			}
+			continue;
+		}
+		const parts = selector.split(',').map(part => /^::part\(\s*([a-zA-Z0-9._-]+)\s*\)$/.exec(part.trim())?.[1]);
+		if (!parts.length || parts.some(part => !part)) {
+			errors.push(`ui.stylesheet: "${selector.slice(0, 60)}" is no rule Breezell reads: write :root or ::part(<name>)`);
+			continue;
+		}
+		const style = {};
+		for (const [property, value] of declarations) {
+			const camel = property.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+			if (!UI_STYLE_PROPERTIES.includes(camel)) {
+				errors.push(`ui.stylesheet: ${selector}: "${property}" is no property a part takes`);
+			} else if (/!important/i.test(value)) {
+				errors.push(`ui.stylesheet: ${selector}: !important is left out`);
+			} else {
+				style[camel] = value;
+			}
+		}
+		for (const region of parts) {
+			uiPatchOk({ region, style }, [], errors, `ui.stylesheet: ::part(${region})`);
+		}
+	}
+	const rest = text.slice(consumed).trim();
+	if (rest) {
+		errors.push(`ui.stylesheet: Breezell leaves out "${rest.slice(0, 60)}"`);
+	}
+	if (Object.keys(tokens).length) {
+		uiTokenSetOk(tokens, undefined, 'ui.stylesheet :root', errors);
+	}
+}
+function uiDeclarations(block) {
+	const out = [];
+	let depth = 0;
+	let quote;
+	let current = '';
+	const flush = () => {
+		const colon = current.indexOf(':');
+		if (colon > 0) {
+			out.push([current.slice(0, colon).trim().toLowerCase(), current.slice(colon + 1).trim()]);
+		}
+		current = '';
+	};
+	for (const char of block) {
+		if (quote) {
+			if (char === quote) {
+				quote = undefined;
+			}
+		} else if (char === '"' || char === '\'') {
+			quote = char;
+		} else if (char === '(') {
+			depth++;
+		} else if (char === ')') {
+			depth = Math.max(0, depth - 1);
+		} else if (char === ';' && depth === 0) {
+			flush();
+			continue;
+		}
+		current += char;
+	}
+	flush();
+	return out;
 }
 
 /** contributes.breezell.ui, and the permissions it needs. */
@@ -147,8 +567,7 @@ function checkUiOptions(raw, pkg, errors) {
 	if (raw.items.length > 12) {
 		errors.push('ui.options.items: at most 12');
 	}
-	const blocks = pkg.contributes?.configuration;
-	const own = Object.assign({}, ...(Array.isArray(blocks) ? blocks : [blocks]).map(block => block?.properties ?? {}));
+	const own = uiOwnSettings(pkg);
 	const seen = new Set();
 	let good = 0;
 	for (const item of raw.items.slice(0, 12)) {
@@ -164,6 +583,17 @@ function checkUiOptions(raw, pkg, errors) {
 		} else if (seen.has(item.setting)) {
 			errors.push(`${where}: listed twice`);
 		} else if (schema.type === 'boolean') {
+			seen.add(item.setting);
+			good++;
+		} else if ((schema.type === 'number' || schema.type === 'integer') && !known) {
+			seen.add(item.setting);
+			if (typeof schema.minimum !== 'number' || typeof schema.maximum !== 'number' || schema.minimum >= schema.maximum) {
+				errors.push(`${where}: a number needs "minimum" and "maximum" in its contributes.configuration entry`);
+			} else {
+				good++;
+			}
+		} else if (schema.type === 'string' && !known) {
+			// A colour picker with "format": "color-hex", else a text field (up to 200 characters).
 			seen.add(item.setting);
 			good++;
 		} else if (known?.length) {
@@ -182,7 +612,7 @@ function checkUiOptions(raw, pkg, errors) {
 				good++;
 			}
 		} else {
-			errors.push(`${where}: only a boolean setting or a string with an enum can go here`);
+			errors.push(`${where}: a setting here is a boolean, a string (with an enum for choices, "format": "color-hex" for a colour) or a number with a minimum and maximum`);
 		}
 	}
 	return good > 0;
@@ -267,35 +697,105 @@ function checkUi(ui, pkg, errors, dir) {
 		errors.push('ui.surfaces: at most 6');
 	}
 
+	const settings = uiOwnSettings(pkg);
 	const patches = list('patches');
 	for (const p of patches) {
-		const name = typeof p?.region === 'string' ? p.region : '';
-		const where = `ui.patches: ${JSON.stringify(name || p)}`;
-		if (UI_PROTECTED.some(area => name === area || name.startsWith(`${area}.`))) {
-			errors.push(`${where} is protected: no plugin may change it`);
+		const where = `ui.patches: ${JSON.stringify((typeof p?.region === 'string' && p.region) || p)}`;
+		if (p?.when !== undefined && !uiConditionOk(p.when, settings, where, errors)) {
 			continue;
 		}
-		const region = Object.prototype.hasOwnProperty.call(UI_REGIONS, name) ? UI_REGIONS[name] : undefined;
-		if (!region) {
-			errors.push(`${where}: no such part (there are ${Object.keys(UI_REGIONS).join(', ')})`);
+		uiPatchOk(p, surfaces, errors, where);
+	}
+	// Breezell's variables: one set, or sets each with a `when`.
+	let tokenSets = 0;
+	if (Array.isArray(ui.tokens)) {
+		for (const set of ui.tokens) {
+			if (set?.when !== undefined && !uiConditionOk(set.when, settings, 'ui.tokens', errors)) {
+				continue;
+			}
+			tokenSets++;
+			uiTokenSetOk(set?.values, settings, 'ui.tokens', errors);
+		}
+	} else if (ui.tokens !== undefined) {
+		tokenSets++;
+		uiTokenSetOk(ui.tokens, settings, 'ui.tokens', errors);
+	}
+	let variantPatches = 0;
+	for (const variant of ui.variants === undefined ? [] : Array.isArray(ui.variants) ? ui.variants : [ui.variants]) {
+		const where = `ui.variants: ${JSON.stringify(variant?.setting ?? variant)}`;
+		if (typeof variant?.setting !== 'string' || typeof variant.values !== 'object' || variant.values === null || Array.isArray(variant.values)) {
+			errors.push(`${where} needs "setting" and "values": { "<value>": { "tokens": {...}, "patches": [...] } }`);
 			continue;
 		}
-		if (p.hide !== undefined && !(p.hide === true && region.hide)) {
-			errors.push(`${where} cannot be hidden`);
+		const schema = settings[variant.setting];
+		for (const [key, look] of Object.entries(variant.values)) {
+			const value = schema?.type === 'boolean' ? (key === 'true' ? true : key === 'false' ? false : key) : schema?.type === 'number' || schema?.type === 'integer' ? Number(key) : key;
+			if (!uiConditionOk({ setting: variant.setting, value }, settings, `${where}.${key}`, errors) || typeof look !== 'object' || look === null) {
+				continue;
+			}
+			if (look.tokens !== undefined) {
+				tokenSets++;
+				uiTokenSetOk(look.tokens, settings, `${where}.${key}.tokens`, errors);
+			}
+			for (const p of Array.isArray(look.patches) ? look.patches : []) {
+				variantPatches++;
+				uiPatchOk(p, surfaces, errors, `${where}.${key}: ${JSON.stringify(p?.region ?? p)}`);
+			}
 		}
-		if (p.order !== undefined && !(region.order && typeof p.order === 'number' && Number.isFinite(p.order))) {
-			errors.push(`${where}: its order cannot be set`);
+	}
+	if (tokenSets > 16) {
+		errors.push('ui.tokens: at most 16 sets of tokens, with those of ui.variants');
+	}
+	if (patches.length + variantPatches > 32) {
+		errors.push('ui.patches: at most 32, with those of ui.variants');
+	}
+	const fonts = list('fonts');
+	for (const f of fonts) {
+		const where = `ui.fonts: ${JSON.stringify(f?.family ?? f)}`;
+		const file = typeof f?.file === 'string' ? f.file.replace(/^\.\//, '') : '';
+		if (typeof f?.family !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9 _-]{0,39}$/.test(f.family)) {
+			errors.push(`${where}: "family" is a name of letters, digits, spaces, _ and -`);
+		} else if (!UI_PATH.test(file) || !/\.(woff2|woff|ttf|otf)$/i.test(file)) {
+			errors.push(`${where}: "file" must be a .woff2, .woff, .ttf or .otf file inside the plugin`);
+		} else if (fileMissing(file)) {
+			errors.push(`${where}: "${file}" does not exist`);
+		} else if (dir && fs.statSync(path.join(dir, file)).size > 2 * 1024 * 1024) {
+			errors.push(`${where}: "${file}" is larger than 2 MB, which Breezell does not load`);
 		}
-		if (p.replaceWith !== undefined && !(region.replace && surfaces.some(s => s?.id === p.replaceWith))) {
-			errors.push(`${where}: "replaceWith" must name one of the plugin's surfaces, where a part can be replaced`);
+		if ((f?.weight !== undefined && !/^(normal|bold|[1-9]00)$/.test(f.weight)) || (f?.style !== undefined && f.style !== 'normal' && f.style !== 'italic')) {
+			errors.push(`${where}: "weight" is normal, bold or 100-900; "style" is normal or italic`);
 		}
-		for (const [property, value] of Object.entries(p.style ?? {})) {
-			if (!(region.style ?? []).includes(property)) {
-				errors.push(`${where}: its style does not take "${property}"`);
-			} else if (!uiStyleOk(property, value)) {
-				errors.push(`${where}: ${JSON.stringify(value)} is no valid ${property}`);
-			} else if (property === 'backgroundColor' && UI_THEME_BACKGROUND_ONLY.includes(name) && !UI_THEME_BACKGROUND.test(value.trim())) {
-				errors.push(`${where}: what is on it must stay readable, so "backgroundColor" can only be "transparent" or var(--vscode-<x>-background) with x one of ${UI_THEME_BACKGROUNDS.join(', ')}`);
+	}
+	if (fonts.length > 8) {
+		errors.push('ui.fonts: at most 8');
+	}
+	// Images named as plugin:<path> must be there, and small enough for Breezell to load.
+	const assets = new Set();
+	const noteAsset = value => { const asset = uiAssetPath(typeof value === 'string' ? value.trim() : ''); if (asset) assets.add(asset); };
+	for (const p of patches) noteAsset(p?.style?.backgroundImage);
+	for (const set of Array.isArray(ui.tokens) ? ui.tokens.map(t => t?.values) : [ui.tokens]) Object.values(set ?? {}).forEach(noteAsset);
+	for (const asset of assets) {
+		if (fileMissing(asset)) {
+			errors.push(`"plugin:${asset}" does not exist`);
+		} else if (dir && fs.statSync(path.join(dir, asset)).size > 2 * 1024 * 1024) {
+			errors.push(`"plugin:${asset}" is larger than 2 MB, which Breezell does not load`);
+		}
+	}
+	let stylesheet = false;
+	if (ui.stylesheet !== undefined) {
+		const file = typeof ui.stylesheet === 'string' ? ui.stylesheet.replace(/^\.\//, '') : '';
+		if (!UI_PATH.test(file) || !/\.css$/i.test(file)) {
+			errors.push('ui.stylesheet must be a .css file inside the plugin');
+		} else if (fileMissing(file)) {
+			errors.push(`ui.stylesheet: "${file}" does not exist`);
+		} else {
+			stylesheet = true;
+			if (dir) {
+				const css = fs.readFileSync(path.join(dir, file), 'utf8');
+				if (Buffer.byteLength(css) > 64 * 1024) {
+					errors.push(`ui.stylesheet: "${file}" is larger than 64 KB; Breezell reads only its start`);
+				}
+				uiStylesheetOk(css, errors);
 			}
 		}
 	}
@@ -373,8 +873,8 @@ function checkUi(ui, pkg, errors, dir) {
 	if (buttons.length || surfaces.some(s => s?.slot && s.slot !== 'chat.input.companion') || modes.length || hasOptions || slashCommands.length) {
 		needs('ui.contribute', 'ui.buttons, ui.surfaces, ui.options, ui.modes and ui.slashCommands');
 	}
-	if (patches.length || companion) {
-		needs('ui.modify', 'ui.patches and a companion');
+	if (patches.length || companion || tokenSets || variantPatches || fonts.length || stylesheet) {
+		needs('ui.modify', 'ui.patches, ui.tokens, ui.variants, ui.fonts, ui.stylesheet and a companion');
 	}
 	if (renderers.length) {
 		needs('chat.render', 'ui.renderers');
