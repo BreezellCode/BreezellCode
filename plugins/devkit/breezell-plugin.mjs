@@ -889,6 +889,8 @@ const MARKET_URLS = [
 	`https://cdn.jsdelivr.net/gh/${MARKET_REPO}@main/plugins/`,
 	`https://fastly.jsdelivr.net/gh/${MARKET_REPO}@main/plugins/`,
 ];
+/** The market's plugins/ folder on GitHub, for links to it from files of a new plugin. */
+const GITHUB_PLUGINS_URL = `https://github.com/${MARKET_REPO}/blob/main/plugins/`;
 const MAX_PACKAGE_BYTES = 50 * 1024 * 1024;
 /** README.<locale>.md next to README.md (English): Breezell shows the user's language, else English. */
 const README_LOCALES = ['zh-CN', 'zh-TW', 'ja', 'ko', 'ru', 'es', 'pt-BR'];
@@ -1804,6 +1806,17 @@ function templateSet() {
 	const shared = readTree(path.join(root, '_shared'));
 	shared['tools/breezell-plugin.mjs'] = fs.readFileSync(SELF, 'utf8');
 	shared['types/breezell.d.ts'] = fs.readFileSync(path.join(DEVKIT_DIR, 'breezell.d.ts'), 'utf8');
+	// The skill for AI assistants, with the guide (plugins/docs) as its references. Links out of the guide
+	// point at GitHub, since the rest of the market is not in a new plugin.
+	const skill = '.agents/skills/breezell-plugin';
+	const docs = path.join(DEVKIT_DIR, '..', 'docs');
+	if (!fs.existsSync(path.join(DEVKIT_DIR, 'skill', 'SKILL.md')) || !fs.existsSync(docs)) {
+		fail('devkit/skill/SKILL.md or docs/ is missing: run this from the market\'s plugins/devkit');
+	}
+	shared[`${skill}/SKILL.md`] = fs.readFileSync(path.join(DEVKIT_DIR, 'skill', 'SKILL.md'), 'utf8');
+	for (const name of fs.readdirSync(docs).filter(n => n.endsWith('.md')).sort()) {
+		shared[`${skill}/references/${name}`] = fs.readFileSync(path.join(docs, name), 'utf8').replace(/\]\(\.\.\//g, `](${GITHUB_PLUGINS_URL}`);
+	}
 	const templates = {};
 	for (const id of fs.readdirSync(root).filter(n => !n.startsWith('_')).sort()) {
 		const files = readTree(path.join(root, id));
