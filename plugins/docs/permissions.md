@@ -24,8 +24,10 @@ each plugin declares before it is installed.
 | `chat.input` | dangerous | Asked for the first time the plugin reads the chat box |
 | `chat.intercept` | dangerous | Asked when the plugin registers a send handler |
 | `ui.contribute` | normal | On from the start; the user can turn it off, which takes the plugin's buttons, pages and modes out of Breezell's screens |
-| `ui.modify` | dangerous | Asked when a plugin that declares `ui.patches`, `ui.tokens`, `ui.variants`, `ui.fonts`, `ui.stylesheet` or a companion first runs |
+| `ui.modify` | dangerous | Asked when a plugin that declares `ui.patches`, `ui.tokens`, `ui.variants`, `ui.fonts`, `ui.stylesheet`, a companion or a page in the title bar first runs |
 | `chat.render` | dangerous | Asked when a plugin that declares `ui.renderers` first runs: a drawn code fence hands the plugin its text |
+| `ui.overlay` | dangerous | Asked the first time the plugin opens a window of `"kind": "overlay"`: a small window that floats above every app. Ask while the user is in Breezell (`requestPermission`), or the question waits in a window they left |
+| `activity.read` | normal | On from the start; the user can turn it off. What the agent is doing (its step, the file name, the model, how long) and the build or test task: never what messages say |
 
 - A permission only some versions of Breezell know goes in `"breezell": { "optionalPermissions": [...] }`:
   an older Breezell leaves it out and installs the plugin all the same, where a permission it does not

@@ -42,6 +42,7 @@ try {
 | Member | Permission | What it is |
 |---|---|---|
 | `requestRestart({ scope, reason, l10n, force })` | `app.restart`; `app.forceRestart` with `force` | Ask to restart `extensionHost`, `window` or `app`, or with `force` restart without asking (once per plugin version). `true` when it will happen. See [Restarting Breezell](restart.md) |
+| `focus()`, `onDidChangeFocus` | none | `{ editorFocused, lastUsed, windowId }`: whether the user is in Breezell, whether this editor window is the one used last, and its id. See [Several editor windows](windows.md#several-editor-windows) |
 
 ## `chat`
 
@@ -101,13 +102,25 @@ budget of your own: some providers count cache reads inside `inputTokens`, and s
 
 | Member | Permission | What it is |
 |---|---|---|
-| `onDidOpenSurface` | none (the page is declared) | One of the plugin's pages opened: `surfaceId`, `context`, `postMessage(m)`, `onDidReceiveMessage`, `onDidClose`. See [Pages](ui.md#pages) |
+| `onDidOpenSurface` | none (the page is declared) | One of the plugin's pages opened: `surfaceId`, `context`, `postMessage(m)`, `onDidReceiveMessage`, `onDidClose`, `screenRect()`. See [Pages](ui.md#pages) |
 
 ## `windows`
 
 | Member | Permission | What it is |
 |---|---|---|
-| `open(id)` | none (the window is declared) | Opens one of the plugin's windows, or brings it to the front: `windowId`, `postMessage`, `onDidReceiveMessage`, `onDidClose`, `close()`. See [Windows](windows.md) |
+| `open(id)` | none (the window is declared); `ui.overlay` for an overlay | Opens one of the plugin's windows, or brings it to the front: `windowId`, `postMessage`, `onDidReceiveMessage`, `onDidClose`, `close()`; an overlay adds `setBounds`, `show`, `hide`, `activate`, `onDidDeactivate`. See [Windows](windows.md) |
+| `overlaySupported()` | none | Whether overlays can float above other apps here (not on a native Wayland session) |
+| `workArea()` | none | The work area of the screen this editor window is on, in screen pixels at 100% |
+| `focusEditor(windowId?)` | `ui.overlay`, with an overlay open | Brings this editor window, or another by id, to the front |
+| `broadcast(message)`, `onDidReceiveBroadcast` | none | This plugin's copies in the other editor windows: `{ fromWindow, message }`. See [Several editor windows](windows.md#several-editor-windows) |
+
+## `activity`
+
+| Member | Permission | What it is |
+|---|---|---|
+| `current()`, `onDidChange` | `activity.read` | `{ agent, task }`. `agent`: `idle`; `awaitingUser` (`conversationId`, `conversations`); `working` (`conversationId`, `step` with `kind` and maybe `file`, `conversations`, `startedAt`, `model` `{ provider, name }`); `finished` (`elapsedMs`); `failed`. The most pressing across the conversations. `task`: `running` (`name`, `startedAt`, `others`), `succeeded` (`elapsedMs`), `failed` (`exitCode`). Never what messages say |
+| `modelIcon({ provider, name })` | `activity.read` | The model's mark as SVG markup |
+| `reveal(target)` | `activity.read` | Brings this editor window to the front with the conversation (`'agent'`) or the task's terminal (`'task'`) |
 
 ## What every call shares
 

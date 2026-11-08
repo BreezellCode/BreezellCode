@@ -52,15 +52,28 @@ declare module 'vscode' {
 			 * cannot run, declare `contributes.breezell.restart` in package.json instead.
 			 */
 			export function requestRestart(request: RestartRequest): Thenable<boolean>;
+
+			/** Whether the user is in Breezell. Needs no permission. */
+			export interface Focus {
+				/** An editor window of Breezell has the keyboard focus (false while the user is in another app, or all are minimized). */
+				readonly editorFocused: boolean;
+				/** This plugin's editor window is the one that has it, or had it last. */
+				readonly lastUsed: boolean;
+				/** This editor window's id: what windows.focusEditor takes, and what other windows' broadcasts say they come from. */
+				readonly windowId: number;
+			}
+			export function focus(): Thenable<Focus>;
+			/** The user went to another app or came back (a quick switch between Breezell's own windows is not a change). */
+			export const onDidChangeFocus: Event<Focus>;
 		}
 
 		/**
 		 * The permissions this plugin declared in `breezell.permissions`, as an Android app declares
 		 * its permissions: nothing undeclared is ever usable. A `normal` permission is
 		 * on unless the user turns it off (`chat.events`, `models.select`, `providers.list`, `app.restart`,
-		 * `ui.contribute`). A `dangerous` one (`models.request`, `chat.read`, `chat.send`, `chat.approve`,
+		 * `ui.contribute`, `activity.read`). A `dangerous` one (`models.request`, `chat.read`, `chat.send`, `chat.approve`,
 		 * `providers.read`, `agent.tools`, `agent.hooks`, `editor.read`, `chat.input`, `chat.intercept`,
-		 * `chat.render`, `ui.modify`, `app.forceRestart`) is asked for the first time the plugin uses it; while the user
+		 * `chat.render`, `ui.modify`, `ui.overlay`, `app.forceRestart`) is asked for the first time the plugin uses it; while the user
 		 * has not allowed it, its calls fail with `BreezellPermissionDenied`. The user can switch each
 		 * permission on and off, or all at once, on the plugin's page in Plugins › Installed.
 		 */
@@ -169,6 +182,16 @@ declare module 'vscode' {
 			postMessage(message: unknown): Thenable<boolean>;
 			readonly onDidReceiveMessage: Event<unknown>;
 			readonly onDidClose: Event<void>;
+			/** Where the page is on the screen now (to start an overlay from it); undefined once it closed. */
+			screenRect(): Thenable<ScreenRect | undefined>;
+		}
+
+		/** A rectangle on the screen, in pixels at 100% scale (Electron's DIPs). */
+		export interface ScreenRect {
+			readonly x: number;
+			readonly y: number;
+			readonly width: number;
+			readonly height: number;
 		}
 
 		export namespace ui {
@@ -438,6 +461,27 @@ declare module 'vscode' {
 			readonly onDidReceiveMessage: Event<unknown>;
 			readonly onDidClose: Event<void>;
 			close(): Thenable<void>;
+			/**
+			 * An overlay's place (`"kind": "overlay"`): within 560 × 480 and on a screen. With
+			 * `durationMs` (up to 2000) it moves there on iOS's curve, quick to leave and slow to settle;
+			 * a new call stops a move under way. Resolves when it is there.
+			 */
+			setBounds(bounds: ScreenRect, options?: { readonly durationMs?: number }): Thenable<void>;
+			/** An overlay opens hidden; shown, it stays above every app without taking the focus. */
+			show(): Thenable<void>;
+			hide(): Thenable<void>;
+			/**
+			 * An overlay takes the keyboard, for a panel the user's click opened, until it loses the
+			 * focus (a click anywhere else): then onDidDeactivate, and it no longer takes the focus.
+			 */
+			activate(): Thenable<void>;
+			readonly onDidDeactivate: Event<void>;
+		}
+
+		/** What an instance of this plugin in another of Breezell's editor windows broadcast. */
+		export interface Broadcast {
+			readonly fromWindow: number;
+			readonly message: unknown;
 		}
 
 		/**
@@ -513,7 +557,63 @@ declare module 'vscode' {
 		}
 
 		export namespace windows {
+			/**
+			 * Opens a declared window, or returns it when it is open. A window declared with
+			 * `"kind": "overlay"` needs `ui.overlay` (asked the first time): small, borderless and
+			 * see-through, above every app, never the focus, out of the taskbar; it opens hidden. On
+			 * a native Wayland session it fails with `BreezellNotSupported` (check overlaySupported()).
+			 */
 			export function open(windowId: string): Thenable<PluginWindow>;
+			/** Whether overlays can float above other apps here: Windows, macOS and Linux under X11; not native Wayland. */
+			export function overlaySupported(): Thenable<boolean>;
+			/** The work area (the screen less the taskbar or menu bar) of the screen this editor window is on. */
+			export function workArea(): Thenable<ScreenRect>;
+			/**
+			 * Brings this editor window, or another by its id (app.focus().windowId of the plugin there),
+			 * to the front, restored when minimized: for a click on the plugin's overlay (only while it has one open).
+			 */
+			export function focusEditor(windowId?: number): Thenable<void>;
+			/**
+			 * Tells this plugin's instances in Breezell's other editor windows (each window runs its own):
+			 * JSON, at most 1 MB. False when it is too big. Needs no permission: it reaches this plugin only.
+			 */
+			export function broadcast(message: unknown): Thenable<boolean>;
+			export const onDidReceiveBroadcast: Event<Broadcast>;
+		}
+
+		/** A step of the agent's work, as the title bar would say it. */
+		export interface AgentStep {
+			readonly kind: 'thinking' | 'writing' | 'editing' | 'reading' | 'searching' | 'runningCommand' | 'usingTool' | 'waitingOnSubtasks' | 'condensing' | 'reconnecting';
+			/** The file's name (no folder), when it reads or edits one file. */
+			readonly file?: string;
+		}
+
+		/**
+		 * What the agent does across the conversations (the most pressing first: waiting on the user,
+		 * then working, then just finished or failed) and the build or test task that runs. The step
+		 * and the model, never what the messages say.
+		 */
+		export interface Activity {
+			readonly agent:
+			| { readonly kind: 'idle' }
+			| { readonly kind: 'awaitingUser'; readonly conversationId: string; readonly conversations: number }
+			| { readonly kind: 'working'; readonly conversationId: string; readonly step: AgentStep; readonly conversations: number; readonly startedAt: number; readonly model?: { readonly provider: string; readonly name: string } }
+			| { readonly kind: 'finished'; readonly conversationId: string; readonly elapsedMs: number }
+			| { readonly kind: 'failed'; readonly conversationId: string };
+			readonly task?:
+			| { readonly kind: 'running'; readonly name: string; readonly startedAt: number; readonly others: number }
+			| { readonly kind: 'succeeded'; readonly name: string; readonly elapsedMs: number }
+			| { readonly kind: 'failed'; readonly name: string; readonly exitCode?: number };
+		}
+
+		/** `activity.read`: what Breezell is busy with, for a status display. */
+		export namespace activity {
+			export function current(): Thenable<Activity>;
+			export const onDidChange: Event<Activity>;
+			/** The model's brand mark as SVG markup (it draws in currentColor where it has one color). */
+			export function modelIcon(model: { readonly provider: string; readonly name: string }): Thenable<string | undefined>;
+			/** Brings this editor window to the front with the conversation, or with the task's terminal. */
+			export function reveal(target?: 'agent' | 'task'): Thenable<void>;
 		}
 
 		/**

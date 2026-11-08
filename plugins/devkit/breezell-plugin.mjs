@@ -29,13 +29,15 @@ import { fileURLToPath } from 'node:url';
 
 const DEVKIT_VERSION = '1.0.0';
 const API_VERSION = 1;
-const PERMISSIONS = ['chat.events', 'models.request', 'models.select', 'chat.read', 'chat.send', 'chat.approve', 'providers.read', 'providers.list', 'agent.tools', 'agent.hooks', 'app.restart', 'app.forceRestart', 'editor.read', 'chat.input', 'chat.intercept', 'chat.render', 'ui.contribute', 'ui.modify'];
+const PERMISSIONS = ['chat.events', 'models.request', 'models.select', 'chat.read', 'chat.send', 'chat.approve', 'providers.read', 'providers.list', 'agent.tools', 'agent.hooks', 'app.restart', 'app.forceRestart', 'editor.read', 'chat.input', 'chat.intercept', 'chat.render', 'ui.contribute', 'ui.modify', 'ui.overlay', 'activity.read'];
 /**
  * What Breezell lets a plugin do to its screens (contributes.breezell.ui). Breezell checks all of this
  * again when it loads a plugin, and what fails there is left out: this is to tell you sooner.
  */
 const UI_BUTTON_SLOTS = ['chat.input.toolbar', 'chat.message.actions', 'code.block.actions'];
-const UI_SURFACE_SLOTS = ['chat.input.above', 'chat.messages.top', 'chat.landing', 'chat.input.companion'];
+const UI_SURFACE_SLOTS = ['chat.input.above', 'chat.messages.top', 'chat.landing', 'chat.input.companion', 'titlebar.center'];
+/** Places on Breezell's own screen, with no line saying whose they are: they take ui.modify, as a patch does. */
+const UI_OWN_SCREEN_SLOTS = ['chat.input.companion', 'titlebar.center'];
 const UI_MODE_BASES = ['normal', 'plan', 'analyze', 'agent'];
 const UI_FENCES_TAKEN = [
 	'mermaid', 'causal', 'diff', 'patch', 'markdown', 'md', 'mdx', 'text', 'txt', 'plain', 'plaintext', 'latex', 'tex', 'math',
@@ -684,6 +686,9 @@ function checkUi(ui, pkg, errors, dir) {
 		if (s?.slot !== undefined && !UI_SURFACE_SLOTS.includes(s.slot)) {
 			errors.push(`${where}: no place ${JSON.stringify(s.slot)} (there are ${UI_SURFACE_SLOTS.join(', ')})`);
 		}
+		if (s?.slot === 'titlebar.center' && surfaces.indexOf(s) !== surfaces.findIndex(o => o?.slot === 'titlebar.center')) {
+			errors.push(`${where}: a plugin has one page in the title bar`);
+		}
 		if (s?.slot === 'chat.input.companion' && surfaces.indexOf(s) !== surfaces.findIndex(o => o?.slot === 'chat.input.companion')) {
 			errors.push(`${where}: a plugin has one companion`);
 		}
@@ -843,7 +848,7 @@ function checkUi(ui, pkg, errors, dir) {
 		errors.push('ui.modes: at most 4');
 	}
 
-	const companion = surfaces.some(s => s?.slot === 'chat.input.companion');
+	const companion = surfaces.some(s => UI_OWN_SCREEN_SLOTS.includes(s?.slot));
 	const hasOptions = checkUiOptions(ui.options, pkg, errors);
 	const slashCommands = list('slashCommands');
 	const slashNames = new Set();
@@ -870,11 +875,11 @@ function checkUi(ui, pkg, errors, dir) {
 	if (slashCommands.length > 8) {
 		errors.push('ui.slashCommands: at most 8');
 	}
-	if (buttons.length || surfaces.some(s => s?.slot && s.slot !== 'chat.input.companion') || modes.length || hasOptions || slashCommands.length) {
+	if (buttons.length || surfaces.some(s => s?.slot && !UI_OWN_SCREEN_SLOTS.includes(s.slot)) || modes.length || hasOptions || slashCommands.length) {
 		needs('ui.contribute', 'ui.buttons, ui.surfaces, ui.options, ui.modes and ui.slashCommands');
 	}
 	if (patches.length || companion || tokenSets || variantPatches || fonts.length || stylesheet) {
-		needs('ui.modify', 'ui.patches, ui.tokens, ui.variants, ui.fonts, ui.stylesheet and a companion');
+		needs('ui.modify', 'ui.patches, ui.tokens, ui.variants, ui.fonts, ui.stylesheet, a companion and a page in the title bar');
 	}
 	if (renderers.length) {
 		needs('chat.render', 'ui.renderers');
@@ -1116,6 +1121,13 @@ function checkPackage(pkg, { forMarket = false, nls, dir } = {}) {
 			if (typeof w?.id !== 'string' || !/^[a-z0-9][a-z0-9-]{0,31}$/.test(w.id) || typeof w.entry !== 'string' || !/\.html?$/i.test(w.entry) || w.entry.startsWith('/') || w.entry.split(/[\\/]/).includes('..')) {
 				errors.push('"contributes.breezell.windows": each window needs an "id" (lowercase, digits, dashes) and an .html "entry" inside the plugin');
 			}
+			if (w?.kind !== undefined && w.kind !== 'overlay') {
+				errors.push(`"contributes.breezell.windows": ${JSON.stringify(w?.id)}: "kind" is "overlay" or left out`);
+			}
+		}
+		const windowPermissions = [...(pkg.breezell?.permissions ?? []), ...(pkg.breezell?.optionalPermissions ?? [])];
+		if ((declared.windows ?? []).some(w => w?.kind === 'overlay') && !windowPermissions.includes('ui.overlay')) {
+			errors.push('windows of "kind": "overlay" need the "ui.overlay" permission: add it to "breezell.permissions" or "breezell.optionalPermissions"');
 		}
 		if (declared.restart !== undefined) {
 			const r = declared.restart;

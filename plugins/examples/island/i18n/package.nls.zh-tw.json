@@ -1,0 +1,5 @@
+{
+	"displayName": "活動島",
+	"description": "Breezell 的標題列用一個會變形的膠囊顯示 AI 正在做什麼。離開 Breezell 時它浮到螢幕頂端、停在所有應用程式之上，點開就是你的對話面板；回來時它飛回標題列。",
+	"config.floatOutside": "離開 Breezell 或把它最小化時，讓活動島浮到螢幕頂端、停在其他應用程式之上。Linux 上需要 X11 工作階段；在 Wayland 下活動島會留在標題列。"
+}

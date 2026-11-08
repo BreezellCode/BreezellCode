@@ -1,0 +1,5 @@
+{
+	"displayName": "Activity Island",
+	"description": "Breezell's title bar shows what the agent is doing in a capsule that morphs. Leave Breezell and it floats at the top of the screen, above every app, and opens into a panel of your conversations; come back and it flies into the title bar.",
+	"config.floatOutside": "Float the island at the top of the screen, above other apps, when you leave Breezell or minimize it. On Linux this needs an X11 session; under Wayland the island stays in the title bar."
+}

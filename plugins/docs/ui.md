@@ -76,6 +76,7 @@ mistake does not cost a plugin everything, and the log says why.
 | `chat.messages.top` | Above the messages | 320 |
 | `chat.landing` | On the empty chat page | 480 |
 | `chat.input.companion` | Floating on the chat box, see [below](#a-companion-on-the-chat-box) | 240 |
+| `titlebar.center` | The middle of the title bar, in place of the search bar, see [below](#a-page-in-the-title-bar) | 30 |
 | none | Only where a patch or a fence puts it | 2000 |
 
 The page runs in a frame with an origin of its own. It cannot reach Breezell's window, its storage or
@@ -142,6 +143,29 @@ Its page is told, with no text from the chat in any of it:
 | `breezell.companion.typing` | | A key was pressed in the chat box, at most ten times a second. Needs `chat.events` |
 
 A page is made for each chat box and starts over when the user changes conversation, so keep what must last in the plugin's code. [Desk Pet](https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/pet) is a whole one.
+
+## A page in the title bar
+
+`"slot": "titlebar.center"` puts a page in the middle of the title bar, where the search bar is. It
+needs `ui.modify` (not `ui.contribute`: it stands on Breezell's own screen with no line saying whose it
+is), one per plugin, and one plugin's at a time: the first allowed one. The notification bell and the
+update button stay beside it. While the debug toolbar shares the middle, the search bar comes back.
+
+```json
+"surfaces": [{ "id": "titlebar", "title": "Activity Island", "entry": "ui/titlebar.html", "slot": "titlebar.center", "width": 220, "height": 26 }]
+```
+
+- `width` 120 to 480 (220 if left out), `height` 16 to 30 (26). The page draws everything: the item is
+  transparent and the page's frame fills it.
+- The page asks for a width as what it shows changes: `postMessage({ __breezellTitlebar: { width } })`.
+  Breezell animates the change. It stands for the search bar, so a click on it should open the search:
+  `postMessage({ __breezellTitlebar: { openSearch: true } })`. Neither reaches the plugin's code.
+- Its `breezell.surface.context` brings `title` (what the search bar would say: the workspace's name,
+  or "Search"), `windowFocused` and `language`, and again whenever one changes.
+- `PluginSurface.screenRect()` in the plugin's code says where the page is on the screen, for an
+  [overlay window](windows.md#overlay-windows) to start from it.
+
+[Activity Island](https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/island) is a whole one.
 
 ## Settings in Feature Options
 

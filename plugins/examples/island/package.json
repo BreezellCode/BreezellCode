@@ -1,0 +1,125 @@
+{
+	"name": "island",
+	"publisher": "breezell",
+	"displayName": "%displayName%",
+	"description": "%description%",
+	"version": "1.0.0",
+	"license": "MIT",
+	"author": {
+		"name": "DreamfallSerena"
+	},
+	"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/island",
+	"icon": "media/icon.png",
+	"engines": {
+		"vscode": "^1.90.0"
+	},
+	"extensionKind": [
+		"ui"
+	],
+	"categories": [
+		"Other"
+	],
+	"keywords": [
+		"island",
+		"title bar",
+		"status",
+		"agent",
+		"activity"
+	],
+	"main": "./dist/extension.js",
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"breezell": {
+		"apiVersion": 1,
+		"permissions": [
+			"ui.modify",
+			"ui.contribute",
+			"activity.read"
+		],
+		"optionalPermissions": [
+			"ui.overlay",
+			"chat.read"
+		],
+		"source": "open"
+	},
+	"contributes": {
+		"configuration": {
+			"title": "%displayName%",
+			"properties": {
+				"activityIsland.floatOutside": {
+					"type": "boolean",
+					"default": true,
+					"description": "%config.floatOutside%"
+				}
+			}
+		},
+		"breezell": {
+			"ui": {
+				"surfaces": [
+					{
+						"id": "titlebar",
+						"title": "Activity Island",
+						"entry": "ui/titlebar.html",
+						"slot": "titlebar.center",
+						"width": 220,
+						"height": 26
+					}
+				],
+				"options": {
+					"title": "Activity Island",
+					"l10n": {
+						"zh-TW": "活動島",
+						"zh-CN": "活动岛",
+						"ja": "アクティビティアイランド",
+						"ko": "활동 아일랜드",
+						"ru": "Остров активности",
+						"es": "Isla de actividad",
+						"pt-BR": "Ilha de atividade"
+					},
+					"items": [
+						{
+							"setting": "activityIsland.floatOutside",
+							"title": "Float at the top of the screen when you leave Breezell",
+							"l10n": {
+								"zh-TW": "離開 Breezell 時浮到螢幕頂端",
+								"zh-CN": "离开 Breezell 时浮到屏幕顶部",
+								"ja": "Breezell を離れたら画面上部に浮かべる",
+								"ko": "Breezell을 벗어나면 화면 상단에 띄우기",
+								"ru": "Всплывать вверху экрана, когда вы уходите из Breezell",
+								"es": "Flotar en la parte superior de la pantalla al salir de Breezell",
+								"pt-BR": "Flutuar no topo da tela ao sair do Breezell"
+							}
+						}
+					]
+				}
+			},
+			"windows": [
+				{
+					"id": "overlay",
+					"kind": "overlay",
+					"title": "Activity Island",
+					"entry": "ui/overlay.html",
+					"width": 220,
+					"height": 32
+				}
+			]
+		}
+	},
+	"scripts": {
+		"build": "node tools/build_page.mjs && node tools/breezell-plugin.mjs build",
+		"typecheck": "tsc -p .",
+		"validate": "node tools/breezell-plugin.mjs validate",
+		"test": "node tools/build_tests.mjs && node --test test/dist/logic.test.cjs test/dist/island.test.cjs test/dist/page.test.cjs",
+		"package:open": "npm run build && node tools/breezell-plugin.mjs pack --open",
+		"submit": "node tools/breezell-plugin.mjs submit"
+	},
+	"devDependencies": {
+		"@types/jsdom": "^21.1.7",
+		"@types/node": "^20.19.43",
+		"@types/vscode": "^1.90.0",
+		"esbuild": "^0.28.0",
+		"jsdom": "^26.1.0",
+		"typescript": "^5.6.0"
+	}
+}

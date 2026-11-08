@@ -1,0 +1,634 @@
+/*
+ * The island: a capsule that morphs (page/view.ts). Black in dark themes, white in light ones,
+ * the title bar's own colors in high contrast; outside the window, always the dark pill.
+ */
+
+:root {
+	--island-spring: cubic-bezier(0.32, 0.72, 0, 1);
+	--island-accent: var(--vscode-textLink-foreground, #3794ff);
+	--island-ok: var(--vscode-testing-iconPassed, #3fb950);
+	--island-warn: var(--vscode-editorWarning-foreground, #d29922);
+	--island-error: var(--vscode-errorForeground, #f85149);
+	--fly-ms: 360ms;
+}
+
+body[data-look="dark"] {
+	--island-surface: #050506;
+	--island-surface-hover: #121214;
+	--island-ink: rgba(255, 255, 255, 0.92);
+	--island-ink-dim: rgba(255, 255, 255, 0.56);
+	--island-edge: rgba(255, 255, 255, 0.09);
+}
+
+body[data-look="light"] {
+	--island-surface: #ffffff;
+	--island-surface-hover: #f5f5f6;
+	--island-ink: rgba(0, 0, 0, 0.86);
+	--island-ink-dim: rgba(0, 0, 0, 0.5);
+	--island-edge: rgba(0, 0, 0, 0.12);
+}
+
+body[data-look="highContrast"],
+body[data-look="highContrastLight"] {
+	--island-surface: var(--vscode-titleBar-activeBackground, #000000);
+	--island-surface-hover: var(--vscode-titleBar-activeBackground, #000000);
+	--island-ink: var(--vscode-titleBar-activeForeground, #ffffff);
+	--island-ink-dim: var(--vscode-titleBar-activeForeground, #ffffff);
+	--island-edge: var(--vscode-contrastBorder, #6fc3df);
+}
+
+body[data-look="highContrastLight"] {
+	--island-surface: var(--vscode-titleBar-activeBackground, #ffffff);
+	--island-surface-hover: var(--vscode-titleBar-activeBackground, #ffffff);
+	--island-ink: var(--vscode-titleBar-activeForeground, #000000);
+	--island-ink-dim: var(--vscode-titleBar-activeForeground, #000000);
+	--island-edge: var(--vscode-contrastBorder, #0f4a85);
+}
+
+/* Outside the window: the dark pill, whatever the theme. */
+body.overlay.outside {
+	--island-surface: #000000;
+	--island-surface-hover: #0b0b0c;
+	--island-ink: rgba(255, 255, 255, 0.94);
+	--island-ink-dim: rgba(255, 255, 255, 0.58);
+	--island-edge: rgba(255, 255, 255, 0.06);
+	--island-accent: #4ea1ff;
+	--island-ok: #34c759;
+	--island-warn: #ffb340;
+	--island-error: #ff5a52;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	background: transparent;
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+body {
+	font-family: var(--vscode-font-family, system-ui, -apple-system, "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans", sans-serif);
+	font-size: 12px;
+	color: var(--island-ink);
+}
+
+body.overlay {
+	font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans", sans-serif;
+}
+
+#island {
+	display: flex;
+	align-items: center;
+	width: 100%;
+	height: 100%;
+}
+
+/* The title bar's island steps away while the one outside covers it or is out. */
+body.away #island {
+	visibility: hidden;
+}
+
+#capsule {
+	position: relative;
+	flex: 1 1 auto;
+	min-width: 0;
+	height: 100%;
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid var(--island-edge);
+	border-radius: 999px;
+	background-color: var(--island-surface);
+	color: var(--island-ink);
+	overflow: hidden;
+	cursor: pointer;
+	outline: none;
+	transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+body.overlay #capsule {
+	/* In px, not 999px: so it can grow into the panel's corners smoothly. */
+	border-radius: 16px;
+	transition: background-color var(--fly-ms) ease, color var(--fly-ms) ease, border-color var(--fly-ms) ease, border-radius 460ms var(--island-spring);
+}
+
+#capsule:hover {
+	background-color: var(--island-surface-hover);
+}
+
+#capsule:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder, #007fd4);
+	outline-offset: -2px;
+}
+
+body.blurred #capsule {
+	color: var(--island-ink-dim);
+}
+
+#rest {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 5px;
+	min-width: 0;
+	max-width: 100%;
+	box-sizing: border-box;
+	padding: 0 12px;
+	transition: opacity 220ms ease 120ms;
+}
+
+#capsule.live-active > #rest {
+	opacity: 0;
+	transition: opacity 120ms ease;
+}
+
+#title {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.search-icon {
+	flex: none;
+	width: 14px;
+	height: 14px;
+	color: var(--island-ink-dim);
+}
+
+.dot-mark {
+	flex: none;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--island-accent);
+}
+
+#live {
+	position: absolute;
+	inset: 0;
+	/* One cell: content that leaves fades out under what replaces it. */
+	display: grid;
+	grid-template-rows: 100%;
+	justify-content: center;
+	justify-items: center;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 120ms ease;
+}
+
+#capsule.live-active > #live {
+	opacity: 1;
+	pointer-events: auto;
+	transition: opacity 200ms ease 60ms;
+}
+
+.live-content {
+	grid-area: 1 / 1;
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	width: max-content;
+	height: 100%;
+	padding: 0 12px;
+	white-space: nowrap;
+	animation: island-in 380ms var(--island-spring) 40ms both;
+}
+
+.live-content.leaving {
+	opacity: 0;
+	pointer-events: none;
+	animation: island-out 200ms ease-in;
+}
+
+.live-content > .text {
+	position: relative;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-weight: 500;
+}
+
+.live-content > .text.clip {
+	text-overflow: clip;
+}
+
+.live-content .words.entering {
+	animation: island-words-in 260ms ease-out both;
+}
+
+/* Words that just changed fade out over the new ones. */
+.live-content .words.leaving {
+	position: absolute;
+	top: 0;
+	left: 0;
+	opacity: 0;
+	animation: island-words-out 200ms ease-in;
+}
+
+.live-content > .fill {
+	flex: 1 1 auto;
+	min-width: 4px;
+}
+
+.live-content > .dim,
+.live-content > .clock {
+	flex: none;
+	color: var(--island-ink-dim);
+}
+
+.live-content > .clock {
+	min-width: 28px;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+.live-content > .chip {
+	flex: none;
+	padding: 1px 8px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 600;
+	background: color-mix(in srgb, currentColor 16%, transparent);
+	cursor: pointer;
+}
+
+.live-content > .chip:hover {
+	background: color-mix(in srgb, currentColor 26%, transparent);
+}
+
+.glyph {
+	position: relative;
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 14px;
+	height: 14px;
+}
+
+.glyph > svg {
+	display: block;
+	width: 14px;
+	height: 14px;
+}
+
+/* A model's brand mark: single-color marks take the island's ink. */
+.glyph > svg.model-mark {
+	width: 13px;
+	height: 13px;
+	color: var(--island-ink);
+}
+
+.live-content > .dot {
+	flex: none;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: currentColor;
+}
+
+.breathe {
+	animation: island-breathe 1.4s ease-in-out infinite;
+}
+
+.spin {
+	animation: island-spin 1s linear infinite;
+}
+
+.live-content > .wave {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	height: 12px;
+}
+
+.live-content > .wave > span {
+	width: 2px;
+	height: 12px;
+	border-radius: 1px;
+	background: currentColor;
+	animation: island-wave 900ms ease-in-out infinite;
+}
+
+.live-content > .wave > span:nth-child(2) { animation-delay: 110ms; }
+.live-content > .wave > span:nth-child(3) { animation-delay: 220ms; }
+.live-content > .wave > span:nth-child(4) { animation-delay: 330ms; }
+.live-content > .wave > span:nth-child(5) { animation-delay: 440ms; }
+
+.tone-accent { color: var(--island-accent); }
+.tone-ok { color: var(--island-ok); }
+.tone-warn { color: var(--island-warn); }
+.tone-error { color: var(--island-error); }
+
+/* A build or test task running beside the agent: a bubble that splits off the capsule's right end. */
+#bubble {
+	flex: none;
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 0;
+	height: 26px;
+	margin-left: 0;
+	border: 0 solid var(--island-edge);
+	border-radius: 13px;
+	background-color: var(--island-surface);
+	color: var(--island-ink);
+	overflow: hidden;
+	opacity: 0;
+	transform: scale(0.4);
+	pointer-events: none;
+	cursor: pointer;
+	transition: width 520ms var(--island-spring), margin-left 520ms var(--island-spring), border-width 520ms var(--island-spring), transform 520ms var(--island-spring), opacity 200ms ease, background-color var(--fly-ms) ease;
+}
+
+#bubble.bubble-shown {
+	width: 26px;
+	margin-left: 6px;
+	border-width: 1px;
+	opacity: 1;
+	transform: none;
+	pointer-events: auto;
+}
+
+#bubble:hover {
+	background-color: var(--island-surface-hover);
+}
+
+@keyframes island-in {
+	from { opacity: 0; filter: blur(4px); transform: scale(0.96); }
+	to { opacity: 1; filter: none; transform: none; }
+}
+
+@keyframes island-out {
+	from { opacity: 1; }
+	to { opacity: 0; filter: blur(4px); transform: scale(0.96); }
+}
+
+@keyframes island-words-in {
+	from { opacity: 0; filter: blur(3px); }
+	to { opacity: 1; filter: none; }
+}
+
+@keyframes island-words-out {
+	from { opacity: 1; filter: none; }
+	to { opacity: 0; filter: blur(3px); }
+}
+
+@keyframes island-breathe {
+	0%, 100% { opacity: 0.4; }
+	50% { opacity: 1; }
+}
+
+@keyframes island-wave {
+	0%, 100% { transform: scaleY(0.35); }
+	50% { transform: scaleY(1); }
+}
+
+@keyframes island-spin {
+	to { transform: rotate(360deg); }
+}
+
+/* --- The panel the island opens into outside the window (as iOS opens its island) --- */
+
+body.overlay.expanded #capsule {
+	border-radius: 32px;
+	align-items: stretch;
+	cursor: default;
+}
+
+body.overlay.expanded #capsule:hover {
+	background-color: var(--island-surface);
+}
+
+body.overlay.expanded #bubble.bubble-shown {
+	width: 0;
+	margin-left: 0;
+	border-width: 0;
+}
+
+/* Stronger than `#capsule.live-active > #live`, which shows what the pill says. */
+body.overlay.expanded #capsule > #rest,
+body.overlay.expanded #capsule.live-active > #live,
+body.overlay.expanded #capsule > #live,
+body.overlay.expanded #bubble {
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 120ms ease;
+}
+
+#panel {
+	position: absolute;
+	inset: 0;
+	opacity: 0;
+	pointer-events: none;
+	transform: scale(0.97);
+	transform-origin: top center;
+	transition: opacity 140ms ease, transform 300ms var(--island-spring);
+	overflow: hidden;
+}
+
+body.overlay.expanded #panel {
+	opacity: 1;
+	pointer-events: auto;
+	transform: none;
+	transition: opacity 260ms ease 150ms, transform 460ms var(--island-spring);
+}
+
+#panel-content {
+	position: absolute;
+	top: 0;
+	left: 0;
+	/* The panel's width (PANEL_WIDTH), also while the pill is small: what it measures is what opens. */
+	width: 420px;
+	box-sizing: border-box;
+	padding: 14px 16px 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	max-height: 480px;
+}
+
+#panel-head {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	min-height: 28px;
+}
+
+#panel-head > .glyph {
+	width: 18px;
+	height: 18px;
+}
+
+#panel-head > .glyph > svg {
+	width: 18px;
+	height: 18px;
+}
+
+#panel-head > .glyph > .dot {
+	width: 9px;
+	height: 9px;
+	border-radius: 50%;
+	background: currentColor;
+}
+
+#panel-summary {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 15px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+}
+
+#panel-back,
+#panel .chip {
+	flex: none;
+	border: none;
+	border-radius: 999px;
+	padding: 5px 12px;
+	font: inherit;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--island-ink);
+	background: rgba(255, 255, 255, 0.14);
+	cursor: pointer;
+}
+
+#panel .chip {
+	padding: 3px 10px;
+	font-size: 11px;
+}
+
+#panel-back:hover,
+#panel .chip:hover {
+	background: rgba(255, 255, 255, 0.24);
+}
+
+#panel-body {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	overflow-y: auto;
+	min-height: 0;
+	max-height: 400px;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+#panel-body.empty {
+	display: none;
+}
+
+.window-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 4px;
+	padding: 0 2px;
+	color: var(--island-ink-dim);
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: none;
+}
+
+.window-name {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.row {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	padding: 8px 10px;
+	border-radius: 16px;
+	background: rgba(255, 255, 255, 0.06);
+}
+
+.row.conversation {
+	cursor: pointer;
+}
+
+.row.conversation:hover {
+	background: rgba(255, 255, 255, 0.11);
+}
+
+.row-line {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+}
+
+.row-line > .glyph > .dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: currentColor;
+}
+
+.row-title {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.row-meta,
+.row-line > .clock {
+	flex: none;
+	font-size: 12px;
+	color: var(--island-ink-dim);
+	font-variant-numeric: tabular-nums;
+}
+
+.row-reply {
+	margin-left: 22px;
+	font-size: 12px;
+	line-height: 1.4;
+	color: rgba(255, 255, 255, 0.72);
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	overflow-wrap: anywhere;
+}
+
+#panel-hint {
+	font-size: 11px;
+	line-height: 1.4;
+	color: var(--island-ink-dim);
+	padding: 0 2px;
+}
+
+#panel-hint[hidden] {
+	display: none;
+}
+
+body.no-transition *,
+body.reduce-motion *,
+body.reduce-motion {
+	transition: none !important;
+}
+
+body.reduce-motion * {
+	animation: none !important;
+}
