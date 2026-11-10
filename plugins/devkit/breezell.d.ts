@@ -275,7 +275,7 @@ declare module 'vscode' {
 			export function reject(conversationId: string): Thenable<void>;
 		}
 
-		/** What a conversation is doing now. */
+		/** What a conversation is doing now: `working` also while it waits for its own subagents or teammates (Breezell newer than 1.4.54). */
 		export type ConversationActivity = 'idle' | 'thinking' | 'writing' | 'runningTool' | 'awaitingApproval' | 'working';
 
 		export interface ConversationSummary {
@@ -308,7 +308,11 @@ declare module 'vscode' {
 			readonly cacheWriteTokens: number;
 		}
 
-		/** A conversation's replies added up. `repliesWithoutUsage` were not counted: their provider reported nothing. */
+		/**
+		 * A conversation's replies added up, with what the helpers working for it spent (its analysis subagents,
+		 * a lead's teammates), growing while they work (Breezell newer than 1.4.54). `repliesWithoutUsage` were
+		 * not counted: their provider reported nothing.
+		 */
 		export interface ConversationTokenUse extends TokenUse {
 			readonly replies: number;
 			readonly repliesWithoutUsage: number;

@@ -33,7 +33,9 @@ vscode.breezell.chat.onDidChangeConversation(change => console.log(change.conver
   each), replies with reasoning, each tool call with its parameters, status and result, and errors.
   Never Breezell's prompts, text only the model sees, hidden rows or other workspaces' conversations.
 - A tool's parameters and result are cut at 20,000 characters (`resultLength` is the full length).
-- `activity` is `idle`, `thinking`, `writing`, `runningTool`, `awaitingApproval` or `working`.
+- `activity` is `idle`, `thinking`, `writing`, `runningTool`, `awaitingApproval` or `working`. A
+  conversation waiting for its own analysis subagents or teammates is `working` (Breezell newer than
+  1.4.54; earlier versions say `awaitingApproval`, though nothing waits for the user).
   `onDidChangeConversation` fires at most every 150 ms per conversation while it streams, with the
   reply being written in `streaming`.
 - `show(id)` opens a conversation in Breezell's chat. `readInput()` (`chat.input`) gives what is typed in
@@ -94,10 +96,13 @@ chat.onDidFinishTurn(async turn => {
 - **`backgroundCommands`** (`{ running, willEnd }`) says how many commands run in the background, and how
   many of them will end by themselves: servers and watchers do not. It is a count, not what they are.
 - **`usage`** on a reply, on a conversation and on a `models.request` answer is the provider's numbers.
-  Some providers count cache reads inside `inputTokens`. Subagents and checks that run beside a
-  conversation are not in it, and `repliesWithoutUsage` says how many replies reported nothing.
-- A turn's `outcome` is `completed`, `error` or `stopped`. A turn waiting for the user's approval has not
-  finished, and a plugin should leave approving to the user.
+  Some providers count cache reads inside `inputTokens`. A conversation's `usage` also holds what the
+  helpers working for it spent (its analysis subagents, a lead's teammates, DarkSelene investigators),
+  and it grows while they work, before the lead's turn ends (Breezell newer than 1.4.54; earlier
+  versions count its own replies only). Checks that run beside a conversation (Cross-Check, your own
+  `models.request`) are not in it, and `repliesWithoutUsage` says how many replies reported nothing.
+- A turn's `outcome` is `completed`, `error` or `stopped`. A turn waiting for the user's approval, or for
+  the conversation's subagents or teammates, has not finished, and a plugin should leave approving to the user.
 
 ## A message before it is sent
 

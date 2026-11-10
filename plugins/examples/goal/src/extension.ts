@@ -264,8 +264,11 @@ export function activate(context: vscode.ExtensionContext): { engine?: GoalEngin
 			}
 		}
 	};
-	// The time on the strip moves on by itself.
-	const clock = setInterval(() => updateStrips(conversationId => engine.get(conversationId)?.status === 'active'), STRIP_CLOCK_MS);
+	// The time on the strip moves on by itself, and so do the tokens of a long turn (its subagents included).
+	const clock = setInterval(() => {
+		updateStrips(conversationId => engine.get(conversationId)?.status === 'active');
+		void engine.refreshUsage();
+	}, STRIP_CLOCK_MS);
 	context.subscriptions.push(
 		engine.onDidChange(changed => updateStrips(conversationId => conversationId === changed)),
 		breezell.onDidChangeLanguage(() => updateStrips()),

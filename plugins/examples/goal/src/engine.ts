@@ -420,6 +420,33 @@ export class GoalEngine {
 		});
 	}
 
+	/**
+	 * The tokens shown follow what the conversation has spent so far, also in the middle of a long turn:
+	 * its subagents and teammates work for minutes before the lead's turn ends, and Breezell counts their
+	 * tokens in the conversation's usage as they land. Limits are still checked when a turn ends.
+	 */
+	async refreshUsage(): Promise<void> {
+		for (const goal of this.activeGoals) {
+			if (this._checks.has(goal.conversationId)) {
+				continue;
+			}
+			try {
+				const conversation = await this._deps.api.chat.getConversation(goal.conversationId);
+				if (!this._isRunning(goal) || !conversation.usage) {
+					continue;
+				}
+				const before = tokensUsed(goal);
+				const uncountedBefore = goal.uncountedReplies;
+				this._account(goal, conversation);
+				if (tokensUsed(goal) !== before || goal.uncountedReplies !== uncountedBefore) {
+					this._changed(goal);
+				}
+			} catch {
+				// The end of the turn reads it again.
+			}
+		}
+	}
+
 	// --- what happens in the chat ------------------------------------------------------------------
 
 	turnStarted(turnId: string): void {
