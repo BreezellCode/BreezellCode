@@ -112,8 +112,8 @@ body.away #island {
 }
 
 body.overlay #capsule {
-	/* In px, not 999px: so it can grow into the panel's corners smoothly. */
-	border-radius: 16px;
+	/* In px, not 999px: so it can grow into the panel's corners smoothly. Half the pill's height (26px, as in the title bar). */
+	border-radius: 13px;
 	transition: background-color var(--fly-ms) ease, color var(--fly-ms) ease, border-color var(--fly-ms) ease, border-radius 460ms var(--island-spring);
 }
 

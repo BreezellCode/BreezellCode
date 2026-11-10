@@ -1,15 +1,17 @@
 import {
-	combinedActivity, ConversationDigest, conversationStateText, formatElapsed, IDLE, IslandActivity, IslandLook, panelSummary, PANEL_MAX_HEIGHT, PANEL_MIN_HEIGHT, taskLabel, WindowDigest, format, stepText,
+	combinedActivity, ConversationDigest, conversationStateText, formatElapsed, IDLE, IslandActivity, IslandLook, panelSummary, PANEL_MAX_HEIGHT, PANEL_MIN_HEIGHT, restTitle, taskLabel, WindowDigest, format, stepText,
 } from '../src/logic';
 import { islandStrings, IslandStrings } from '../src/strings';
 import { icon, IslandRenderer, modelMark } from './view';
 
 /*
  * The island outside the window: a small window of its own (`"kind": "overlay"`) that floats
- * above every app at the top of the screen while you are away from Breezell. It flies there from
- * the title bar and back; on the way it changes from the title bar's look to its own dark pill.
- * It shows every Breezell window at once. A click opens it into a panel, as iOS opens its island:
- * the windows, their conversations with the end of each reply, their tasks, and ways back in.
+ * above every app at the top of the screen while you are away from Breezell and something goes
+ * on. It flies there from the title bar and back; on the way it changes from the title bar's look
+ * to its own dark pill. It shows every Breezell window at once. A click opens it into a panel, as
+ * iOS opens its island: the windows, their conversations with the end of each reply, their tasks,
+ * and ways back in. At rest (on its way home, or behind the open panel) it says the workspace's
+ * name, as the title bar's island does.
  */
 
 interface Bridge {
@@ -234,7 +236,7 @@ function apply(): void {
 	body.classList.toggle('reduce-motion', lessMotion());
 	body.classList.toggle('expanded', state.expanded === true);
 	panel.setAttribute('aria-hidden', String(state.expanded !== true));
-	title.textContent = strings.allQuiet;
+	title.textContent = restTitle(state.windows ?? []);
 	capsule.setAttribute('aria-label', panelSummary(state.windows ?? [], strings));
 	renderer.update({ activity: state.activity ?? IDLE, language: state.language ?? 'en', modelIcon: state.modelIcon });
 	renderPanel();

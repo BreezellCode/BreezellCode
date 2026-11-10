@@ -3,7 +3,7 @@
 	"publisher": "breezell",
 	"displayName": "%displayName%",
 	"description": "%description%",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"license": "MIT",
 	"author": {
 		"name": "DreamfallSerena"
@@ -101,7 +101,7 @@
 					"title": "Activity Island",
 					"entry": "ui/overlay.html",
 					"width": 220,
-					"height": 32
+					"height": 26
 				}
 			]
 		}

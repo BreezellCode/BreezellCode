@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { suite, test } from 'node:test';
 import { Island, IslandApi, IslandHost, IslandSurface, IslandWindow } from '../src/island';
-import { COLLAPSE_MS, ConversationState, DIGEST_STALE_MS, EXPAND_MS, FLY_IN_MS, FLY_OUT_MS, IDLE, IslandActivity, IslandFocus, MORPH_MS, OUTSIDE_HEIGHT, outsideRect, panelRect, Rect, WindowDigest } from '../src/logic';
+import { aboveScreen, COLLAPSE_MS, ConversationState, DIGEST_STALE_MS, EXPAND_MS, FLY_IN_MS, FLY_OUT_MS, IDLE, IslandActivity, IslandFocus, MORPH_MS, outsideRect, panelRect, Rect, WindowDigest } from '../src/logic';
 
 /*
  * The island's choreography with stand-ins for Breezell that behave as it does: a move takes
@@ -99,6 +99,8 @@ interface Options {
 	reduceMotion?: boolean;
 	focus?: Omit<IslandFocus, 'windowId'>;
 	noTitlebar?: boolean;
+	/** Breezell cannot open the overlay (the plugin blocked, nobody signed in). */
+	overlayFails?: boolean;
 	conversations?: { id: string; title: string; updatedAt: string; activity: ConversationState; reply?: string }[];
 }
 
@@ -127,6 +129,7 @@ function harness(options: Options = {}) {
 	const shown: string[] = [];
 	const said: Record<string, unknown>[] = [];
 	const overlays: FakeOverlay[] = [];
+	let opens = 0;
 	const memento = new Map<string, unknown>();
 	const conversations = new Map((options.conversations ?? []).map(c => [c.id, c]));
 	const api: IslandApi = {
@@ -158,8 +161,12 @@ function harness(options: Options = {}) {
 		},
 		windows: {
 			open: async () => {
+				opens++;
 				if (grants['ui.overlay'] !== 'granted') {
 					throw Object.assign(new Error('denied'), { name: 'BreezellPermissionDenied' });
+				}
+				if (options.overlayFails) {
+					throw Object.assign(new Error('blocked'), { name: 'BreezellBlocked' });
 				}
 				const overlay = new FakeOverlay();
 				overlays.push(overlay);
@@ -200,6 +207,8 @@ function harness(options: Options = {}) {
 		/** Deleted in Breezell: no event, it is just no longer listed. */
 		deleteConversation: (id: string) => conversations.delete(id),
 		get overlay() { return overlays[overlays.length - 1]; },
+		/** How often the overlay was asked for. */
+		get opens() { return opens; },
 		async start() {
 			await island.start();
 			if (!options.noTitlebar) {
@@ -253,23 +262,25 @@ function harness(options: Options = {}) {
 
 const LEFT = { editorFocused: false, lastUsed: true };
 const BACK = { editorFocused: true, lastUsed: true };
-const OUT = outsideRect(AREA, 220, OUTSIDE_HEIGHT);
+const OUT = outsideRect(AREA, 220);
 const at = (r: Rect, ms?: number) => `bounds ${r.x},${r.y},${r.width}x${r.height}${ms ? ` in ${ms}` : ''}`;
 const working = (conversationId = 'c', model?: { provider: string; name: string }): IslandActivity => ({ agent: { kind: 'working', conversationId, step: { kind: 'thinking' }, conversations: 1, startedAt: 1, ...(model ? { model } : {}) } });
 const digest = (windowId: number, activity: IslandActivity, over: Partial<WindowDigest> = {}): WindowDigest => ({ windowId, title: `window ${windowId}`, activity, conversations: [], readsChat: false, at: 0, ...over });
 
-/** Out, arrived, its page settled. */
+/** At work, the user gone: out, arrived, its page settled. */
 async function outside(h: ReturnType<typeof harness>) {
 	await h.start();
+	await h.activity(working());
 	await h.focus(LEFT);
 	h.overlay.arrive();
 	await flush();
 }
 
 suite('the island flies out of the window and back', () => {
-	test('leaving Breezell: it starts on the title bar\'s island, covers it, and flies to the top of the screen', async () => {
+	test('leaving Breezell while it works: it starts on the title bar\'s island, covers it, and flies to the top of the screen', async () => {
 		const h = harness();
 		await h.start();
+		await h.activity(working());
 		assert.equal(h.overlays.length, 0, 'nothing opens while the user is in Breezell');
 		await h.focus(LEFT);
 		const o = h.overlay;
@@ -300,6 +311,7 @@ suite('the island flies out of the window and back', () => {
 	test('the window used last sends its island out; the others keep theirs', async () => {
 		const h = harness();
 		await h.start();
+		await h.activity(working());
 		await h.focus({ editorFocused: false, lastUsed: false });
 		assert.equal(h.overlays.length, 0);
 		await h.focus({ editorFocused: true, lastUsed: false });
@@ -309,6 +321,7 @@ suite('the island flies out of the window and back', () => {
 	test('in and out in quick succession: it ends where the user is, never stranded', async () => {
 		const h = harness();
 		await h.start();
+		await h.activity(working());
 		await h.focus(LEFT);
 		await h.focus(BACK);
 		await h.focus(LEFT);
@@ -329,6 +342,7 @@ suite('the island flies out of the window and back', () => {
 	test('back before the overlay could even open: the title bar keeps its island', async () => {
 		const h = harness();
 		await h.start();
+		await h.activity(working());
 		const pending = h.focus(LEFT);
 		await h.focus(BACK);
 		await pending;
@@ -342,6 +356,7 @@ suite('the island flies out of the window and back', () => {
 	test('without its page in the title bar, it comes down from above the screen and goes back up', async () => {
 		const h = harness({ noTitlebar: true });
 		await h.start();
+		await h.activity(working());
 		await h.focus(LEFT);
 		const o = h.overlay;
 		assert.ok(o.calls[0].startsWith('bounds 690,-'), o.calls[0]);
@@ -355,14 +370,133 @@ suite('the island flies out of the window and back', () => {
 		await outside(h);
 		h.overlay.says({ width: 300 });
 		await flush();
-		assert.equal(h.overlay.calls.at(-1), at(outsideRect(AREA, 300, OUTSIDE_HEIGHT), MORPH_MS));
+		assert.equal(h.overlay.calls.at(-1), at(outsideRect(AREA, 300), MORPH_MS));
 	});
 
 	test('with reduce motion on, it goes at once', async () => {
 		const h = harness({ reduceMotion: true });
 		await h.start();
+		await h.activity(working());
 		await h.focus(LEFT);
 		assert.deepEqual(h.overlay.calls, [at(TITLEBAR_RECT), 'show', at(OUT)]);
+	});
+
+	test('a title bar said to be off every screen (a minimized window, on an older Breezell): it comes down from above the screen and goes back up', async () => {
+		const h = harness();
+		await h.start();
+		await h.activity(working());
+		h.titlebar.rect = { x: -31142, y: -31995, width: 220, height: 26 };
+		await h.focus(LEFT);
+		const o = h.overlay;
+		assert.deepEqual(o.calls, [at(aboveScreen(AREA, 220)), 'show', at(OUT, FLY_OUT_MS)], 'not from the corner of the screen Breezell would move it to');
+		o.arrive();
+		await h.focus(BACK);
+		assert.equal(o.calls.at(-1), at(aboveScreen(AREA, 220), FLY_IN_MS));
+	});
+});
+
+suite('only while something goes on', () => {
+	test('with nothing going on it stays in the title bar when the user leaves', async () => {
+		const h = harness();
+		await h.start();
+		await h.focus(LEFT);
+		assert.equal(h.opens, 0, 'the overlay is not even opened');
+		assert.notEqual(h.titlebar.away, true);
+	});
+
+	test('work that begins while the user is away sends it out; all quiet again, it flies home', async () => {
+		const h = harness();
+		await h.start();
+		await h.focus(LEFT);
+		await h.activity(working());
+		const o = h.overlay;
+		assert.deepEqual(o.calls, [at(TITLEBAR_RECT), 'show', at(OUT, FLY_OUT_MS)]);
+		o.arrive();
+		await flush();
+		await h.activity({ agent: { kind: 'finished', conversationId: 'c', elapsedMs: 5 } });
+		assert.equal(o.calls.at(-1), at(OUT, FLY_OUT_MS), 'a turn that just ended still shows: it stays');
+		assert.equal(h.titlebar.away, true);
+		await h.activity(IDLE);
+		assert.equal(o.calls.at(-1), at(TITLEBAR_RECT, FLY_IN_MS));
+		o.arrive();
+		await flush();
+		assert.equal(o.visible, false);
+		assert.equal(h.titlebar.away, false, 'the title bar has its island back, though the user is still away');
+		await h.activity({ agent: { kind: 'idle' }, task: { kind: 'running', name: 'build', startedAt: 1, others: 0 } });
+		assert.equal(o.visible, true, 'a task alone sends it out as well');
+		assert.equal(h.overlays.length, 1, 'the same overlay');
+	});
+
+	test('another window\'s work sends it out too; it flies home when that window is done, says goodbye or goes silent', async () => {
+		const h = harness();
+		await h.start();
+		await h.focus(LEFT);
+		await h.hear(OTHER, { type: 'digest', digest: digest(OTHER, working('b')) });
+		const o = h.overlay;
+		assert.equal(o.calls.at(-1), at(OUT, FLY_OUT_MS));
+		o.arrive();
+		await flush();
+		await h.hear(OTHER, { type: 'digest', digest: digest(OTHER, IDLE) });
+		assert.equal(o.calls.at(-1), at(TITLEBAR_RECT, FLY_IN_MS), 'done');
+		o.arrive();
+		await flush();
+
+		await h.hear(OTHER, { type: 'digest', digest: digest(OTHER, working('b')) });
+		o.arrive();
+		await flush();
+		await h.hear(OTHER, { type: 'bye', windowId: OTHER });
+		assert.equal(o.calls.at(-1), at(TITLEBAR_RECT, FLY_IN_MS), 'goodbye');
+		o.arrive();
+		await flush();
+
+		await h.hear(OTHER, { type: 'digest', digest: digest(OTHER, working('b')) });
+		o.arrive();
+		await flush();
+		assert.equal(o.calls.at(-1), at(OUT, FLY_OUT_MS));
+		await h.tick(DIGEST_STALE_MS + 16_000);
+		assert.equal(o.calls.at(-1), at(TITLEBAR_RECT, FLY_IN_MS), 'silent for too long: noticed at the next heartbeat');
+	});
+
+	test('all quiet while its panel is open: it stays until the panel closes, then flies home instead of back into the pill', async () => {
+		const h = harness();
+		await outside(h);
+		h.overlay.says({ expand: true });
+		await flush();
+		h.overlay.arrive();
+		await flush();
+		await h.activity(IDLE);
+		assert.equal(h.overlay.state.expanded, true);
+		assert.equal(h.overlay.calls.at(-1), 'activate', 'no move while the user reads it');
+		h.overlay.says({ collapse: true });
+		await flush();
+		assert.equal(h.overlay.state.expanded, false);
+		assert.equal(h.overlay.calls.at(-1), at(TITLEBAR_RECT, FLY_IN_MS));
+		assert.ok(!h.overlay.calls.includes(at(OUT, COLLAPSE_MS)));
+	});
+
+	test('a width its page asks for as it sets off home does not turn it round', async () => {
+		const h = harness();
+		await outside(h);
+		h.overlay.says({ width: 300 });
+		await h.activity(IDLE);
+		assert.equal(h.overlay.calls.at(-1), at(TITLEBAR_RECT, FLY_IN_MS));
+		assert.ok(!h.overlay.calls.includes(at(outsideRect(AREA, 300), MORPH_MS)));
+	});
+
+	test('an overlay Breezell cannot open is asked for once, not at every step of the work; again after the user has been back', async () => {
+		const h = harness({ overlayFails: true });
+		await h.start();
+		await h.activity(working());
+		await h.focus(LEFT);
+		assert.equal(h.opens, 1);
+		await h.activity({ agent: { kind: 'working', conversationId: 'c', step: { kind: 'writing' }, conversations: 1, startedAt: 1 } });
+		await h.activity({ agent: { kind: 'awaitingUser', conversationId: 'c', conversations: 1 } });
+		await h.tick(16_000);
+		assert.equal(h.opens, 1);
+		assert.notEqual(h.titlebar.away, true);
+		await h.focus(BACK);
+		await h.focus(LEFT);
+		assert.equal(h.opens, 2);
 	});
 });
 
@@ -370,6 +504,7 @@ suite('when it stays in', () => {
 	test('on a Wayland session: never an overlay, and the user is told once', async () => {
 		const h = harness({ supported: false });
 		await h.start();
+		await h.activity(working());
 		await h.focus(LEFT);
 		assert.equal(h.overlays.length, 0);
 		assert.equal(h.notes.length, 1);
@@ -386,6 +521,7 @@ suite('when it stays in', () => {
 		assert.deepEqual(asked.asked, ['ui.overlay']);
 		const away = harness({ overlay: 'ask', focus: LEFT });
 		await away.start();
+		await away.activity(working());
 		assert.deepEqual(away.asked, [], 'started while away: asked later, when the user is back');
 		assert.equal(away.overlays.length, 0);
 		await away.focus(BACK);
@@ -397,6 +533,7 @@ suite('when it stays in', () => {
 	test('refused: it stays in, and reading the conversations is not asked for either', async () => {
 		const h = harness({ overlay: 'ask', chatRead: 'ask', allow: false });
 		await h.start();
+		await h.activity(working());
 		await h.focus(LEFT);
 		assert.equal(h.overlays.length, 0);
 		assert.notEqual(h.titlebar.away, true);
@@ -426,6 +563,12 @@ suite('when it stays in', () => {
 		await h.overlay.close();
 		await flush();
 		assert.equal(h.titlebar.away, false);
+		await h.activity(working('d'));
+		await h.tick(16_000);
+		assert.equal(h.opens, 1, 'not opened anew for what goes on');
+		await h.focus(BACK);
+		await h.focus(LEFT);
+		assert.equal(h.opens, 2, 'again once the user has been back and left');
 	});
 });
 
@@ -534,6 +677,7 @@ suite('the panel', () => {
 	test('not while it flies, nor in the title bar', async () => {
 		const h = harness();
 		await h.start();
+		await h.activity(working());
 		await h.focus(LEFT);
 		h.overlay.says({ expand: true });
 		await flush();

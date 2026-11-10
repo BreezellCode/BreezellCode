@@ -1,6 +1,6 @@
 import {
-	aboveScreen, COLLAPSE_MS, combinedActivity, ConversationDigest, ConversationState, conversationsToShow, DIGEST_HEARTBEAT_MS, EXPAND_MS, FLY_IN_MS, FLY_OUT_MS, IDLE, INSIDE_HEIGHT,
-	IslandActivity, IslandFocus, IslandLook, islandPlace, liveWindows, MORPH_MS, OUTSIDE_HEIGHT, outsideRect, PANEL_MIN_HEIGHT, panelRect, Rect, replyExcerpt, REST_WIDTH, WindowDigest,
+	aboveScreen, COLLAPSE_MS, combinedActivity, ConversationDigest, ConversationState, conversationsToShow, DIGEST_HEARTBEAT_MS, EXPAND_MS, flightPlace, FLY_IN_MS, FLY_OUT_MS, hasActivity, IDLE,
+	IslandActivity, IslandFocus, IslandLook, islandPlace, liveWindows, MORPH_MS, outsideRect, PANEL_MIN_HEIGHT, panelRect, Rect, replyExcerpt, REST_WIDTH, WindowDigest,
 } from './logic';
 import { islandStrings } from './strings';
 
@@ -8,7 +8,8 @@ import { islandStrings } from './strings';
  * The plugin's code: it hears what Breezell is busy with and whether the user is in it, tells
  * both pages, and moves the island. In the title bar it is Breezell's page (the "titlebar"
  * surface); outside the window it is the overlay (the "overlay" window), which flies from the
- * title bar to the top of the screen when the user leaves Breezell and back when they return.
+ * title bar to the top of the screen once the user has left Breezell and something goes on, and
+ * back when they return or all is quiet again. With nothing to show it stays in the title bar.
  *
  * Every editor window runs its own copy of this code. Each tells the others what its window is
  * doing (a broadcast); the one whose window was used last sends its island out, and that island
@@ -136,6 +137,8 @@ export class Island {
 	private _overlayReady: (() => void) | undefined;
 	/** The overlay is on screen (or about to be): a flight back in has to bring it down. */
 	private _overlayShown = false;
+	/** The overlay did not open, or Breezell closed it: it is not asked for again until the user has been back. */
+	private _overlayLost = false;
 	/** The title bar's island stepped away because the overlay covers it or is out. */
 	private _titlebarAway = false;
 	/** The width each page asked for; outside, the overlay takes its own. */
@@ -187,6 +190,9 @@ export class Island {
 		}
 		this._subscriptions.push(api.app.onDidChangeFocus(focus => {
 			this._focus = focus;
+			if (focus.editorFocused) {
+				this._overlayLost = false;
+			}
 			this._decide();
 			if (focus.editorFocused) {
 				void this._askForPermissions().then(() => this._decide());
@@ -268,6 +274,7 @@ export class Island {
 	private _setActivity(activity: IslandActivity): void {
 		this._activity = activity;
 		this._changed();
+		this._decide();
 	}
 
 	private _setReadsChat(reads: boolean): void {
@@ -409,6 +416,8 @@ export class Island {
 			}
 			this._sayDigest();
 			this._tellOverlay();
+			// A window that went quiet may have been the one with something to show.
+			this._decide();
 			this._beat();
 		});
 	}
@@ -431,11 +440,13 @@ export class Island {
 				if (message.digest && message.digest.windowId === fromWindow) {
 					this._others.set(fromWindow, { ...message.digest, at: this._host.now() });
 					this._tellOverlay();
+					this._decide();
 				}
 				break;
 			case 'bye':
 				this._others.delete(fromWindow);
 				this._tellOverlay();
+				this._decide();
 				break;
 			case 'show':
 				if (message.windowId === mine && typeof message.conversationId === 'string' && this._readsChat) {
@@ -458,6 +469,11 @@ export class Island {
 			all.set(own.windowId, own);
 		}
 		return liveWindows(all.values(), this._host.now(), this._focus.windowId);
+	}
+
+	/** Whether any window has something to show: the island goes out for that, never to say that nothing goes on. */
+	private _live(): boolean {
+		return hasActivity(combinedActivity(this._windows()));
 	}
 
 	private _fetchModelIcons(): void {
@@ -550,6 +566,7 @@ export class Island {
 						this._overlayShown = false;
 						this._overlayWidth = undefined;
 						this._expanded = false;
+						this._overlayLost = true;
 						this._comeBack();
 					}
 				});
@@ -564,6 +581,7 @@ export class Island {
 					this._supported = false;
 				}
 				this._overlay = undefined;
+				this._overlayLost = true;
 				return undefined;
 			});
 			this._overlay = opened;
@@ -627,8 +645,13 @@ export class Island {
 
 	/** Where the overlay is when it is out: the pill, or the panel when open. */
 	private async _fit(win: IslandWindow, durationMs: number): Promise<void> {
+		const flight = this._flight;
 		const area = await this._host.api.windows.workArea();
-		const rect = this._expanded ? panelRect(area, this._panelHeight) : outsideRect(area, this._overlayWidth ?? this._titlebarWidth, OUTSIDE_HEIGHT);
+		if (flight !== this._flight) {
+			// It set off elsewhere meanwhile: that flight places it.
+			return;
+		}
+		const rect = this._expanded ? panelRect(area, this._panelHeight) : outsideRect(area, this._overlayWidth ?? this._titlebarWidth);
 		await win.setBounds(rect, { durationMs: this._ms(durationMs) });
 	}
 
@@ -656,6 +679,8 @@ export class Island {
 		}
 		this._expanded = false;
 		this._tellOverlay();
+		// Open, the panel kept the island out; with nothing left to show it goes home now, not back into the pill.
+		this._decide();
 		if (this._place === 'outside' && this._settled) {
 			void this._overlay?.then(win => win && this._fit(win, COLLAPSE_MS));
 		}
@@ -693,7 +718,9 @@ export class Island {
 		if (this._disposed) {
 			return;
 		}
-		const place = islandPlace(this._focus, this._canFloat());
+		// The open panel counts as something to show: the island does not leave from under the user's hand.
+		// What goes on changes far more often than where the user is: a lost overlay is not opened anew for it.
+		const place = islandPlace(this._focus, this._canFloat() && !this._overlayLost, this._live() || this._expanded);
 		if (place === this._place) {
 			return;
 		}
@@ -726,8 +753,9 @@ export class Island {
 		this._expanded = false;
 		void win.postMessage(this._overlayState());
 		const width = this._overlayWidth ?? this._titlebarWidth;
-		const to = outsideRect(area, width, OUTSIDE_HEIGHT);
-		const start = from && from.width > 0 && from.height > 0 ? from : aboveScreen(area, width, OUTSIDE_HEIGHT);
+		const to = outsideRect(area, width);
+		// From the title bar's island, or from above the screen when that one is not on it (no page there, or a minimized window an older Breezell misplaces).
+		const start = flightPlace(from, area) ?? aboveScreen(area, width);
 		void win.postMessage({ type: 'fly', to: 'outside', durationMs: this._ms(FLY_OUT_MS) });
 		if (!this._overlayShown) {
 			await win.setBounds(start);
@@ -769,7 +797,7 @@ export class Island {
 			return;
 		}
 		const width = this._overlayWidth ?? this._titlebarWidth;
-		const landing = to && to.width > 0 && to.height > 0 ? to : aboveScreen(area, width, INSIDE_HEIGHT);
+		const landing = flightPlace(to, area) ?? aboveScreen(area, width);
 		void win.postMessage({ type: 'fly', to: 'inside', durationMs: this._ms(FLY_IN_MS) });
 		await win.setBounds(landing, { durationMs: this._ms(FLY_IN_MS) });
 		if (flight !== this._flight) {

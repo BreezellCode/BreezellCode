@@ -1,5 +1,5 @@
 {
 	"displayName": "활동 아일랜드",
-	"description": "Breezell 제목 표시줄에 AI가 하는 일을 모양이 바뀌는 캡슐로 보여 줍니다. Breezell을 벗어나면 화면 상단에서 모든 앱 위에 떠 있고 클릭하면 대화 패널이 열리며, 돌아오면 제목 표시줄로 날아 들어옵니다.",
-	"config.floatOutside": "Breezell을 벗어나거나 최소화하면 아일랜드를 화면 상단, 다른 앱 위에 띄웁니다. Linux에서는 X11 세션이 필요하며, Wayland에서는 제목 표시줄에 머뭅니다."
+	"description": "Breezell 제목 표시줄에 AI가 하는 일을 모양이 바뀌는 캡슐로 보여 줍니다. AI가 작업하는 동안 Breezell을 벗어나면 화면 상단에서 모든 앱 위에 떠 있고 클릭하면 대화 패널이 열리며, 돌아오면 제목 표시줄로 날아 들어옵니다.",
+	"config.floatOutside": "진행 중인 일이 있을 때 Breezell을 벗어나거나 최소화하면 아일랜드를 화면 상단, 다른 앱 위에 띄웁니다. Linux에서는 X11 세션이 필요하며, Wayland에서는 제목 표시줄에 머뭅니다."
 }

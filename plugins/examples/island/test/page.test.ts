@@ -131,11 +131,13 @@ suite('the title bar\'s island', () => {
 const digest = (windowId: number, activity: IslandActivity, conversations: unknown[] = [], readsChat = true) => ({ windowId, title: `project-${windowId}`, activity, conversations, readsChat, at: 0 });
 
 suite('the island outside the window', () => {
-	test('says hello; all quiet when nothing goes on; a click opens the panel', () => {
+	test('says hello; at rest it says the workspace of the window used last; a click opens the panel', () => {
 		const p = page('overlay');
 		assert.ok(p.posted.some(m => m.hello === true));
-		p.tell({ type: 'state', activity: { agent: { kind: 'idle' } }, windows: [digest(1, { agent: { kind: 'idle' } })], language: 'zh-TW' });
-		assert.equal(p.text('#title'), '相安無事');
+		assert.equal(p.text('#title'), 'Breezell', 'before it is told of any window');
+		p.tell({ type: 'state', activity: { agent: { kind: 'idle' } }, windows: [digest(2, { agent: { kind: 'idle' } }), digest(1, { agent: { kind: 'idle' } })], language: 'zh-TW' });
+		assert.equal(p.text('#title'), 'project-2');
+		assert.equal(p.doc.getElementById('capsule')!.getAttribute('aria-label'), 'project-2');
 		p.click('#capsule');
 		assert.ok(p.posted.some(m => m.expand === true));
 		assert.ok(!p.posted.some(m => m.back === true), 'a click no longer leaves at once');

@@ -1,13 +1,13 @@
 # Ilha de atividade
 
-A barra de título do Breezell mostra o que a IA está fazendo numa cápsula que muda de forma. Saia do Breezell ou minimize-o e a cápsula voa para o topo da tela, onde flutua acima de todos os apps. Clique nela e ela se abre num painel com suas conversas e as últimas palavras de cada resposta. Volte e ela voa de volta para a barra de título.
+A barra de título do Breezell mostra o que a IA está fazendo numa cápsula que muda de forma. Saia do Breezell ou minimize-o enquanto algo está em andamento e a cápsula voa para o topo da tela, onde flutua acima de todos os apps. Clique nela e ela se abre num painel com suas conversas e as últimas palavras de cada resposta. Volte, ou deixe o trabalho terminar, e ela voa de volta para a barra de título.
 
 ## O que ela faz
 
 - **Ocupa o meio da barra de título.** Em repouso mostra o nome do seu workspace, e um clique abre a pesquisa, como a barra de pesquisa fazia. O sino de notificações e o botão de atualização continuam ao lado.
 - **Muda de forma enquanto o Breezell trabalha.** A cápsula se alarga até a etapa da IA, com a marca do modelo, uma onda e um relógio. Ela avisa quando um chat aguarda você, quando um turno termina e quanto levou, e quando algo dá errado, com um botão **Ver** que abre a conversa.
 - **Mostra tarefas.** Uma tarefa de build ou de testes aparece na cápsula quando a IA está livre, e numa bolha ao lado quando está ocupada. **Ver** numa tarefa que falhou abre o terminal dela.
-- **Flutua fora da janela.** Quando você vai para outro app ou minimiza o Breezell, a cápsula voa da barra de título para o topo da tela e vira uma pílula escura acima de tudo. Sem nada acontecendo, ela diz **Tudo tranquilo**.
+- **Flutua fora da janela enquanto algo está em andamento.** Quando você vai para outro app ou minimiza o Breezell enquanto a IA trabalha, aguarda você, acabou de terminar ou falhou, ou uma tarefa está rodando, a cápsula voa da barra de título para o topo da tela e vira uma pílula escura acima de tudo. Sem nada acontecendo, ela fica na barra de título, e quando tudo se acalma ela voa de volta para lá.
 - **Abre-se num painel.** Clique na pílula e ela se abre como uma ilha expandida: quantos chats estão em andamento ou aguardam você, o que cada conversa está fazendo, o relógio e as últimas palavras da resposta, e as tarefas. Clique numa conversa para ir direto a ela, ou em **Voltar ao editor**. Um clique fora do painel, ou Esc, o fecha.
 - **Todas as janelas do Breezell de uma vez.** Com várias janelas abertas, uma só ilha do lado de fora mostra todas, a mais urgente primeiro, e o painel as lista janela por janela com **Ir** para trocar.
 
@@ -25,7 +25,7 @@ O que ela lê: a etapa em que a IA está, qual modelo trabalha, como vai uma tar
 
 | Configuração | O que faz |
 |---|---|
-| `activityIsland.floatOutside` | Faz a ilha flutuar no topo da tela quando você sai do Breezell. Desativada: ela fica na barra de título |
+| `activityIsland.floatOutside` | Faz a ilha flutuar no topo da tela quando você sai do Breezell enquanto algo está em andamento. Desativada: ela fica na barra de título |
 
 Ela também está em Box > Opções de recursos. Com **Reduzir movimento** do Breezell ativado, ela se move na hora.
 

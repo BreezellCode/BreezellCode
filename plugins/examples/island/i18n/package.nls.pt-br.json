@@ -1,5 +1,5 @@
 {
 	"displayName": "Ilha de atividade",
-	"description": "A barra de título do Breezell mostra o que a IA está fazendo numa cápsula que muda de forma. Saia do Breezell e ela flutua no topo da tela, acima de todos os apps, e se abre num painel com suas conversas; volte e ela voa de volta para a barra de título.",
-	"config.floatOutside": "Fazer a ilha flutuar no topo da tela, acima de outros apps, quando você sai do Breezell ou o minimiza. No Linux é preciso uma sessão X11; no Wayland a ilha fica na barra de título."
+	"description": "A barra de título do Breezell mostra o que a IA está fazendo numa cápsula que muda de forma. Saia do Breezell enquanto a IA trabalha e a cápsula flutua no topo da tela, acima de todos os apps, e se abre num painel com suas conversas; volte e ela voa de volta para a barra de título.",
+	"config.floatOutside": "Fazer a ilha flutuar no topo da tela, acima de outros apps, quando você sai do Breezell ou o minimiza enquanto algo está em andamento. No Linux é preciso uma sessão X11; no Wayland a ilha fica na barra de título."
 }

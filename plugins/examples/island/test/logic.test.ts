@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { suite, test } from 'node:test';
-import { aboveScreen, BUBBLE_ROOM, bubbleTask, capsuleWidth, combinedActivity, ConversationDigest, conversationsToShow, DIGEST_STALE_MS, IDLE, IslandActivity, islandPlace, islandView, islandWidth, liveWindows, MAX_WIDTH, OUTSIDE_HEIGHT, OUTSIDE_TOP, outsideRect, panelRect, panelSummary, PANEL_MAX_HEIGHT, PANEL_MIN_HEIGHT, PANEL_WIDTH, replyExcerpt, REST_WIDTH, formatElapsed, WindowDigest } from '../src/logic';
+import { aboveScreen, BUBBLE_ROOM, bubbleTask, capsuleWidth, combinedActivity, ConversationDigest, conversationsToShow, DIGEST_STALE_MS, flightPlace, hasActivity, IDLE, ISLAND_HEIGHT, IslandActivity, islandPlace, islandView, islandWidth, liveWindows, MAX_WIDTH, OUTSIDE_TOP, outsideRect, panelRect, panelSummary, PANEL_MAX_HEIGHT, PANEL_MIN_HEIGHT, PANEL_WIDTH, replyExcerpt, restTitle, REST_WIDTH, formatElapsed, WindowDigest } from '../src/logic';
 import { ISLAND_STRINGS, islandStrings } from '../src/strings';
 
 const en = islandStrings('en');
@@ -69,6 +71,23 @@ suite('what the island shows', () => {
 		assert.equal(bubbleTask(working()), undefined);
 	});
 
+	test('something to show whenever the island has a view, and only then', () => {
+		const shown: IslandActivity[] = [
+			working(),
+			{ agent: { kind: 'awaitingUser', conversationId: 'c', conversations: 1 } },
+			{ agent: { kind: 'finished', conversationId: 'c', elapsedMs: 1 } },
+			{ agent: { kind: 'failed', conversationId: 'c' } },
+			{ agent: { kind: 'idle' }, task: { kind: 'running', name: 'build', startedAt: 1, others: 0 } },
+			{ agent: { kind: 'idle' }, task: { kind: 'succeeded', name: 'test', elapsedMs: 1 } },
+			{ ...working(), task: { kind: 'failed', name: 'lint' } },
+		];
+		for (const activity of [IDLE, ...shown]) {
+			assert.equal(hasActivity(activity), islandView(activity, en) !== undefined, JSON.stringify(activity));
+		}
+		assert.equal(hasActivity(IDLE), false);
+		assert.ok(shown.every(hasActivity));
+	});
+
 	test('the clock reads minutes and seconds', () => {
 		assert.equal(formatElapsed(0), '0:00');
 		assert.equal(formatElapsed(59_999), '0:59');
@@ -89,17 +108,35 @@ suite('sizes and places', () => {
 
 	test('outside, at the top of the screen in the middle; or just above it', () => {
 		const area = { x: 1920, y: 40, width: 2560, height: 1400 };
-		assert.deepEqual(outsideRect(area, 260), { x: 1920 + 1150, y: 40 + OUTSIDE_TOP, width: 260, height: OUTSIDE_HEIGHT });
+		assert.deepEqual(outsideRect(area, 260), { x: 1920 + 1150, y: 40 + OUTSIDE_TOP, width: 260, height: ISLAND_HEIGHT });
 		const above = aboveScreen(area, 260);
 		assert.ok(above.y + above.height <= area.y, 'entirely above the work area');
 		assert.equal(above.x, outsideRect(area, 260).x);
 	});
 
-	test('out only when the user left Breezell from this window, and it can float', () => {
-		assert.equal(islandPlace({ editorFocused: true, lastUsed: true }, true), 'inside');
-		assert.equal(islandPlace({ editorFocused: false, lastUsed: true }, true), 'outside');
-		assert.equal(islandPlace({ editorFocused: false, lastUsed: false }, true), 'inside', 'another window was used last: its island goes out');
-		assert.equal(islandPlace({ editorFocused: false, lastUsed: true }, false), 'inside', 'Wayland, turned off, or not allowed');
+	test('as tall outside the window as the page in the title bar', () => {
+		const pkg = JSON.parse(readFileSync(join(__dirname, '..', '..', 'package.json'), 'utf8'));
+		const titlebar = pkg.contributes.breezell.ui.surfaces.find((s: { slot?: string }) => s.slot === 'titlebar.center');
+		const overlay = pkg.contributes.breezell.windows.find((w: { kind?: string }) => w.kind === 'overlay');
+		assert.deepEqual([titlebar.height, overlay.height], [ISLAND_HEIGHT, ISLAND_HEIGHT]);
+	});
+
+	test('out only when the user left Breezell from this window, there is something to show, and it can float', () => {
+		assert.equal(islandPlace({ editorFocused: true, lastUsed: true }, true, true), 'inside');
+		assert.equal(islandPlace({ editorFocused: false, lastUsed: true }, true, true), 'outside');
+		assert.equal(islandPlace({ editorFocused: false, lastUsed: true }, true, false), 'inside', 'nothing goes on: it does not go out to say so');
+		assert.equal(islandPlace({ editorFocused: false, lastUsed: false }, true, true), 'inside', 'another window was used last: its island goes out');
+		assert.equal(islandPlace({ editorFocused: false, lastUsed: true }, false, true), 'inside', 'Wayland, turned off, or not allowed');
+	});
+
+	test('the title bar\'s place is flown from and to only while it is on the screen, or on one beside it', () => {
+		const area = { x: 0, y: 24, width: 1920, height: 1056 };
+		const titlebar = { x: 850, y: 28, width: 220, height: 26 };
+		assert.deepEqual(flightPlace(titlebar, area), titlebar);
+		assert.deepEqual(flightPlace({ ...titlebar, x: -1500 }, area), { ...titlebar, x: -1500 }, 'a window reaching onto the screen to the left');
+		assert.equal(flightPlace({ x: -31142, y: -31995, width: 220, height: 26 }, area), undefined, 'a minimized window, as an older Breezell says it on Windows');
+		assert.equal(flightPlace({ ...titlebar, width: 0 }, area), undefined, 'a page that is not laid out');
+		assert.equal(flightPlace(undefined, area), undefined, 'no page in the title bar');
 	});
 });
 
@@ -150,11 +187,13 @@ suite('several windows at once', () => {
 		assert.deepEqual(list.map(w => w.windowId), [5, 2, 3]);
 	});
 
-	test('the panel\'s headline: all quiet, or who waits and how many run', () => {
-		assert.equal(panelSummary([win(1, IDLE)], en), 'All quiet');
+	test('the panel\'s headline: who waits and how many run, or what else goes on; at rest, the workspace of the window used last', () => {
 		assert.equal(panelSummary([win(1, working({ conversations: 2 })), win(2, { agent: { kind: 'awaitingUser', conversationId: 'a', conversations: 1 } })], en), 'Waiting for you · 2 running');
 		assert.equal(panelSummary([win(1, { agent: { kind: 'idle' }, task: { kind: 'running', name: 'build', startedAt: 1, others: 0 } })], en), 'build');
-		assert.equal(panelSummary([win(1, IDLE)], islandStrings('zh-TW')), '相安無事');
+		assert.equal(panelSummary([win(1, IDLE)], en), 'w1');
+		assert.equal(panelSummary([win(2, IDLE), win(1, IDLE)], islandStrings('zh-TW')), 'w2', 'the same in every language: it is the workspace\'s own name');
+		assert.equal(restTitle([win(2, IDLE), win(1, IDLE)]), 'w2');
+		assert.equal(restTitle([]), 'Breezell', 'before any window has said what it does');
 	});
 });
 

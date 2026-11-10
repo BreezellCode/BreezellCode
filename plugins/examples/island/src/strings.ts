@@ -28,8 +28,6 @@ export interface IslandStrings {
 	readonly exitCode: string;
 	/** What the island outside the window is, for screen readers: a click opens its panel. */
 	readonly backToBreezell: string;
-	/** Nothing going on in any window. */
-	readonly allQuiet: string;
 	readonly backToEditor: string;
 	/** Goes to that editor window. */
 	readonly goTo: string;
@@ -53,7 +51,7 @@ export const ISLAND_STRINGS: Readonly<Record<string, IslandStrings>> = {
 		taskRunning: 'Running {0}', taskSucceeded: '{0} succeeded', taskFailed: '{0} failed', exitCode: 'exit code {0}',
 		backToBreezell: 'Back to Breezell',
 		waylandNote: 'Activity Island stays in the title bar on this desktop: a Wayland session does not let apps keep a window above others. Under X11 it floats at the top of the screen when you leave Breezell.',
-		allQuiet: "All quiet", backToEditor: "Back to editor", goTo: "Go", running: "{0} running", working: "Working", untitled: "New chat",
+		backToEditor: "Back to editor", goTo: "Go", running: "{0} running", working: "Working", untitled: "New chat",
 		readChatHint: "Allow \"Read your conversations\" for Activity Island in Plugins to see replies here.",
 	},
 	'zh-CN': {
@@ -63,7 +61,7 @@ export const ISLAND_STRINGS: Readonly<Record<string, IslandStrings>> = {
 		taskRunning: '正在运行 {0}', taskSucceeded: '{0} 已完成', taskFailed: '{0} 失败', exitCode: '退出码 {0}',
 		backToBreezell: '回到 Breezell',
 		waylandNote: '活动岛在这个桌面上会留在标题栏：Wayland 会话不允许应用让窗口浮在其他窗口之上。在 X11 下，离开 Breezell 时它会浮到屏幕顶部。',
-		allQuiet: "相安无事", backToEditor: "回到编辑器", goTo: "前往", running: "{0} 个对话进行中", working: "正在工作", untitled: "新对话",
+		backToEditor: "回到编辑器", goTo: "前往", running: "{0} 个对话进行中", working: "正在工作", untitled: "新对话",
 		readChatHint: "在插件中允许活动岛“读取你的对话”，即可在这里看到回复。",
 	},
 	'zh-TW': {
@@ -73,7 +71,7 @@ export const ISLAND_STRINGS: Readonly<Record<string, IslandStrings>> = {
 		taskRunning: '正在執行 {0}', taskSucceeded: '{0} 已完成', taskFailed: '{0} 失敗', exitCode: '結束代碼 {0}',
 		backToBreezell: '回到 Breezell',
 		waylandNote: '活動島在這個桌面上會留在標題列：Wayland 工作階段不讓應用程式把視窗浮在其他視窗之上。在 X11 下，離開 Breezell 時它會浮到螢幕頂端。',
-		allQuiet: "相安無事", backToEditor: "回到編輯器", goTo: "前往", running: "{0} 個對話進行中", working: "正在工作", untitled: "新對話",
+		backToEditor: "回到編輯器", goTo: "前往", running: "{0} 個對話進行中", working: "正在工作", untitled: "新對話",
 		readChatHint: "在插件中允許活動島「讀取你的對話」，即可在這裡看到回覆。",
 	},
 	ko: {
@@ -83,7 +81,7 @@ export const ISLAND_STRINGS: Readonly<Record<string, IslandStrings>> = {
 		taskRunning: '{0} 실행 중', taskSucceeded: '{0} 완료', taskFailed: '{0} 실패', exitCode: '종료 코드 {0}',
 		backToBreezell: 'Breezell로 돌아가기',
 		waylandNote: '이 데스크톱에서는 활동 아일랜드가 제목 표시줄에 머뭅니다. Wayland 세션은 앱이 창을 다른 창 위에 띄우도록 허용하지 않습니다. X11에서는 Breezell을 벗어나면 화면 상단에 떠 있습니다.',
-		allQuiet: "모두 평온", backToEditor: "편집기로 돌아가기", goTo: "이동", running: "대화 {0}개 진행 중", working: "작업 중", untitled: "새 채팅",
+		backToEditor: "편집기로 돌아가기", goTo: "이동", running: "대화 {0}개 진행 중", working: "작업 중", untitled: "새 채팅",
 		readChatHint: "플러그인에서 활동 아일랜드의 '대화 읽기'를 허용하면 여기에서 답변을 볼 수 있습니다.",
 	},
 	ru: {
@@ -93,7 +91,7 @@ export const ISLAND_STRINGS: Readonly<Record<string, IslandStrings>> = {
 		taskRunning: 'Выполняется {0}', taskSucceeded: '{0}: готово', taskFailed: '{0}: ошибка', exitCode: 'код выхода {0}',
 		backToBreezell: 'Вернуться в Breezell',
 		waylandNote: 'На этом рабочем столе остров активности остаётся в заголовке окна: сеанс Wayland не позволяет приложениям держать окно поверх других. В X11 он всплывает вверху экрана, когда вы уходите из Breezell.',
-		allQuiet: "Всё спокойно", backToEditor: "Вернуться в редактор", goTo: "Перейти", running: "Идёт разговоров: {0}", working: "Работает", untitled: "Новый чат",
+		backToEditor: "Вернуться в редактор", goTo: "Перейти", running: "Идёт разговоров: {0}", working: "Работает", untitled: "Новый чат",
 		readChatHint: "Разрешите острову активности «Читать ваши разговоры» в разделе плагинов, чтобы видеть здесь ответы.",
 	},
 	ja: {
@@ -103,7 +101,7 @@ export const ISLAND_STRINGS: Readonly<Record<string, IslandStrings>> = {
 		taskRunning: '{0} を実行中', taskSucceeded: '{0} 完了', taskFailed: '{0} 失敗', exitCode: '終了コード {0}',
 		backToBreezell: 'Breezell に戻る',
 		waylandNote: 'このデスクトップではアクティビティアイランドはタイトルバーに留まります。Wayland セッションではアプリが他のウィンドウの上にウィンドウを保てません。X11 では Breezell を離れると画面上部に浮かびます。',
-		allQuiet: "すべて順調", backToEditor: "エディターに戻る", goTo: "移動", running: "{0} 件の会話が進行中", working: "作業中", untitled: "新しいチャット",
+		backToEditor: "エディターに戻る", goTo: "移動", running: "{0} 件の会話が進行中", working: "作業中", untitled: "新しいチャット",
 		readChatHint: "プラグインでアクティビティアイランドに「会話を読み取る」を許可すると、ここに返信が表示されます。",
 	},
 	es: {
@@ -113,7 +111,7 @@ export const ISLAND_STRINGS: Readonly<Record<string, IslandStrings>> = {
 		taskRunning: 'Ejecutando {0}', taskSucceeded: '{0} terminó', taskFailed: '{0} falló', exitCode: 'código de salida {0}',
 		backToBreezell: 'Volver a Breezell',
 		waylandNote: 'En este escritorio, la isla de actividad se queda en la barra de título: una sesión de Wayland no deja que las apps mantengan una ventana sobre las demás. Con X11 flota en la parte superior de la pantalla cuando sales de Breezell.',
-		allQuiet: "Todo en calma", backToEditor: "Volver al editor", goTo: "Ir", running: "{0} en curso", working: "Trabajando", untitled: "Chat nuevo",
+		backToEditor: "Volver al editor", goTo: "Ir", running: "{0} en curso", working: "Trabajando", untitled: "Chat nuevo",
 		readChatHint: "Permite «Leer tus conversaciones» a la Isla de actividad en Plugins para ver aquí las respuestas.",
 	},
 	'pt-BR': {
@@ -123,7 +121,7 @@ export const ISLAND_STRINGS: Readonly<Record<string, IslandStrings>> = {
 		taskRunning: 'Executando {0}', taskSucceeded: '{0} concluída', taskFailed: '{0} falhou', exitCode: 'código de saída {0}',
 		backToBreezell: 'Voltar ao Breezell',
 		waylandNote: 'Neste desktop, a ilha de atividade fica na barra de título: uma sessão Wayland não deixa os apps manterem uma janela acima das outras. No X11 ela flutua no topo da tela quando você sai do Breezell.',
-		allQuiet: "Tudo tranquilo", backToEditor: "Voltar ao editor", goTo: "Ir", running: "{0} em andamento", working: "Trabalhando", untitled: "Novo chat",
+		backToEditor: "Voltar ao editor", goTo: "Ir", running: "{0} em andamento", working: "Trabalhando", untitled: "Novo chat",
 		readChatHint: "Permita “Ler suas conversas” para a Ilha de atividade em Plugins para ver as respostas aqui.",
 	},
 };

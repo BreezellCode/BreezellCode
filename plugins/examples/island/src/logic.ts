@@ -35,9 +35,8 @@ export const MAX_WIDTH = 380;
 export const BUBBLE_GAP = 6;
 export const BUBBLE_SIZE = 26;
 export const BUBBLE_ROOM = BUBBLE_GAP + BUBBLE_SIZE;
-/** How tall the island is in the title bar, and outside the window. */
-export const INSIDE_HEIGHT = 26;
-export const OUTSIDE_HEIGHT = 32;
+/** How tall the island is, in the title bar and outside the window alike: it does not grow as it leaves. */
+export const ISLAND_HEIGHT = 26;
 /** How far below the top of the screen it floats outside the window. */
 export const OUTSIDE_TOP = 6;
 /** The spring all of it moves on: quick to leave, slow to settle. */
@@ -178,6 +177,9 @@ export function islandView(activity: IslandActivity, strings: IslandStrings): Is
 	}
 }
 
+/** Whether there is anything to show: the agent at work, waiting, done or failed, or a task. At rest there is not, and the title shows. */
+export const hasActivity = (activity: IslandActivity): boolean => activity.agent.kind !== 'idle' || !!activity.task;
+
 /** A task running beside a live agent activity shows in a bubble of its own, to the capsule's right. */
 export const bubbleTask = (activity: IslandActivity): IslandTask | undefined =>
 	activity.agent.kind !== 'idle' ? activity.task : undefined;
@@ -197,7 +199,7 @@ export interface Rect {
 }
 
 /** Where the island floats outside the window: at the top of the screen, in the middle. */
-export const outsideRect = (workArea: Rect, width: number, height = OUTSIDE_HEIGHT): Rect => ({
+export const outsideRect = (workArea: Rect, width: number, height = ISLAND_HEIGHT): Rect => ({
 	x: Math.round(workArea.x + (workArea.width - width) / 2),
 	y: workArea.y + OUTSIDE_TOP,
 	width,
@@ -205,10 +207,25 @@ export const outsideRect = (workArea: Rect, width: number, height = OUTSIDE_HEIG
 });
 
 /** Above the top of the screen, where it comes from and goes to when there is no title bar to fly from. */
-export const aboveScreen = (workArea: Rect, width: number, height = OUTSIDE_HEIGHT): Rect => ({
+export const aboveScreen = (workArea: Rect, width: number, height = ISLAND_HEIGHT): Rect => ({
 	...outsideRect(workArea, width, height),
 	y: workArea.y - height - 4,
 });
+
+/**
+ * The title bar's place when the island can fly from it or to it: a rectangle on the screen the
+ * work area is of, or on one beside it; undefined otherwise, as without a title bar. An older
+ * Breezell answers for a minimized window on Windows with where the system parks it, far off every
+ * screen (-32000, -32000), and an overlay sent there lands in the nearest corner of the screen.
+ */
+export const flightPlace = (place: Rect | undefined, workArea: Rect): Rect | undefined => {
+	if (!place || place.width <= 0 || place.height <= 0) {
+		return undefined;
+	}
+	const near = place.x + place.width > workArea.x - workArea.width && place.x < workArea.x + 2 * workArea.width
+		&& place.y + place.height > workArea.y - workArea.height && place.y < workArea.y + 2 * workArea.height;
+	return near ? place : undefined;
+};
 
 export interface IslandFocus {
 	readonly editorFocused: boolean;
@@ -218,12 +235,13 @@ export interface IslandFocus {
 }
 
 /**
- * Where the island belongs: in the title bar while the user is in Breezell, outside (at the top of
- * the screen) once they leave it, for the window they used last. Without an overlay (turned off,
- * not allowed, or a desktop that cannot float one) it stays in.
+ * Where the island belongs: in the title bar while the user is in Breezell and while nothing goes
+ * on; outside (at the top of the screen) once they have left it and there is something to show
+ * (`live`), for the window they used last. Without an overlay (turned off, not allowed, or a
+ * desktop that cannot float one) it stays in.
  */
-export const islandPlace = (focus: IslandFocus, canFloat: boolean): 'inside' | 'outside' =>
-	canFloat && !focus.editorFocused && focus.lastUsed ? 'outside' : 'inside';
+export const islandPlace = (focus: IslandFocus, canFloat: boolean, live: boolean): 'inside' | 'outside' =>
+	canFloat && live && !focus.editorFocused && focus.lastUsed ? 'outside' : 'inside';
 
 /** The theme the island takes in the title bar; outside it is always the dark pill. */
 export type IslandLook = 'dark' | 'light' | 'highContrast' | 'highContrastLight';
@@ -334,7 +352,10 @@ export function conversationStateText(state: ConversationState, strings: IslandS
 	}
 }
 
-/** The panel's headline: all quiet, or how many chats wait and run across the windows. */
+/** What the island outside says at rest: the workspace of the window used last, as the title bar's does. */
+export const restTitle = (windows: readonly WindowDigest[]): string => windows[0]?.title || 'Breezell';
+
+/** The panel's headline: how many chats wait and run across the windows, or what else goes on; at rest, the workspace. */
 export function panelSummary(windows: readonly WindowDigest[], strings: IslandStrings): string {
 	const combined = combinedActivity(windows);
 	const count = (kind: string) => windows.reduce((n, w) => n + (w.activity.agent.kind === kind && 'conversations' in w.activity.agent ? w.activity.agent.conversations : 0), 0);
@@ -351,7 +372,7 @@ export function panelSummary(windows: readonly WindowDigest[], strings: IslandSt
 		return parts.join(' · ');
 	}
 	const view = islandView(combined, strings);
-	return view?.words ?? strings.allQuiet;
+	return view?.words ?? restTitle(windows);
 }
 
 /** Where the panel opens: at the top of the screen, in the middle, where the island is. */

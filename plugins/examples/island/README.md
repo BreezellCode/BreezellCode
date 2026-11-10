@@ -1,13 +1,13 @@
 # Activity Island
 
-Breezell's title bar shows what the agent is doing, in a capsule that morphs. Leave Breezell, or minimize it, and the capsule flies out to the top of the screen, where it floats above every app. Click it and it opens into a panel with your conversations and the latest words of each reply. Come back and it flies into the title bar again.
+Breezell's title bar shows what the agent is doing, in a capsule that morphs. Leave Breezell, or minimize it, while something is going on, and the capsule flies out to the top of the screen, where it floats above every app. Click it and it opens into a panel with your conversations and the latest words of each reply. Come back, or let the work end, and it flies into the title bar again.
 
 ## What it does
 
 - **Takes the middle of the title bar.** At rest it shows your workspace's name, and a click opens the search, as the search bar did. The notification bell and the update button stay next to it.
 - **Morphs while Breezell works.** The capsule widens to the step the agent is on, with the model's mark, a wave and a clock. It tells you when a chat waits for you, when a turn is done and how long it took, and when something went wrong, with a **View** button that opens the conversation.
 - **Shows tasks.** A build or test task runs in the capsule when the agent is idle, and in a small bubble beside it when the agent is busy. **View** on a failed task opens its terminal.
-- **Floats outside the window.** When you go to another app or minimize Breezell, the capsule flies from the title bar to the top of the screen and turns into a dark pill above everything else. With nothing going on it says **All quiet**.
+- **Floats outside the window while something is going on.** When you go to another app or minimize Breezell while the agent works, waits for you, has just finished or failed, or a task runs, the capsule flies from the title bar to the top of the screen and turns into a dark pill above everything else. With nothing going on it stays in the title bar, and once all is quiet it flies back there.
 - **Opens into a panel.** Click the pill and it opens like an expanded island: how many chats run or wait for you, each conversation with what it is doing, its clock and the last words of its reply, and the tasks. Click a conversation to go straight to it, or **Back to editor**. A click anywhere else, or Esc, closes the panel.
 - **Every Breezell window at once.** With several windows open, one island outside shows them all, the most pressing first, and the panel lists them window by window with **Go** to switch.
 
@@ -25,7 +25,7 @@ What it reads: the step the agent is on, which model works, how a build or test 
 
 | Setting | What it does |
 |---|---|
-| `activityIsland.floatOutside` | Float the island at the top of the screen when you leave Breezell. Off: it stays in the title bar |
+| `activityIsland.floatOutside` | Float the island at the top of the screen when you leave Breezell while something is going on. Off: it stays in the title bar |
 
 It is also in Box > Feature Options. Breezell's **Reduce Motion** makes it move at once.
 
