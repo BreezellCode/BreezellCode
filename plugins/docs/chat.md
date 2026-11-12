@@ -38,6 +38,8 @@ vscode.breezell.chat.onDidChangeConversation(change => console.log(change.conver
   1.4.54; earlier versions say `awaitingApproval`, though nothing waits for the user).
   `onDidChangeConversation` fires at most every 150 ms per conversation while it streams, with the
   reply being written in `streaming`.
+- A subagent's conversation (see [Subagents](#subagents-chatread-chatsend)) is listed like any other, with `subagent` set on
+  it and on its changes.
 - `show(id)` opens a conversation in Breezell's chat. `readInput()` (`chat.input`) gives what is typed in
   the chat box, its part before the caret, and the text of the last messages.
 
@@ -65,6 +67,73 @@ await vscode.breezell.chat.stop(conversationId);                // stops the rep
 - `stop(id)` is not the user's Stop: `automated` messages may follow it.
 - `approve(id)` / `reject(id)` (`chat.approve`) answer the tool call a conversation waits for. Leave
   approving to the user unless approving is what the plugin is for.
+
+## Subagents (`chat.read`, `chat.send`)
+
+A subagent is a conversation of its own that a conversation in Agent or Entanglement mode (its **lead**)
+starts. It works on one task in the lead's mode, fixed when it starts, and reports back to the lead. Users
+see it in its own tab beside the lead's; a plugin sees it as a conversation with `subagent` set. All of
+this needs a Breezell newer than 1.4.56: check that `startSubagent` exists before calling it.
+
+```ts
+const { chat } = vscode.breezell;
+if (typeof chat.startSubagent !== 'function') { return; }          // an older Breezell
+
+const { conversationId: subagentId } = await chat.startSubagent(leadId, {
+	name: 'Check the docs',
+	task: 'Read docs/*.md and list every link that no longer works. Report the list.',
+	model: { provider: 'openAICompatible', model: 'my-model' },     // one of models.list(); needed when the user picks each subagent's model
+});
+
+chat.onDidChangeConversation(change => {
+	if (change.conversationId === subagentId && change.subagent) {
+		console.log(change.subagent.status);                            // working, awaitingApproval, idle, interrupted or closed
+	}
+});
+
+await chat.messageSubagent(subagentId, 'Skip the old/ folder');        // { delivered: 'nextStep' } while it works, 'started' when idle
+const open = (await chat.listSubagents(leadId)).filter(s => s.status !== 'closed');
+await chat.closeSubagent(subagentId);                               // true; false when it was closed already
+```
+
+- `listSubagents(conversationId)` (`chat.read`) gives a conversation's subagents, open and closed, oldest
+  first. Each has `id` (its conversation, as `listConversations` names it), `leadConversationId`, `name`,
+  `mode` (`agent` or `entanglement`), `status` (`working`, `awaitingApproval`, `idle`, `interrupted` or
+  `closed`), `createdAt`, `startedBy` (the plugin that started it; absent when the lead's AI did) and
+  `closedBy` (`agent`, `user`, `withdrawn` or `plugin`, once closed).
+- `startSubagent(conversationId, { name?, task, model? })` (`chat.send`) starts one and resolves to
+  `{ conversationId }`, the subagent's own. `task` is everything it is told: it sees nothing of the
+  conversation, so write it self-contained. `name` is at most 60 characters and is made unique among the
+  conversation's open subagents. It reports to the lead's AI as the subagents the AI starts itself do, and the
+  AI is told that a plugin started it.
+- `messageSubagent(subagentId, text)` (`chat.send`) sends a message to an open subagent. It shows in the
+  subagent's conversation as the plugin's, never as the user's or the lead's, and resolves to
+  `{ delivered }`: `'nextStep'` when the subagent was working and reads it at its next step, `'started'` when
+  it was idle and starts on it.
+- `closeSubagent(subagentId)` (`chat.send`) stops a subagent. Its conversation stays in the history, and the
+  lead's AI is told that the plugin closed it. It resolves to `false` when it was closed already.
+- `getConversation(subagentId)` and `onDidChangeConversation` (`chat.read`) read a subagent like any
+  conversation, with `subagent` set on the summary and on each change. `show(subagentId)` opens it in its tab.
+- `send(text, { conversationId: subagentId })` also works while the subagent is open, but it fails once the
+  subagent is closed, and with `mode` (a subagent keeps the mode it started in). Prefer `messageSubagent`,
+  which also reaches a subagent that is working.
+- A conversation's `usage` includes what its subagents spent.
+
+What is refused:
+
+- `startSubagent` fails with `BreezellStoppedByUser` after the user pressed Stop in the lead conversation,
+  and `messageSubagent` after they pressed Stop in that subagent, until they write there again.
+- At most 5 subagents of a conversation work at once; a sixth `startSubagent` fails with
+  `BreezellInvalidRequest` until one finishes or is closed.
+- A conversation in Plan, Chat or Agent Teams mode has no subagents: `startSubagent` fails with
+  `BreezellInvalidRequest`.
+- With the **Subagent Model** switch off in Box (the user picks each subagent's model), a start must name a
+  `model` from `models.list()`; with it on, `model` is optional and the subagent uses the conversation's own.
+- A closed subagent takes no message: `messageSubagent` fails with `BreezellInvalidRequest`.
+- `startSubagent` and `messageSubagent` count against the same 10 messages a minute per plugin as `send`
+  (`BreezellRateLimited`).
+- Whatever a plugin sends this way is the plugin's: labelled with its name in the chat, never taken as the
+  user's own words or reaction.
 
 ## Work over many turns
 
@@ -97,9 +166,9 @@ chat.onDidFinishTurn(async turn => {
   many of them will end by themselves: servers and watchers do not. It is a count, not what they are.
 - **`usage`** on a reply, on a conversation and on a `models.request` answer is the provider's numbers.
   Some providers count cache reads inside `inputTokens`. A conversation's `usage` also holds what the
-  helpers working for it spent (its analysis subagents, a lead's teammates, DarkSelene investigators),
+  helpers working for it spent (its subagents, its analysis subagents, a lead's teammates, DarkSelene investigators),
   and it grows while they work, before the lead's turn ends (Breezell newer than 1.4.54; earlier
-  versions count its own replies only). Checks that run beside a conversation (Cross-Check, your own
+  versions count its own replies only, and its subagents are counted from Breezell newer than 1.4.56). Checks that run beside a conversation (Cross-Check, your own
   `models.request`) are not in it, and `repliesWithoutUsage` says how many replies reported nothing.
 - A turn's `outcome` is `completed`, `error` or `stopped`. A turn waiting for the user's approval, or for
   the conversation's subagents or teammates, has not finished, and a plugin should leave approving to the user.

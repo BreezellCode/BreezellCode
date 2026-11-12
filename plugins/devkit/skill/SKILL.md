@@ -27,8 +27,9 @@ Read the reference page for the part you touch before writing it: they are short
 |---|---|---|---|
 | Use their chat model (or another of the picker's) | `models.request` | `models.request` | `references/models.md` |
 | Know when the AI starts or finishes, no content | `chat.events` (normal) | `chat.onDidStartTurn`, `onDidFinishTurn` | `references/chat.md` |
-| Read conversations, tool calls, recalled memories | `chat.read` | `listConversations`, `getConversation`, `onDidChangeConversation` | `references/chat.md` |
+| Read conversations, tool calls, recalled memories | `chat.read` | `listConversations`, `getConversation`, `onDidChangeConversation`, `listSubagents` | `references/chat.md` |
 | Send messages, start conversations, stop a reply, keep work going | `chat.send` | `chat.send`, `chat.stop`, `holdDoneNotice` | `references/chat.md` |
+| Start a subagent of a conversation, message it, close it (Breezell newer than 1.4.56) | `chat.send` | `startSubagent`, `messageSubagent`, `closeSubagent` | `references/chat.md` |
 | Approve or reject a waiting tool call | `chat.approve` | `chat.approve`, `chat.reject` | `references/chat.md` |
 | Change, stop or add context to what the user sends | `chat.intercept` | `chat.registerSendHandler` | `references/chat.md` |
 | Read the chat box | `chat.input` | `chat.readInput` | `references/chat.md` |

@@ -50,14 +50,18 @@ try {
 |---|---|---|
 | `onDidStartTurn`, `onDidFinishTurn` | `chat.events` | `{ turnId, conversationId, mode }`; a finish adds `outcome` (`completed`, `error`, `stopped`) and `durationMs`. No content |
 | `conversationOfTurn(turnId)` | `chat.read` | The `listConversations` id of a turn event's conversation; undefined for a turn too long ago (the last 200 are kept) |
-| `listConversations()` | `chat.read` | This workspace's conversations, most recently changed first: `id`, `title`, `createdAt`, `updatedAt`, `messageCount`, `current`, `activity`, `backgroundCommands` |
+| `listConversations()` | `chat.read` | This workspace's conversations, most recently changed first: `id`, `title`, `createdAt`, `updatedAt`, `messageCount`, `current`, `activity`, `backgroundCommands`, `subagent` (set on a subagent's conversation; Breezell newer than 1.4.56) |
 | `getConversation(id)` | `chat.read` | The same with `messages`, `streaming` and `usage` |
-| `onDidChangeConversation` | `chat.read` | `{ conversationId, activity, streaming, backgroundCommands }`, at most every 150 ms per conversation |
+| `onDidChangeConversation` | `chat.read` | `{ conversationId, activity, streaming, backgroundCommands, subagent }`, at most every 150 ms per conversation |
 | `show(id)` | `chat.read` | Opens the conversation in Breezell's chat |
 | `readInput()` | `chat.input` | The chat box: `text`, `before` (before the caret), `recent` (last messages' text) |
 | `registerSendHandler(handler)` | `chat.intercept` | See each message the user sends before it goes: change it, stop it, add context for the AI. One per plugin. See [A message before it is sent](chat.md#a-message-before-it-is-sent) |
 | `send(text, options)` | `chat.send` | Send as the user would: `conversationId` (none: a new one), `automated`, `mode`, `model`, `attachments`. Resolves to `{ conversationId }` once the message is in |
 | `stop(id)` | `chat.send` | Stops the reply being written; not the user's Stop |
+| `listSubagents(conversationId)` | `chat.read` | A conversation's subagents, open and closed, oldest first: `id`, `leadConversationId`, `name`, `mode`, `status`, `createdAt`, `startedBy`, `closedBy`. Breezell newer than 1.4.56. See [Subagents](chat.md#subagents-chatread-chatsend) |
+| `startSubagent(conversationId, { name, task, model })` | `chat.send` | Start a subagent of a conversation in Agent or Entanglement mode: a conversation of its own that works on `task` and reports to its lead. Resolves to `{ conversationId }`. Breezell newer than 1.4.56 |
+| `messageSubagent(subagentId, text)` | `chat.send` | Message an open subagent as the plugin. Resolves to `{ delivered }`: `'nextStep'` (it was working) or `'started'` (it was idle). Breezell newer than 1.4.56 |
+| `closeSubagent(subagentId)` | `chat.send` | Close a subagent; its conversation stays in the history. `false` when it was closed already. Breezell newer than 1.4.56 |
 | `holdDoneNotice(id)`, `releaseDoneNotice(id, { announce })` | `chat.send` | No done sound or notification until released. See [Work over many turns](chat.md#work-over-many-turns) |
 | `approve(id)`, `reject(id)` | `chat.approve` | Answer the tool call the conversation waits for |
 
@@ -73,7 +77,8 @@ try {
 | `error` | `text` |
 
 `usage` on a conversation adds `replies` and `repliesWithoutUsage`. Token counts are the provider's, for a
-budget of your own: some providers count cache reads inside `inputTokens`, and subagents are not included.
+budget of your own: some providers count cache reads inside `inputTokens`. A conversation's `usage` also holds what its helpers
+spent, subagents included (Breezell newer than 1.4.56); checks that run beside a conversation are not in it.
 
 ## `models`
 
