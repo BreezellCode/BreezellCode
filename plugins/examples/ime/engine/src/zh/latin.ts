@@ -6,10 +6,11 @@
  *
  *   word   ln P(this word | a Latin word): how often it stands among Chinese (latinWords.ts), a little
  *          of how common it is in English, and the user's own share once they used it twice.
- *   lang   ln P(a Latin word comes next): from what precedes the cursor, raised for a user who
- *          writes much Latin.
+ *   lang   ln P(a Latin word comes next): from what precedes the cursor, raised for the words of a
+ *          user who writes much Latin.
  *   habit  what the user did when this word was on offer: took it, or took Chinese instead.
  *   here   how often the text around the cursor holds it.
+ *   acronym  less for a word in capitals nobody here wrote, typed among Chinese.
  *
  * LATIN_PRIOR, EXACT_MARGIN and the rest were chosen on bench/english-mix.ts's development samples.
  */
@@ -44,6 +45,13 @@ const MIN_COMMON_PREFIX = 4;
 /** Uses before the user's own word is offered by its start: once may be a one-off. */
 const MIN_USES_TO_COMPLETE = 2;
 const MAX_OFFERS = 3;
+/**
+ * Two or three letters are nearly always some acronym's (DJ, SBS, NSS), and as often the initials of a
+ * Chinese word (大家, 是不是, 你是說): among Chinese, one the user never typed and the text around does
+ * not hold is meant less often than the table says. Halves the times such a word goes above the
+ * initials of a Chinese word; an acronym the user takes once is offered as before.
+ */
+const ACRONYM_PRIOR = -2;
 
 export type LatinContext = 'chinese' | 'latin' | 'none';
 
@@ -160,7 +168,12 @@ function langScore(context: LatinContext, adaptive: AdaptiveModel | undefined): 
 /** The words `letters` may be, each with the score to set against the Chinese readings. */
 function scored(query: LatinQuery, words: LatinWords | undefined, adaptive: AdaptiveModel | undefined): { word: string; text: string; score: number }[] {
 	const { letters, here } = query;
-	const lang = langScore(query.context, adaptive);
+	// The share of Latin a user writes raises the words they have written. It says nothing of the
+	// table's other words: a developer who types much English has not thereby meant SBS or NBN, whose
+	// letters are the initials of 是不是 and 能不能. Raising every word put such words first, over the
+	// initials of a Chinese word, about two times in three for a developer's learning.
+	const ownLang = langScore(query.context, adaptive);
+	const lang = langScore(query.context, undefined);
 	const score = (word: string): number => {
 		const own = adaptive?.latinWord(word);
 		const uses = own?.uses ?? 0;
@@ -169,7 +182,9 @@ function scored(query: LatinQuery, words: LatinWords | undefined, adaptive: Adap
 		const p = own ? (1 - OWN_WEIGHT) * base + OWN_WEIGHT * share : base;
 		const hits = here.get(word)?.hits ?? 0;
 		const habit = own ? Math.log((Math.min(uses, HABIT_CAP) + 1) / (own.skips + 1)) : 0;
-		return Math.log(Math.max(p, Math.exp(FLOOR))) + lang + CONTEXT_BONUS * Math.log1p(hits) + habit
+		const written = words?.written(word) ?? word;
+		const acronym = uses === 0 && hits === 0 && query.context !== 'latin' && written === written.toUpperCase() ? ACRONYM_PRIOR : 0;
+		return Math.log(Math.max(p, Math.exp(FLOOR))) + (uses > 0 ? ownLang : lang) + CONTEXT_BONUS * Math.log1p(hits) + habit + acronym
 			+ COMPLETION_POWER * Math.log(letters.length / word.length);
 	};
 	const textOf = (word: string): string => adaptive?.latinWord(word)?.text ?? here.get(word)?.text ?? words?.written(word) ?? word;

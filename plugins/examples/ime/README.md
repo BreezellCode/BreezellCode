@@ -105,7 +105,7 @@ dictionary, so ITA, with readings by people, is the fairest of the three.
 
 **The words before the caret.** A clause cut before its last word, the rest already there: the first candidate is right for 95.3% of subtitles, 94.0% of technical documents and 90.8% of Wikipedia, against 81.9%, 86.6% and 78.8% without reading them.
 
-**English among Chinese.** On the same kind of kept-out text, a Latin word comes first 82 to 89% of the time when it is what was meant (67 to 74% before 1.2.0), and it takes the first place from a Chinese word typed by its initials 6 to 7% of the time (15 to 20% before).
+**English among Chinese.** On the same kind of kept-out text, a Chinese word typed by its initials loses the first place to a Latin word 3 to 4% of the time (7 to 9% in 1.2.0), and in subtitles a Latin word that was meant comes first 84% of the time (86% in 1.2.0).
 
 ## Building from source
 

@@ -89,7 +89,7 @@ Los documentos de Vue y Python en los que se basan los conjuntos técnicos nunca
 
 **Las palabras antes del cursor.** Con una frase cortada antes de su última palabra y el resto ya escrito, el primer candidato acierta en el 95,3% de los subtítulos, el 94,0% de los documentos técnicos y el 90,8% de Wikipedia, frente al 81,9%, 86,6% y 78,8% sin leerlas.
 
-**Inglés entre chino.** En textos del mismo tipo no usados para entrenar, una palabra latina va primera entre el 82 y el 89% de las veces cuando era la buscada (entre el 67 y el 74% antes de 1.2.0), y quita el primer lugar a una palabra china escrita por sus iniciales entre el 6 y el 7% de las veces (antes, entre el 15 y el 20%).
+**Inglés entre chino.** En textos del mismo tipo no usados para entrenar, una palabra latina quita el primer lugar a una palabra china escrita por sus iniciales entre el 3 y el 4% de las veces (entre el 7 y el 9% en 1.2.0), y en subtítulos una palabra latina que era la buscada va primera el 84% de las veces (86% en 1.2.0).
 
 ## Compilar desde el código fuente
 

@@ -89,7 +89,7 @@ Os documentos do Vue e do Python por trás dos conjuntos técnicos nunca foram u
 
 **As palavras antes do cursor.** Com uma frase cortada antes da última palavra e o resto já escrito, o primeiro candidato acerta em 95,3% das legendas, 94,0% dos documentos técnicos e 90,8% da Wikipédia, contra 81,9%, 86,6% e 78,8% sem lê-las.
 
-**Inglês em meio ao chinês.** Em textos do mesmo tipo não usados no treino, uma palavra latina vem primeiro de 82 a 89% das vezes quando era a pretendida (de 67 a 74% antes da 1.2.0), e tira o primeiro lugar de uma palavra chinesa digitada pelas iniciais de 6 a 7% das vezes (antes, de 15 a 20%).
+**Inglês em meio ao chinês.** Em textos do mesmo tipo não usados no treino, uma palavra latina tira o primeiro lugar de uma palavra chinesa digitada pelas iniciais de 3 a 4% das vezes (de 7 a 9% na 1.2.0), e em legendas uma palavra latina que era a pretendida vem primeiro em 84% das vezes (86% na 1.2.0).
 
 ## Compilar a partir do código-fonte
 

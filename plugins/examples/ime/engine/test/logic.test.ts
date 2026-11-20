@@ -303,7 +303,7 @@ test('user model: another one merged in counts as learned here', () => {
 });
 
 const reading = (text: string, score: number, more: Partial<ZhCandidate> = {}): ZhCandidate => ({ text, score, sentence: true, end: 9, entries: [], ...more });
-const LIST = new LatinWords('API\t10000\nhello\t300\nmy\t250\nmen\t130\nKubernetes\t6000\nkubectl\t900');
+const LIST = new LatinWords('API\t10000\nhello\t300\nmy\t250\nmen\t130\nKubernetes\t6000\nkubectl\t900\nDJ\t1576');
 const offers = (letters: string, candidates: ZhCandidate[], context: 'chinese' | 'latin' | 'none', adaptive?: AdaptiveModel, here = new Map<string, { text: string; hits: number }>()) =>
 	latinOffers({ letters, candidates, lead: candidates.length, context, here }, LIST, adaptive);
 
@@ -342,6 +342,31 @@ test('latin: a word the user keeps taking rises, one they keep passing over sink
 	assert.equal(offers('my', chinese, 'chinese', a)[0].index, 1);
 	a.learnLatin('my');
 	assert.ok(a.latinWord('my')!.skips === 6, 'a use weighs against what came before');
+});
+
+test('latin: much Latin written raises the user\'s own words, not the rest of the table', () => {
+	// A developer saw nbn above 能不能: their share of Latin raised every word of the table, so letters
+	// they never meant as English went above the initials of a common word.
+	const a = new AdaptiveModel();
+	for (let i = 0; i < 60; i++) {
+		a.learnLatin('kubectl');
+	}
+	assert.equal(offers('my', [reading('没有', -12)], 'chinese', a)[0].index, 1, 'never typed: where it is for anyone');
+	assert.equal(offers('kubectl', [reading('酷币', -10)], 'chinese')[0].index, 1);
+	assert.equal(offers('kubectl', [reading('酷币', -10)], 'chinese', a)[0].index, 0, 'their own word rises');
+});
+
+test('latin: an acronym nobody here wrote gives way to the initials of a Chinese word, until it is taken once', () => {
+	// dj: DJ, or 大家 typed by its initials.
+	assert.equal(offers('dj', [reading('大家', -14)], 'chinese')[0].index, 1);
+	assert.equal(offers('dj', [reading('大家', -14)], 'none')[0].index, 1);
+	const a = new AdaptiveModel();
+	a.learnLatin('DJ');
+	assert.equal(offers('dj', [reading('大家', -13)], 'chinese', a)[0].index, 0, 'taken once: the user means it');
+	const here = new Map([['dj', { text: 'DJ', hits: 1 }]]);
+	assert.equal(offers('dj', [reading('大家', -12.5)], 'chinese', undefined, here)[0].index, 0, 'the text around holds it');
+	assert.equal(offers('dj', [reading('大家', -8.5)], 'latin')[0].index, 0, 'after English, English');
+	assert.equal(offers('my', [reading('没用', -15.5)], 'chinese')[0].index, 0, 'a word in small letters is no acronym');
 });
 
 test('latin: found by its start: the user\'s after two uses, the context\'s, a common one without a reading typed in full', () => {

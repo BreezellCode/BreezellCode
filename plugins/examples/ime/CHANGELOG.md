@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.1
+
+- If you type a lot of English, it no longer pushes aside Chinese typed by its initials. How much English you write raised every English word in the list, even ones you never typed, so after 「…問題，」 `nbn` came before 能不能. Now it raises only the words you have used.
+- An abbreviation in capitals that you have never typed and that is not in the text around (`DJ`, `SBS`, `HHH`) gives way more often to the Chinese its letters are the initials of (大家, 是不是, 哈哈哈) when you type among Chinese: on kept-out text such a word took the first place 3 to 4% of the time, against 7 to 9%. In subtitles a Latin word that was meant still comes first 84% of the time, against 86%. Pick an abbreviation once and it is offered as before; after English nothing changes.
+
 ## 1.2.0
 
 - It reads what is before the caret, whoever typed it. A word typed after text that was already there follows that text (with a Breezell that has `chat.readInput`, in the chat box too), where before it started as a new sentence: the last word of a clause comes first 90 to 95% of the time, against 79 to 87%.
