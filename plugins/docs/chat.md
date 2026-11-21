@@ -190,6 +190,10 @@ follow-up they picked), not what Breezell or another plugin writes: a teammate's
 would have been.
 
 - It sees the text as it reads, with mentions written out (`@file.ts`), and `attachments`: the names of what goes with it. Attachments stay as they are.
+- `slashCommand` *(new)*: `{ name }` when the message was sent with one of your own `ui.slashCommands` rows
+  (one without `command`), picked in the chat box or typed at the start and shown there as a tag; the text
+  still begins with `/name`. `null` when the text merely reads `/name` (pasted, or left as words): that is not
+  your command. Absent on an older Breezell, where the text is all there is to go by.
 - Context for the AI: answer `{ context: '...' }` (alone or with `text`), up to 20,000 characters, 50,000 from all
   plugins together. The AI reads it with the message and is told it came from your plugin; the user does not see
   it in the chat and `chat.read` does not show it. It stays in the conversation's history, and an edit of the

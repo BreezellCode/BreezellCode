@@ -138,6 +138,18 @@ declare module 'vscode' {
 			readonly text: string;
 			/** The names of what goes with it (files, folders, images), as `ConversationMessage` names them. Empty on an older Breezell. */
 			readonly attachments: readonly string[];
+			/**
+			 * The plugin's own slash command the message was sent with: a row of `ui.slashCommands` that
+			 * has no `command`. The user picked it in the chat box, or typed its name at the start of the
+			 * message, and it shows there as a tag. `text` then begins with `/name`, as it always has.
+			 *
+			 * `null` when the message carries no command of this plugin, whatever its words: text that
+			 * merely reads `/name` (pasted, or left as words) is not the command.
+			 *
+			 * Absent on an older Breezell, which has no such tags: there, text that begins with `/name`
+			 * is all there is to go by.
+			 */
+			readonly slashCommand?: { readonly name: string } | null;
 		}
 
 		/**
