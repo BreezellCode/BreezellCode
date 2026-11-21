@@ -12,6 +12,8 @@ Normalmente a IA para quando acha que respondeu. Com um objetivo, cada vez que e
 
 Digite `/goal` seguido do que deve valer ao terminar, escolha no menu que abre com `/`, ou aperte **Objetivo** ao lado da caixa de chat. Uma faixa acima da caixa mostra o andamento e não ocupa espaço quando não há objetivo.
 
+Na caixa de chat, `/goal` vira uma etiqueta, seja escolhido no menu ou digitado no começo da mensagem. É essa etiqueta que faz da mensagem um objetivo: um texto que só diz `/goal …`, colado ou deixado como texto apertando Esc ao digitar, vai para a IA como está.
+
 | Comando | O que faz |
 | --- | --- |
 | `/goal <o que deve valer>` | Define o objetivo desta conversa e começa. Um novo substitui o anterior. |
@@ -63,14 +65,14 @@ O Breezell pergunta na primeira vez que forem necessárias, e você pode desativ
 | `chat.send` | Enviar a próxima mensagem e segurar o som até o fim. |
 | `models.request` | Verificar o trabalho com seu modelo de chat. É cobrado como qualquer pedido seu. |
 | `ui.contribute` | O botão, a faixa e as configurações. |
-| `chat.intercept` (opcional) | Reconhecer `/goal` na caixa de chat. Só responde a mensagens que começam com `/goal`; as outras passam intactas e não são guardadas. Sem ela, use o botão. |
+| `chat.intercept` (opcional) | Receber `/goal` da caixa de chat. Só responde a mensagens enviadas com a etiqueta `/goal`; as outras passam intactas e não são guardadas. Sem ela, use o botão. |
 | `agent.tools` (opcional) | Para a IA informar que terminou ou está bloqueada. Sem ela, decide a verificação depois de cada turno. |
 
 Só lê as conversas às quais você deu um objetivo, e o que lê vai apenas para o seu modelo de chat.
 
 ## Requisitos
 
-Um Breezell mais novo que 1.4.41. Em um mais antigo ele instala e não faz nada, e explica ao apertar o comando.
+Um Breezell mais novo que 1.4.41. Em um mais antigo ele instala e não faz nada, e explica ao apertar o comando. A etiqueta `/goal` precisa de um Breezell mais novo que 1.4.54; até essa versão, uma mensagem que começa com `/goal` é o comando.
 
 ## Licença
 

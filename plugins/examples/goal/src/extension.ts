@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { GoalEngine, GoalView } from './engine';
-import { GoalCommand, GoalLimits, GOAL_LIMITS, limitsFromSettings, parseGoalCommand } from './logic';
+import { GoalCommand, goalCommandOf, GoalLimits, GOAL_LIMITS, limitsFromSettings, parseGoalCommand } from './logic';
 import { fill, goalStrings } from './strings';
 
 /*
@@ -88,7 +88,7 @@ export function activate(context: vscode.ExtensionContext): { engine?: GoalEngin
 
 	let handler: vscode.Disposable | undefined;
 	const handleSend: vscode.breezell.SendHandler = async input => {
-		const command = parseGoalCommand(input.text);
+		const command = goalCommandOf(input);
 		if (!command) {
 			return undefined;
 		}

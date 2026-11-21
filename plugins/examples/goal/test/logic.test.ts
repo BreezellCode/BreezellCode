@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { suite, test } from 'node:test';
 import {
-	activeMinutes, checkRequest, freshTokens, Goal, GOAL_LIMITS, limitReached, limitsFromSettings, limitsToResume, parseGoalCommand, parseTokenCount, parseVerdict,
+	activeMinutes, checkRequest, freshTokens, Goal, goalCommandOf, GOAL_LIMITS, limitReached, limitsFromSettings, limitsToResume, parseGoalCommand, parseTokenCount, parseVerdict,
 	readStoredGoals, shortCount, storedGoals, tokensUsed, usedToolsSince, WorkMessage, workRecord,
 } from '../src/logic';
 
@@ -53,6 +53,30 @@ suite('what the user types', () => {
 		assert.equal(parseTokenCount('1.5M'), 1_500_000);
 		assert.equal(parseTokenCount('off'), 0);
 		assert.equal(parseTokenCount('1.5x'), undefined);
+	});
+});
+
+suite('what the chat box says of a message', () => {
+	const tagged = { name: 'goal' };
+	test('where /goal is a tag, the tag is the command, and it reads as it always did', () => {
+		assert.deepEqual(goalCommandOf({ text: '/goal all tests pass', slashCommand: tagged }), { kind: 'set', condition: 'all tests pass', limits: {} });
+		assert.deepEqual(goalCommandOf({ text: '/goal', slashCommand: tagged }), { kind: 'status' });
+		assert.deepEqual(goalCommandOf({ text: '/goal pause', slashCommand: tagged }), { kind: 'pause' });
+		assert.deepEqual(goalCommandOf({ text: '/goal resume --rounds 40', slashCommand: tagged }), { kind: 'resume', limits: { rounds: 40 } });
+		assert.equal(goalCommandOf({ text: '/goal --rounds lots x', slashCommand: tagged })?.kind, 'invalid');
+	});
+	test('there, words that only read /goal are a message like any other', () => {
+		for (const text of ['/goal all tests pass', '/goal', '/goal pause', '  /GOAL clear']) {
+			assert.equal(goalCommandOf({ text, slashCommand: null }), undefined, text);
+		}
+		assert.equal(goalCommandOf({ text: '/goal all tests pass', slashCommand: { name: 'goals' } }), undefined, 'a tag that is not this command');
+		assert.equal(goalCommandOf({ text: 'hello', slashCommand: tagged }), undefined, 'a tag whose words no longer begin with it');
+	});
+	test('an older Breezell says nothing of tags: there the words are all there is', () => {
+		assert.deepEqual(goalCommandOf({ text: '/goal all tests pass' }), { kind: 'set', condition: 'all tests pass', limits: {} });
+		assert.deepEqual(goalCommandOf({ text: '/goal pause' }), { kind: 'pause' });
+		assert.deepEqual(goalCommandOf({ text: '/goal all tests pass', slashCommand: undefined }), { kind: 'set', condition: 'all tests pass', limits: {} });
+		assert.equal(goalCommandOf({ text: 'hello' }), undefined);
 	});
 });
 

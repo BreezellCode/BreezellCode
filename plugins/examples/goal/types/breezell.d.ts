@@ -138,6 +138,18 @@ declare module 'vscode' {
 			readonly text: string;
 			/** The names of what goes with it (files, folders, images), as `ConversationMessage` names them. Empty on an older Breezell. */
 			readonly attachments: readonly string[];
+			/**
+			 * The plugin's own slash command the message was sent with: a row of `ui.slashCommands` that
+			 * has no `command`. The user picked it in the chat box, or typed its name at the start of the
+			 * message, and it shows there as a tag. `text` then begins with `/name`, as it always has.
+			 *
+			 * `null` when the message carries no command of this plugin, whatever its words: text that
+			 * merely reads `/name` (pasted, or left as words) is not the command.
+			 *
+			 * Absent on an older Breezell, which has no such tags: there, text that begins with `/name`
+			 * is all there is to go by.
+			 */
+			readonly slashCommand?: { readonly name: string } | null;
 		}
 
 		/**
@@ -237,7 +249,7 @@ declare module 'vscode' {
 			export function getConversation(id: string): Thenable<Conversation>;
 			/** A conversation changed: a message, a tool call's status, or the reply being written (`chat.read`). */
 			export const onDidChangeConversation: Event<ConversationChange>;
-			/** Opens the conversation in Breezell's chat (`chat.read`). */
+			/** Opens the conversation in Breezell's chat (`chat.read`): a subagent's opens in its tab, beside its lead. */
 			export function show(id: string): Thenable<void>;
 			/**
 			 * Sends a message as the user would (`chat.send`); without `conversationId`, in a new
@@ -249,6 +261,10 @@ declare module 'vscode' {
 			 * not count as the user's reaction or end up in memories. It fails with
 			 * `BreezellStoppedByUser` after the user pressed Stop on the reply, until they write again,
 			 * and with `BreezellInvalidRequest` while a message of the user's waits in the queue.
+			 *
+			 * To a subagent's conversation: it fails once the subagent is closed, and with a `mode` (a
+			 * subagent keeps the mode it started in). `messageSubagent` reaches one that is working.
+			 * Subagents need Breezell newer than 1.4.56.
 			 */
 			export function send(text: string, options?: SendOptions): Thenable<{ readonly conversationId: string }>;
 			/**
@@ -256,6 +272,30 @@ declare module 'vscode' {
 			 * user's Stop: `automated` messages may follow it. Nothing happens when it is not writing.
 			 */
 			export function stop(conversationId: string): Thenable<void>;
+			/** A conversation's subagents, open and closed, oldest first (`chat.read`). Needs Breezell newer than 1.4.56: check that it exists before calling. */
+			export function listSubagents(conversationId: string): Thenable<Subagent[]>;
+			/**
+			 * Starts a subagent for a conversation in Agent or Entanglement mode (`chat.send`): a
+			 * conversation of its own, in that conversation's mode, which works on `task` and reports to
+			 * the conversation's AI like the subagents it starts itself; the AI is told this plugin
+			 * started it. At most 5 subagents of a conversation work at once. Fails with
+			 * `BreezellStoppedByUser` after the user pressed Stop in the conversation, until they write
+			 * again. When the user picks each subagent's model (Subagent Model off), give `model`.
+			 * Needs Breezell newer than 1.4.56: check that it exists before calling.
+			 */
+			export function startSubagent(conversationId: string, start: SubagentStart): Thenable<{ readonly conversationId: string }>;
+			/**
+			 * A message to an open subagent (`chat.send`), shown and sent as this plugin's, neither the
+			 * user's nor its lead's: read at its next step while it works, started on when it is idle.
+			 * Needs Breezell newer than 1.4.56: check that it exists before calling.
+			 */
+			export function messageSubagent(subagentId: string, text: string): Thenable<{ readonly delivered: 'nextStep' | 'started' }>;
+			/**
+			 * Closes a subagent (`chat.send`): it stops, its conversation stays in the history, and its
+			 * lead is told this plugin closed it. False when it was closed already.
+			 * Needs Breezell newer than 1.4.56: check that it exists before calling.
+			 */
+			export function closeSubagent(subagentId: string): Thenable<boolean>;
 			/**
 			 * Work over many turns (`chat.send`): the turns of this conversation make no done sound or
 			 * system notification until released. Errors still do. It ends by itself when the user
@@ -289,6 +329,35 @@ declare module 'vscode' {
 			readonly activity: ConversationActivity;
 			/** How many commands of this conversation run in the background; `willEnd` leaves out servers and watchers. Absent on an older Breezell. */
 			readonly backgroundCommands?: BackgroundCommands;
+			/** Set on a subagent's conversation. Absent on an older Breezell (newer than 1.4.56 has subagents). */
+			readonly subagent?: Subagent;
+		}
+
+		/** A subagent: a conversation another one (its lead) started, that reports to it (Breezell newer than 1.4.56). */
+		export interface Subagent {
+			/** Its conversation, as `listConversations` names it. */
+			readonly id: string;
+			/** The conversation that started it and gets its reports. */
+			readonly leadConversationId: string;
+			readonly name: string;
+			/** Its lead's mode when it started; it never changes. */
+			readonly mode: 'agent' | 'entanglement';
+			readonly status: 'working' | 'awaitingApproval' | 'idle' | 'interrupted' | 'closed';
+			/** ISO time it started. */
+			readonly createdAt: string;
+			/** The plugin that started it; absent when its lead's AI did. */
+			readonly startedBy?: { readonly id: string; readonly name: string };
+			/** Once closed: by its lead's AI, the user, the withdrawal of the message it came after, or a plugin. */
+			readonly closedBy?: 'agent' | 'user' | 'withdrawn' | 'plugin';
+		}
+
+		export interface SubagentStart {
+			/** Short (60 characters at most), shown in the chat history; made unique among the conversation's open subagents. */
+			readonly name?: string;
+			/** The whole task, self-contained: the subagent sees nothing of the conversation. */
+			readonly task: string;
+			/** One of `models.list`'s models; else the conversation's own. */
+			readonly model?: { readonly provider: string; readonly model: string };
 		}
 
 		export interface BackgroundCommands {
@@ -298,8 +367,8 @@ declare module 'vscode' {
 
 		/**
 		 * Tokens as the provider reported them: for a budget of your own, not a bill. Some providers
-		 * count cache reads inside `inputTokens`. Subagents and checks that run beside a conversation
-		 * are not in it, and nothing here says what tokens cost.
+		 * count cache reads inside `inputTokens`. A reply's are its own; checks that run beside a
+		 * conversation are in neither, and nothing here says what tokens cost.
 		 */
 		export interface TokenUse {
 			readonly inputTokens: number;
@@ -309,9 +378,10 @@ declare module 'vscode' {
 		}
 
 		/**
-		 * A conversation's replies added up, with what the helpers working for it spent (its analysis subagents,
-		 * a lead's teammates), growing while they work (Breezell newer than 1.4.54). `repliesWithoutUsage` were
-		 * not counted: their provider reported nothing.
+		 * A conversation's replies added up, with what the helpers working for it spent (its subagents, its
+		 * analysis subagents, a lead's teammates), growing while they work (Breezell newer than 1.4.54; its
+		 * subagents are counted from Breezell newer than 1.4.56). `repliesWithoutUsage` were not counted: their
+		 * provider reported nothing.
 		 */
 		export interface ConversationTokenUse extends TokenUse {
 			readonly replies: number;
@@ -374,6 +444,8 @@ declare module 'vscode' {
 			readonly activity: ConversationActivity;
 			readonly streaming?: ConversationStream;
 			readonly backgroundCommands?: BackgroundCommands;
+			/** A subagent's conversation: what it is and does now (Breezell newer than 1.4.56). */
+			readonly subagent?: Subagent;
 		}
 
 		/** An image for the model: base64 without the `data:` prefix, at most 8,000,000 characters. */

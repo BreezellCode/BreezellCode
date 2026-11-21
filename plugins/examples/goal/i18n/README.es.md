@@ -12,6 +12,8 @@ Normalmente la IA se detiene cuando cree que ya respondió. Con un objetivo, cad
 
 Escribe `/goal` seguido de lo que debe cumplirse al terminar, elígelo en el menú que se abre con `/`, o pulsa **Objetivo** junto al cuadro de chat. Una franja sobre el cuadro muestra cómo va y no ocupa espacio si no hay objetivo.
 
+En el cuadro de chat, `/goal` se convierte en una etiqueta, tanto si lo eliges en el menú como si lo escribes al principio del mensaje. Esa etiqueta es lo que hace del mensaje un objetivo: un texto que solo dice `/goal …`, pegado o dejado como texto pulsando Esc al escribirlo, se envía a la IA tal cual.
+
 | Comando | Qué hace |
 | --- | --- |
 | `/goal <lo que debe cumplirse>` | Define el objetivo de esta conversación y empieza. Uno nuevo reemplaza al anterior. |
@@ -63,14 +65,14 @@ Breezell los pide la primera vez que hacen falta, y puedes desactivar cada uno e
 | `chat.send` | Enviar el siguiente mensaje y retener el sonido hasta el final. |
 | `models.request` | Comprobar el trabajo con tu modelo de chat. Se factura como cualquier solicitud tuya. |
 | `ui.contribute` | El botón, la franja y los ajustes. |
-| `chat.intercept` (opcional) | Reconocer `/goal` en el cuadro de chat. Solo responde a mensajes que empiezan por `/goal`; los demás pasan intactos y no se guardan. Sin él, usa el botón. |
+| `chat.intercept` (opcional) | Recibir `/goal` desde el cuadro de chat. Solo responde a mensajes enviados con la etiqueta `/goal`; los demás pasan intactos y no se guardan. Sin él, usa el botón. |
 | `agent.tools` (opcional) | Que la IA informe de que terminó o está bloqueada. Sin él, decide la comprobación tras cada turno. |
 
 Solo lee las conversaciones a las que diste un objetivo, y lo que lee solo va a tu propio modelo de chat.
 
 ## Requisitos
 
-Un Breezell posterior a 1.4.41. En uno anterior se instala y no hace nada, y lo explica al pulsar su comando.
+Un Breezell posterior a 1.4.41. En uno anterior se instala y no hace nada, y lo explica al pulsar su comando. La etiqueta `/goal` necesita un Breezell posterior a 1.4.54; hasta esa versión, un mensaje que empieza por `/goal` es el comando.
 
 ## Licencia
 

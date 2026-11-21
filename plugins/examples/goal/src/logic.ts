@@ -160,6 +160,19 @@ export function parseGoalCommand(text: string): GoalCommand | undefined {
 	return { kind: 'set', condition: rest, limits };
 }
 
+/**
+ * What a message sent in the chat box asks of Goal, if anything. A Breezell with command tags says
+ * whether the message carries this plugin's (`slashCommand`: the command's name, null for none):
+ * there the tag is the command, and words that only read `/goal`, pasted or left as words, go on as
+ * any message does. An older Breezell says nothing of tags, and there the words are all there is.
+ */
+export function goalCommandOf(message: { readonly text: string; readonly slashCommand?: { readonly name: string } | null }): GoalCommand | undefined {
+	if (message.slashCommand !== undefined && message.slashCommand?.name !== 'goal') {
+		return undefined;
+	}
+	return parseGoalCommand(message.text);
+}
+
 // --- settings --------------------------------------------------------------------------------------
 
 export function limitsFromSettings(raw: { readonly maxRounds?: unknown; readonly maxTokens?: unknown; readonly maxMinutes?: unknown }): GoalLimits {

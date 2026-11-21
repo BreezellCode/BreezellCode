@@ -60,6 +60,25 @@
 	},
 	"versions": [
 		{
+			"version": "1.1.0",
+			"path": "packages/breezell.goal/1.1.0/breezell.goal-1.1.0.vsix",
+			"sha256": "fbd044a8f0408d98fb94bfb585a51cc50c25aeafbd11db2f9e6d696d77b304da",
+			"size": 138700,
+			"apiVersion": 1,
+			"permissions": [
+				"chat.events",
+				"chat.read",
+				"chat.send",
+				"models.request",
+				"ui.contribute",
+				"agent.tools"
+			],
+			"optionalPermissions": [
+				"chat.intercept"
+			],
+			"publishedAt": "2026-11-21T04:44:46.369Z"
+		},
+		{
 			"version": "1.0.1",
 			"path": "packages/breezell.goal/1.0.1/breezell.goal-1.0.1.vsix",
 			"sha256": "df7d260db2f1a8d65a9434d2d68c516dbe8fd62dbade26c41dbf6006e888993c",

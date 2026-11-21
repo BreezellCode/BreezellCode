@@ -12,6 +12,8 @@ Normally the AI stops when it thinks it has answered. With a goal, each time it 
 
 Type `/goal` followed by what should be true when the work is done, pick it from the menu that opens at `/`, or press **Goal** beside the chat box. A strip above the box shows how it stands, and takes no room when there is no goal.
 
+In the chat box `/goal` becomes a tag, whether you pick it or type it at the start of a message. The tag is what makes the message a goal: text that only reads `/goal …`, pasted in or kept as words by pressing Esc while typing it, goes to the AI as written.
+
 | Command | What it does |
 | --- | --- |
 | `/goal <what should be true>` | Sets the goal of this conversation and starts. A new goal replaces the old one. |
@@ -63,14 +65,14 @@ Breezell asks for these the first time they are needed, and you can turn each of
 | `chat.send` | To send the next message, and to hold the done sound until the end. |
 | `models.request` | To check the work with your chat model. This is billed like any request of yours. |
 | `ui.contribute` | The button, the strip and the settings. |
-| `chat.intercept` (optional) | To recognize `/goal` in the chat box. It answers only messages starting with `/goal`; others pass untouched and are not kept. Without it, use the button. |
+| `chat.intercept` (optional) | To take `/goal` from the chat box. It answers only messages sent with the `/goal` tag; others pass untouched and are not kept. Without it, use the button. |
 | `agent.tools` (optional) | So the AI can report that it is done or blocked. Without it, the check after each turn still decides. |
 
 It reads only conversations you gave a goal to, and sends what it reads only to your own chat model.
 
 ## Requirements
 
-A Breezell newer than 1.4.41. On an older one it installs and does nothing, and says so when you press its command.
+A Breezell newer than 1.4.41. On an older one it installs and does nothing, and says so when you press its command. The `/goal` tag needs one newer than 1.4.54; up to that version, a message that starts with `/goal` is the command.
 
 ## Building
 
