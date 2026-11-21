@@ -1158,11 +1158,40 @@ function checkPackage(pkg, { forMarket = false, nls, dir } = {}) {
 				errors.push('"contributes.breezell.launcher" needs "command" (one of the plugin\'s contributes.commands) or "window" (one of its windows); "sidebar": false keeps it out of the Box sidebar');
 			}
 		}
-		for (const key of ['skills', 'rules']) {
-			const list = declared[key] ?? [];
-			if (!Array.isArray(list) || list.some(p => typeof p !== 'string' || p.startsWith('/') || p.split(/[\\/]/).includes('..'))) {
-				errors.push(`"contributes.breezell.${key}" must be an array of paths inside the plugin`);
-			}
+		const inside = p => typeof p === 'string' && !!p && !p.startsWith('/') && !p.split(/[\\/]/).includes('..');
+		const skills = declared.skills ?? [];
+		if (!Array.isArray(skills) || skills.some(p => !inside(p))) {
+			errors.push('"contributes.breezell.skills" must be an array of paths inside the plugin');
+		}
+		// A rule: a .md path (every request), or { path, when, models }: while one of the plugin's own
+		// settings has a value, and only for some models (`*` for any characters, case ignored).
+		const rules = declared.rules ?? [];
+		if (!Array.isArray(rules)) {
+			errors.push('"contributes.breezell.rules" must be an array of .md paths or { "path", "when", "models" }');
+		} else {
+			const settings = uiOwnSettings(pkg);
+			rules.forEach((rule, i) => {
+				const where = `"contributes.breezell.rules[${i}]"`;
+				const entry = typeof rule === 'string' ? { path: rule } : rule;
+				if (typeof entry !== 'object' || entry === null || Array.isArray(entry) || !inside(entry.path) || !entry.path.toLowerCase().endsWith('.md')) {
+					errors.push(`${where} must be a path inside the plugin ending in .md, or { "path", "when", "models" }`);
+					return;
+				}
+				if (entry.when !== undefined) {
+					uiConditionOk(entry.when, settings, where, errors);
+					const choices = settings[entry.when?.setting]?.enum;
+					if (Array.isArray(choices) && !choices.includes(entry.when.value)) {
+						errors.push(`${where}: "when.value" ${JSON.stringify(entry.when.value)} is none of the setting's values (${choices.map(v => JSON.stringify(v)).join(', ')}), so the rule would never apply`);
+					}
+				}
+				if (entry.models !== undefined && (!Array.isArray(entry.models) || !entry.models.length || entry.models.length > 16 || entry.models.some(m => typeof m !== 'string' || !/^[A-Za-z0-9*._:/@+-]{1,80}$/.test(m)))) {
+					errors.push(`${where}: "models" must be 1 to 16 model names (letters, digits, . _ : / @ + - and * for any characters)`);
+				}
+				const extra = Object.keys(entry).filter(k => !['path', 'when', 'models'].includes(k));
+				if (extra.length) {
+					errors.push(`${where}: Breezell reads "path", "when" and "models", not ${extra.map(k => JSON.stringify(k)).join(', ')}`);
+				}
+			});
 		}
 		const servers = declared.mcpServers ?? {};
 		if (typeof servers !== 'object' || Array.isArray(servers) || Object.values(servers).some(s => typeof s !== 'object' || s === null || (typeof s.command !== 'string' && typeof s.url !== 'string'))) {
@@ -1368,7 +1397,8 @@ function packageFiles(dir, pkg, open) {
 	// What a pack declares: skills, rules and themes ship as they are, and each window's folder.
 	const windowFolders = (pkg.contributes?.breezell?.windows ?? []).map(w => typeof w?.entry === 'string' ? w.entry.replace(/^\.\//, '') : undefined).filter(Boolean)
 		.map(entry => path.posix.dirname(entry) === '.' ? entry : path.posix.dirname(entry));
-	for (const rel of [...(pkg.contributes?.breezell?.skills ?? []), ...(pkg.contributes?.breezell?.rules ?? []), ...(pkg.contributes?.themes ?? []).map(t => t.path), ...windowFolders]) {
+	const rulePaths = (pkg.contributes?.breezell?.rules ?? []).map(rule => typeof rule === 'string' ? rule : rule?.path);
+	for (const rel of [...(pkg.contributes?.breezell?.skills ?? []), ...rulePaths, ...(pkg.contributes?.themes ?? []).map(t => t.path), ...windowFolders]) {
 		if (typeof rel === 'string') {
 			walk(rel.replace(/^\.\//, '').replace(/\/$/, ''));
 		}

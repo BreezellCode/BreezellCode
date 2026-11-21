@@ -24,6 +24,20 @@ Declare them in `package.json`; no code is needed:
   labelled with the plugin, and the agent loads them like any skill. A user's skill of the same name wins.
 - `rules`: Markdown files added to the AI's instructions while the plugin is on (at most 8,000 characters
   per file and 24,000 for all plugins together). Keep them short: they count against every request.
+  A rule can also wait for one of the plugin's own settings and be meant for some models only *(new)*:
+
+  ```json
+  "rules": [
+  	{ "path": "rules/tone.md", "when": { "setting": "myTone.mode", "value": "gpt" }, "models": ["*gpt*"] },
+  	{ "path": "rules/tone.md", "when": { "setting": "myTone.mode", "value": "all" } }
+  ]
+  ```
+
+  `when` names a setting in your own `contributes.configuration` and a value of its type; put the setting in
+  Feature Options (`ui.options`) so users can switch it. `models` lists model names, with `*` for any run of
+  characters and case ignored, matched against the whole name of the model the request goes to (up to 16).
+  The rule goes in while both hold, from the next request on; a file named by several rules goes in once.
+  Breezell versions from before conditional rules leave such entries out.
 - `mcpServers`: a `command` (with `args` and `env`) or a `url` (with `headers`). They appear in the MCP list
   labelled with the plugin; a user or project server of the same name wins. Users see each command before
   they install. MCP servers give the agent tools, so they need the `agent.tools` permission in
