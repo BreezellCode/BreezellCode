@@ -5,6 +5,7 @@ export interface GoalStrings {
 	readonly working: string;
 	readonly checking: string;
 	readonly waiting: string;
+	readonly waitingSubagents: string;
 	readonly paused: string;
 	readonly complete: string;
 	readonly blocked: string;
@@ -54,6 +55,7 @@ const EN: GoalStrings = {
 	working: 'Working',
 	checking: 'Checking the work',
 	waiting: 'Waiting for {n} background command(s) to end',
+	waitingSubagents: 'Waiting for {n} subagent(s) to finish',
 	paused: 'Paused',
 	complete: 'Met',
 	blocked: 'Stopped',
@@ -116,6 +118,7 @@ const ZH_TW: GoalStrings = {
 	working: '進行中',
 	checking: '正在檢查成果',
 	waiting: '等待 {n} 個背景命令結束',
+	waitingSubagents: '等待 {n} 個子代理完成',
 	paused: '已暫停',
 	complete: '已達成',
 	blocked: '已停止',
@@ -178,6 +181,7 @@ const ZH_CN: GoalStrings = {
 	working: '进行中',
 	checking: '正在检查成果',
 	waiting: '等待 {n} 个后台命令结束',
+	waitingSubagents: '等待 {n} 个子代理完成',
 	paused: '已暂停',
 	complete: '已达成',
 	blocked: '已停止',
@@ -240,6 +244,7 @@ const JA: GoalStrings = {
 	working: '作業中',
 	checking: '成果を確認中',
 	waiting: 'バックグラウンドのコマンド {n} 件の終了待ち',
+	waitingSubagents: 'サブエージェント {n} 件の完了待ち',
 	paused: '一時停止中',
 	complete: '達成',
 	blocked: '停止',
@@ -302,6 +307,7 @@ const KO: GoalStrings = {
 	working: '진행 중',
 	checking: '결과 확인 중',
 	waiting: '백그라운드 명령 {n}개 종료 대기 중',
+	waitingSubagents: '서브에이전트 {n}개 완료 대기 중',
 	paused: '일시 중지됨',
 	complete: '달성',
 	blocked: '중단됨',
@@ -364,6 +370,7 @@ const RU: GoalStrings = {
 	working: 'В работе',
 	checking: 'Проверка результата',
 	waiting: 'Ожидание завершения фоновых команд: {n}',
+	waitingSubagents: 'Ожидание завершения субагентов: {n}',
 	paused: 'На паузе',
 	complete: 'Достигнута',
 	blocked: 'Остановлена',
@@ -426,6 +433,7 @@ const ES: GoalStrings = {
 	working: 'En curso',
 	checking: 'Comprobando el trabajo',
 	waiting: 'Esperando a que terminen {n} comandos en segundo plano',
+	waitingSubagents: 'Esperando a que terminen {n} subagentes',
 	paused: 'En pausa',
 	complete: 'Cumplido',
 	blocked: 'Detenido',
@@ -488,6 +496,7 @@ const PT_BR: GoalStrings = {
 	working: 'Em andamento',
 	checking: 'Verificando o trabalho',
 	waiting: 'Aguardando {n} comandos em segundo plano terminarem',
+	waitingSubagents: 'Aguardando {n} subagentes terminarem',
 	paused: 'Pausado',
 	complete: 'Cumprido',
 	blocked: 'Parado',

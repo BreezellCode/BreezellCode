@@ -34,7 +34,7 @@ A goal always has a limit on the messages it may send: 20 unless you change it. 
 
 At a limit it stops and tells you. `/goal resume` then allows as much again of that limit, or as much as you say: `/goal resume --rounds 40`.
 
-Tokens are **new tokens** since the goal began, as your provider reports them: input not read from a cache, plus output, plus what checking the work used. They are for keeping an eye on a run, not a bill. Work done by subagents and Cross-Check is not in them, and a provider that reports nothing is not counted (the strip says so when that happens).
+Tokens are **new tokens** since the goal began, as your provider reports them: input not read from a cache, plus output, plus what checking the work used. They are for keeping an eye on a run, not a bill. What subagents spend is in them (with a Breezell newer than 1.4.54); Cross-Check's is not, and a provider that reports nothing is not counted (the strip says so when that happens).
 
 ## What stops it
 
@@ -44,7 +44,7 @@ Tokens are **new tokens** since the goal began, as your provider reports them: i
 - **A limit.**
 - **You.** Press Stop on the reply and it pauses. It sends nothing more until you resume or set a new goal.
 
-While a command it started is still running in the background, it waits for that to end. A server or a watcher does not count as something to wait for.
+While a command it started is still running in the background, it waits for that to end. A server or a watcher does not count as something to wait for. In the same way, while a subagent the AI started is still working, it waits for the subagent's report and the turn that report starts, and only then checks (with a Breezell newer than 1.4.56).
 
 The done sound and notification come once, when the goal has really ended, not after each turn. Errors still sound at once.
 

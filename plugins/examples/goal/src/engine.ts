@@ -177,7 +177,9 @@ export class GoalEngine {
 	private _statusText(goal: Goal, t: GoalStrings): string {
 		switch (goal.status) {
 			case 'active':
-				return this._checks.has(goal.conversationId) ? t.checking : goal.waitingFor > 0 ? fill(t.waiting, { n: goal.waitingFor }) : t.working;
+				return this._checks.has(goal.conversationId) ? t.checking
+					: goal.waitingSubagents ? fill(t.waitingSubagents, { n: goal.waitingSubagents })
+						: goal.waitingFor > 0 ? fill(t.waiting, { n: goal.waitingFor }) : t.working;
 			case 'paused': return t.paused;
 			case 'complete': return t.complete;
 			case 'blocked': return t.blocked;
@@ -460,6 +462,7 @@ export class GoalEngine {
 				if (goal?.status === 'active') {
 					this._waiting.clear(conversationId);
 					goal.waitingFor = 0;
+					goal.waitingSubagents = 0;
 					this._changed(goal);
 				}
 			}
@@ -511,7 +514,7 @@ export class GoalEngine {
 			if (!conversation || !stillWaiting() || conversation.activity !== 'idle' || this._endIfAtLimit(goal)) {
 				return;
 			}
-			const waitingFor = conversation.backgroundCommands?.willEnd ?? 0;
+			const waitingFor = await this._waitingFor(goal, conversation);
 			if (waitingFor > 0) {
 				goal.waitingFor = waitingFor;
 				this._changed(goal);
@@ -523,6 +526,26 @@ export class GoalEngine {
 				await this._afterTurn(goal.conversationId, 'completed');
 			}
 		}), this.timing.waitCheckMs);
+	}
+
+	/**
+	 * What is still at work for the conversation and starts its next turn by itself: background commands that
+	 * will end, and subagents working or waiting for an approval, whose reports wake their lead (Breezell newer
+	 * than 1.4.56 lists them). Also notes how many are subagents, for the strip.
+	 */
+	private async _waitingFor(goal: Goal, conversation: { readonly id: string; readonly backgroundCommands?: { readonly willEnd: number } }): Promise<number> {
+		const commands = conversation.backgroundCommands?.willEnd ?? 0;
+		let subagents = 0;
+		const list = this._deps.api.chat.listSubagents;
+		if (typeof list === 'function') {
+			try {
+				subagents = (await list.call(this._deps.api.chat, conversation.id)).filter(subagent => subagent.status === 'working' || subagent.status === 'awaitingApproval').length;
+			} catch {
+				// A Breezell that cannot list them now: the background commands are all there is to go by.
+			}
+		}
+		goal.waitingSubagents = subagents;
+		return commands + subagents;
 	}
 
 	private _endIfAtLimit(goal: Goal): boolean {
@@ -552,6 +575,7 @@ export class GoalEngine {
 		}
 		this._account(goal, conversation);
 		goal.waitingFor = 0;
+		goal.waitingSubagents = 0;
 		// A turn has begun since, or waits on the user: its end is what to look at.
 		if (conversation.activity !== 'idle') {
 			this._changed(goal);
@@ -561,7 +585,7 @@ export class GoalEngine {
 			await this._send(goal, this._firstMessage(goal), false);
 			return;
 		}
-		const waitingFor = conversation.backgroundCommands?.willEnd ?? 0;
+		const waitingFor = await this._waitingFor(goal, conversation);
 		// Its end starts a turn by itself. The work is not done, so there is nothing to look at or send yet.
 		if (waitingFor > 0) {
 			goal.waitingFor = waitingFor;
@@ -726,6 +750,7 @@ export class GoalEngine {
 			goal.resumedAt = undefined;
 		}
 		goal.waitingFor = 0;
+		goal.waitingSubagents = 0;
 	}
 
 	private _releaseNotice(goal: Goal, announce: boolean): void {

@@ -34,7 +34,7 @@ Um objetivo sempre tem um limite de mensagens próprias: 20, a menos que você m
 
 Num limite ele para e avisa. `/goal resume` permite o mesmo tanto outra vez, ou o que você disser: `/goal resume --rounds 40`.
 
-Tokens são **tokens novos** desde o início do objetivo, conforme seu provedor informa: entrada não lida do cache, saída e o que foi usado para verificar o trabalho. Servem para acompanhar, não são uma fatura. Subagentes e Cross-Check não entram, e um provedor que não informa não é contado (a faixa avisa).
+Tokens são **tokens novos** desde o início do objetivo, conforme seu provedor informa: entrada não lida do cache, saída e o que foi usado para verificar o trabalho. Servem para acompanhar, não são uma fatura. O que os subagentes gastam entra (com um Breezell posterior a 1.4.54); o do Cross-Check não, e um provedor que não informa não é contado (a faixa avisa).
 
 ## O que o faz parar
 
@@ -44,7 +44,7 @@ Tokens são **tokens novos** desde o início do objetivo, conforme seu provedor 
 - **Um limite.**
 - **Você.** Aperte Parar na resposta e ele pausa. Nada é enviado até você retomar ou definir outro objetivo.
 
-Enquanto um comando iniciado ainda roda em segundo plano, ele espera terminar. Um servidor ou um observador não contam como algo a esperar.
+Enquanto um comando iniciado ainda roda em segundo plano, ele espera terminar. Um servidor ou um observador não contam como algo a esperar. Da mesma forma, enquanto um subagente que a IA iniciou ainda trabalha, ele espera o relatório do subagente e o turno que esse relatório inicia, e só então verifica (com um Breezell posterior a 1.4.56).
 
 O som e o aviso de conclusão vêm uma vez, quando o objetivo termina de verdade. Erros avisam na hora.
 

@@ -56,8 +56,13 @@ export interface Goal {
 	/** Messages before this one were there at the last check. */
 	checkedIndex: number;
 	report?: GoalReport;
-	/** Commands the last turn left running that will end by themselves. */
+	/**
+	 * What the last turn left at work whose end starts the next turn by itself: commands that will end, and
+	 * subagents still working (each one's report starts a turn of its lead). Nothing is checked or sent meanwhile.
+	 */
 	waitingFor: number;
+	/** How many of `waitingFor` are subagents (for the strip's text). */
+	waitingSubagents?: number;
 	/** The first message is still to go, when the conversation is free. */
 	pendingStart?: boolean;
 }

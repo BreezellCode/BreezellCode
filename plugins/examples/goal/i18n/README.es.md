@@ -34,7 +34,7 @@ Un objetivo siempre tiene un límite de mensajes propios: 20 salvo que lo cambie
 
 En un límite se detiene y te avisa. `/goal resume` permite otro tanto de ese límite, o lo que indiques: `/goal resume --rounds 40`.
 
-Los tokens son **tokens nuevos** desde que empezó el objetivo, según informa tu proveedor: entrada no leída de caché, salida y lo usado en comprobar el trabajo. Sirven para vigilar la marcha, no son una factura. Los subagentes y Cross-Check no están incluidos, y un proveedor que no informa no se cuenta (la franja lo indica).
+Los tokens son **tokens nuevos** desde que empezó el objetivo, según informa tu proveedor: entrada no leída de caché, salida y lo usado en comprobar el trabajo. Sirven para vigilar la marcha, no son una factura. Lo que gastan los subagentes sí está incluido (con un Breezell posterior a 1.4.54); lo de Cross-Check no, y un proveedor que no informa no se cuenta (la franja lo indica).
 
 ## Qué lo detiene
 
@@ -44,7 +44,7 @@ Los tokens son **tokens nuevos** desde que empezó el objetivo, según informa t
 - **Un límite.**
 - **Tú.** Pulsa Detener en la respuesta y se pausa. No envía nada hasta que lo reanudes o definas otro objetivo.
 
-Mientras un comando que inició siga en segundo plano, espera a que termine. Un servidor o un observador no cuentan como algo que esperar.
+Mientras un comando que inició siga en segundo plano, espera a que termine. Un servidor o un observador no cuentan como algo que esperar. Del mismo modo, mientras un subagente que inició la IA siga trabajando, espera su informe y el turno que ese informe inicia, y solo entonces comprueba (con un Breezell posterior a 1.4.56).
 
 El sonido y el aviso de finalización llegan una vez, cuando el objetivo termina de verdad. Los errores avisan al momento.
 
