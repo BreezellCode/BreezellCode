@@ -1,0 +1,71 @@
+{
+	"id": "breezell.gpt-tune",
+	"displayName": "GPT Tune",
+	"description": "Makes the AI write like a person: plain wording, lighter formatting, answers sized to the question, and your own voice kept when it edits your text. For GPT models, or every model.",
+	"categories": [],
+	"tags": [
+		"gpt",
+		"writing",
+		"tone",
+		"style",
+		"rules",
+		"prompt"
+	],
+	"source": "closed",
+	"author": {
+		"name": "DreamfallSerena"
+	},
+	"license": "Proprietary",
+	"icon": "packages/breezell.gpt-tune/icon.png",
+	"readme": "packages/breezell.gpt-tune/README.md",
+	"readmes": {
+		"zh-CN": "packages/breezell.gpt-tune/i18n/README.zh-CN.md",
+		"zh-TW": "packages/breezell.gpt-tune/i18n/README.zh-TW.md",
+		"ja": "packages/breezell.gpt-tune/i18n/README.ja.md",
+		"ko": "packages/breezell.gpt-tune/i18n/README.ko.md",
+		"ru": "packages/breezell.gpt-tune/i18n/README.ru.md",
+		"es": "packages/breezell.gpt-tune/i18n/README.es.md",
+		"pt-BR": "packages/breezell.gpt-tune/i18n/README.pt-BR.md"
+	},
+	"l10n": {
+		"zh-CN": {
+			"displayName": "GPT 调校",
+			"description": "让 AI 写起来像人：用词平实、格式清爽、篇幅看问题而定，润色你的文字时保留你的语气。可只用于 GPT 模型，或所有模型。"
+		},
+		"zh-TW": {
+			"displayName": "GPT 調校",
+			"description": "讓 AI 寫起來像人：用詞平實、格式清爽、篇幅看問題而定，潤飾你的文字時保留你的語氣。可只用於 GPT 模型，或所有模型。"
+		},
+		"ja": {
+			"displayName": "GPT チューン",
+			"description": "AI の文章を人が書いたように整えます。飾らない言葉、軽い書式、質問に合った長さで、あなたの文章を直すときはあなたの口調を残します。GPT モデルだけ、またはすべてのモデルに使えます。"
+		},
+		"ko": {
+			"displayName": "GPT 튜닝",
+			"description": "AI가 사람처럼 쓰게 합니다. 담백한 표현, 가벼운 서식, 질문에 맞는 분량, 그리고 내 글을 다듬을 때는 내 말투를 그대로 둡니다. GPT 모델에만 또는 모든 모델에 쓸 수 있습니다."
+		},
+		"ru": {
+			"displayName": "Настройка GPT",
+			"description": "ИИ пишет как человек: простые слова, меньше оформления, объём по вопросу, а при правке вашего текста сохраняется ваш голос. Только для моделей GPT или для всех моделей."
+		},
+		"es": {
+			"displayName": "Ajuste de GPT",
+			"description": "La IA escribe como una persona: palabras sencillas, menos formato, respuestas a la medida de la pregunta y tu propia voz cuando corrige tus textos. Solo para modelos GPT o para todos."
+		},
+		"pt-BR": {
+			"displayName": "Ajuste do GPT",
+			"description": "A IA escreve como uma pessoa: palavras simples, menos formatação, respostas do tamanho da pergunta e a sua própria voz quando ela revisa seus textos. Só para modelos GPT ou para todos."
+		}
+	},
+	"versions": [
+		{
+			"version": "1.0.0",
+			"path": "packages/breezell.gpt-tune/1.0.0/breezell.gpt-tune-1.0.0.vsix",
+			"sha256": "2bf936ad8cd4d1336c5f1f4f7004e603006eab69bce195c3c10eb20167200fe8",
+			"size": 38007,
+			"apiVersion": 1,
+			"permissions": [],
+			"publishedAt": "2026-11-21T04:27:27.831Z"
+		}
+	]
+}
