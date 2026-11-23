@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.3
+
+- A new icon.
+
 ## 1.0.2
 
 - Published by DreamfallSerena.

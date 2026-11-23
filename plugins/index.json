@@ -1,12 +1,12 @@
 {
 	"schemaVersion": 1,
-	"updatedAt": "2026-11-23T13:36:40.886Z",
+	"updatedAt": "2026-11-23T13:49:59.460Z",
 	"plugins": [
 		{
 			"id": "breezell.agent-bridge",
 			"displayName": "Agent Bridge",
 			"description": "Connects Breezell to the Claude Code you installed and signed in to yourself, and lets you chat with it in Breezell. Shows on Box › Models › Sign in.",
-			"version": "1.0.2",
+			"version": "1.0.3",
 			"apiVersion": 1,
 			"categories": [
 				"AI",
@@ -45,11 +45,11 @@
 				}
 			},
 			"package": {
-				"path": "packages/breezell.agent-bridge/1.0.2/breezell.agent-bridge-1.0.2.vsix",
-				"sha256": "d935b4dd1e4139dfe7fc45ced969c6d02dcf4299aada7722f02bc901ec5c6be4",
-				"size": 199083
+				"path": "packages/breezell.agent-bridge/1.0.3/breezell.agent-bridge-1.0.3.vsix",
+				"sha256": "8938b5b6686ba9a2f4d2a5df179f7eac8015f9d7767a8dcd5b6383288aeb53f7",
+				"size": 223270
 			},
-			"updatedAt": "2026-11-23T13:36:40.886Z"
+			"updatedAt": "2026-11-23T13:49:59.460Z"
 		},
 		{
 			"id": "breezell.chat-mirror",
