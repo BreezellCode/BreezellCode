@@ -64,6 +64,8 @@ await breezell.agents.setModels('myAgent', [
   never send logos.
 - `efforts`: the levels the model takes. The model menu offers them; `turn.effort` is the one the user
   picked, and absent when they picked none (use the agent's own default then).
+- `compacts: true`: the agent compresses its context when asked. Manual compress (the context ring)
+  then asks it with a turn that has `compact`, instead of doing nothing. Breezell newer than 1.4.65.
 
 ## A turn
 
@@ -87,7 +89,7 @@ What a turn brings:
 | `conversationId` | The conversation, for `stopSubagent` and your own bookkeeping |
 | `model` | The id of the model picked, one of those listed |
 | `text` | What the user wrote (empty in a turn Breezell starts for `notices` alone) |
-| `attachments` | Files and folders attached, with their paths on this computer |
+| `attachments` | What the user attached. Files and folders: their `path`, for the agent to open. Pictures and PDFs, pasted ones too: their bytes in `data` (base64 and its type), to give the agent as an image or a document. A code selection (`path`, `lines`), problems, console or terminal output, a quoted message, a skill and the like: `text`, what Breezell's own model is given of it. Anything else (a video): its name only |
 | `folders` | The conversation's folders as URIs, the one it works in first |
 | `session` | What the plugin said of its session in this conversation's last turn: go on in it |
 | `effort` | The effort level picked, if any |
@@ -95,6 +97,9 @@ What a turn brings:
 | `memories` | What Breezell remembers that bears on this message, as its own model gets it: put it in the agent's prompt |
 | `continuing` | `{ after }`: the turn goes on in `session` after the agent's model request failed (see below). `text` is the message it was answering; there are no attachments |
 | `notices` | Breezell's notices for the agent: how commands it ran in Breezell's terminal ended in the background |
+| `mode` | The chat mode the user picked: `agent` (or absent) changes files and runs commands; `plan` reads and plans, and its plan goes to `callBreezellTool('update_plan', …)` (below), whose card's Execute starts an `agent` turn asking for it to be carried out; `analyze` reads and answers; `chat` answers. Breezell's tools for changes and commands are listed and run in `agent` only: turn the agent's own off in the other modes. Breezell newer than 1.4.65 |
+| `compact` | The user chose Manual compress on the context ring (models listed with `compacts` only): compress the agent's context in `session` now, as it compresses its own, and nothing else. `text` is empty. Say how it went with `compaction`, and its size after with `usage` (`context`). Breezell newer than 1.4.65 |
+| `rules` | The user's rules for this project, as Breezell's own model gets them (the project's rules file, else the global ones, and the plugins' rules for this model). Without `session`: give them to the new session once, where it keeps its standing instructions (they are not sent again with each message). With `session`: they changed since the session got them (`''`: removed); tell the agent once. Absent when there is nothing new. Breezell newer than 1.4.65 |
 
 What the plugin writes:
 
@@ -105,6 +110,8 @@ What the plugin writes:
 | `thinking(tokens)` | A thought whose text the agent keeps hidden: Breezell shows Thinking with how long and about how many tokens. Not for a thought you give with `reasoning` |
 | `tool(event)` | One of the agent's tool calls (below) |
 | `session(id)` | The agent's own session: the next turn gets it as `turn.session`. Say it as soon as you know it |
+| `usage({ context, models })` | What the agent's model requests used, once or more a turn. `context`: `tokens`, how much of its model's context its conversation now takes (its last request's input, cached parts too), and that model's `window`, for the chat's context ring. `models`: per model, the `inputTokens`, `outputTokens`, `cacheReadTokens` and `cacheWriteTokens` used since it last said this, for Box › Token usage and the reply's token count. Breezell newer than 1.4.65 |
+| `compaction({ phase, trigger, preTokens, postTokens })` | The agent compresses its context: `started`, then `done` (its size before and after, as the agent says them) or `failed`. `trigger`: `manual` for a `compact` turn, `auto` when the agent compresses by itself. Breezell shows that it compresses ("Compressing…" on the ring for a `compact` turn, "Condensing" in the chat for the agent's own); the ring takes its size from `usage`, not from these. Breezell newer than 1.4.65 |
 | `retrying({ attempt, maxAttempts, delayMs, error })` | The agent sends a failed model request again by itself: Breezell shows its reconnecting countdown until the agent's next event |
 | `approve(request)` | Ask before a call runs (below) |
 | `breezellTools()`, `callBreezellTool(name, input, toolUseId)` | Breezell's own tools for the agent (below) |
@@ -130,6 +137,7 @@ row under its own name.
 | `todos` | The agent's to-do list |
 | `subagent` | A subagent: `description`, `prompt`, `step`, `report`, `background`, `stopped`, `model` |
 | `memories` | A lookup in Breezell's memories (`callBreezellTool('memories_recall')`) |
+| `mcp` | A tool of one of the user's MCP servers in Breezell: `server`, `tool`. Drawn as Breezell's MCP row of that server, its approval card too |
 
 - A file is drawn as Breezell's own only with its `uri`, as Breezell opens it: a `file:` or
   `vscode-remote:` URI of the window. `path` is the agent's own name of it.
@@ -166,6 +174,9 @@ run its calls with `reply.callBreezellTool(name, input, toolUseId)`. Pass the ag
 | `memories_recall` | Looks up what Breezell remembers, as Breezell's own model does |
 | `run_terminal_cmd` | Runs a command in Breezell's terminal: the card has Open, Stop, live output and Move to background; a command still running after its wait goes on in the background |
 | `await` | Waits on such a background command, or stops it |
+| MCP tools | The tools of the user's MCP servers in Breezell, as Breezell's own model may use them in this mode: each listed with `mcpServer`, `mcpTool` and `description` beside its `name` and schema. Offer them under names of your own; call them by this `name`, and Breezell runs them with its own connection to the server (also from WSL, also signed-in servers). Ask first with `kind: 'other'` (Auto-approve MCP tools decides) and tell their calls with `view: { kind: 'mcp', server, tool }`. Breezell newer than 1.4.65 |
+| `ask_question` | Asks the user the agent's questions with Breezell's question card, on the row of the agent's call (pass its `toolUseId`), in every mode. `questions`: each with an `id`, the `question`, at least two `options` (`id`, `label`) and `allow_multiple`. It waits for the user, whatever their auto-approve settings, and resolves with `answers` (per question, the labels picked or the user's own words); empty when they chose Skip. Breezell newer than 1.4.65 |
+| `update_plan` | In `plan` mode: shows the agent's plan as Breezell's plan card, on the row of the agent's call (pass its `toolUseId`). Give `title`, `markdown` (the plan) and `plan`, its steps (`[{ step }]`, at least one), the card's to-dos. The user can edit it and chooses Execute. Not for the agent to call itself |
 | `edit_file`, `write_to_file` | Changes a file or creates one through Breezell's editor: a snapshot before it, the change in the editor to keep or undo, a step of Code Review, Auto-accept, Open file when editing, and the lint and type errors it leaves in the result |
 
 - When you offer the terminal or the edit tools, turn the agent's own shell or edit tools off, so that

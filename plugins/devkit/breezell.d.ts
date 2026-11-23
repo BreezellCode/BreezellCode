@@ -285,13 +285,25 @@ declare module 'vscode' {
 			readonly family?: 'claude';
 			/** The effort levels it takes: the model menu offers them, and a turn says the one picked (`AgentTurn.effort`). */
 			readonly efforts?: readonly ('low' | 'medium' | 'high' | 'xhigh' | 'max')[];
+			/** Its agent compresses its context when asked (AgentTurn.compact): Manual compress asks it, not Breezell's own summary (Breezell newer than 1.4.65). */
+			readonly compacts?: boolean;
 		}
 
 		export interface AgentAttachment {
 			readonly name: string;
-			readonly kind: 'file' | 'folder' | 'image' | 'other';
-			/** Where it is on this computer, for a file or a folder. */
+			/** `document`: a PDF. */
+			readonly kind: 'file' | 'folder' | 'image' | 'document' | 'other';
+			/** Where it is on this computer, for a file or a folder (a code selection's file too). */
 			readonly path?: string;
+			/** A code selection's lines, first and last. */
+			readonly lines?: readonly [number, number];
+			/**
+			 * What Breezell's own model is given of it, when a path is not enough: a code selection's lines, problems, console or
+			 * terminal output, a quoted message, a skill and the like. Give it to the agent with the message.
+			 */
+			readonly text?: string;
+			/** A picture's or a PDF's bytes (base64, no `data:` prefix), pasted ones included: give them to the agent as an image or a document. */
+			readonly data?: { readonly mimeType: string; readonly base64: string };
 		}
 
 		/** A turn of a conversation whose model is one of the plugin's. */
@@ -330,6 +342,26 @@ declare module 'vscode' {
 			 * (`run_terminal_cmd`) ended in the background. A turn Breezell starts for them alone has an empty `text`.
 			 */
 			readonly notices?: readonly string[];
+			/**
+			 * The user's rules in Breezell for this conversation's project (its own rules file, else the global ones, and the
+			 * plugins' rules for this model). Without `session`: give them to the new session once, where it keeps its
+			 * standing instructions. With `session`: they changed since the session got them (`''`: removed); tell it once.
+			 * Absent when there is nothing new to tell. Breezell newer than 1.4.65.
+			 */
+			readonly rules?: string;
+			/**
+			 * The chat mode the user picked (Breezell newer than 1.4.65). `agent` (or absent): the agent may change files and
+			 * run commands. `plan`: it reads and plans and changes nothing; give its plan to `callBreezellTool('update_plan',
+			 * { title, markdown, plan: [{ step }] })` and it shows as Breezell's plan card, whose Execute starts an `agent` turn
+			 * that asks for it to be carried out. `analyze`: it reads and answers. `chat`: it answers. Breezell's tools for
+			 * changes and commands are listed and run in `agent` only: turn the agent's own off in the other modes.
+			 */
+			readonly mode?: 'agent' | 'plan' | 'analyze' | 'chat';
+			/**
+			 * The user chose Manual compress (Breezell newer than 1.4.65): compress the agent's context in `session` now, as
+			 * it compresses its own. `text` is empty; say how it went with `reply.compaction`.
+			 */
+			readonly compact?: true;
 		}
 
 		export interface AgentHistoryEntry {
@@ -375,7 +407,9 @@ declare module 'vscode' {
 			| { readonly kind: 'todos'; readonly items: readonly { readonly text: string; readonly status: 'pending' | 'in_progress' | 'completed' }[] }
 			| { readonly kind: 'subagent'; readonly description: string; readonly prompt?: string; readonly agentType?: string; readonly step?: string; readonly report?: string; readonly background?: boolean; readonly stopped?: boolean; /** The model it runs on: one of the agent's models (AgentModel.id). */ readonly model?: string }
 			/** A lookup in Breezell's memories (`callBreezellTool('memories_recall', …)`): `resultType` and `count` as its result said them. */
-			| { readonly kind: 'memories'; readonly query?: string; readonly ids?: readonly string[]; readonly resultType?: 'search' | 'list' | 'open' | 'l0_index'; readonly count?: number };
+			| { readonly kind: 'memories'; readonly query?: string; readonly ids?: readonly string[]; readonly resultType?: 'search' | 'list' | 'open' | 'l0_index'; readonly count?: number }
+			/** A tool of one of the user's MCP servers in Breezell (AgentBreezellTool.mcpServer, mcpTool): drawn as Breezell's MCP row of that server (Breezell newer than 1.4.65). */
+			| { readonly kind: 'mcp'; readonly server: string; readonly tool: string };
 
 		/** One of Breezell's tools an agent may call through its plugin: its name and its parameters (a JSON schema). */
 		export interface AgentBreezellTool {
@@ -383,6 +417,14 @@ declare module 'vscode' {
 			readonly inputSchema: { readonly type: 'object'; readonly properties: { readonly [key: string]: unknown }; readonly required: readonly string[] };
 			/** `run_terminal_cmd`: the system and shell Breezell's terminal runs its commands in ("windows | PowerShell"); tell the agent. */
 			readonly shell?: string;
+			/**
+			 * A tool of one of the user's MCP servers in Breezell (Breezell newer than 1.4.65): its server, its own name and
+			 * what the server says it does. Offer it to the agent under a name of your own; call it with this `name`, and
+			 * Breezell runs it with its own connection to the server. Its tool events take `view: { kind: 'mcp', server, tool }`.
+			 */
+			readonly mcpServer?: string;
+			readonly mcpTool?: string;
+			readonly description?: string;
 		}
 
 		/** What a call of one of Breezell's tools returned: the text for the agent's model; for its row the kind and count. */
@@ -391,6 +433,8 @@ declare module 'vscode' {
 			readonly isError?: boolean;
 			readonly resultType?: string;
 			readonly count?: number;
+			/** `ask_question`: what the user picked for each question (the options' labels, or their own words); empty: skipped (Breezell newer than 1.4.65). */
+			readonly answers?: readonly { readonly question_id: string; readonly selected: readonly string[] }[];
 		}
 
 		/** One replacement in a file, as Breezell's edit card draws it. */
@@ -413,6 +457,21 @@ declare module 'vscode' {
 			readonly view?: AgentToolView;
 		}
 
+		/** The agent compressing its context (AgentReply.compaction). */
+		export interface AgentCompaction {
+			readonly phase: 'started' | 'done' | 'failed';
+			/** `manual`: asked with AgentTurn.compact; `auto`: the agent's own, its context full. */
+			readonly trigger: 'manual' | 'auto';
+			readonly preTokens?: number;
+			readonly postTokens?: number;
+		}
+
+		/** What an agent's model requests used (AgentReply.usage). */
+		export interface AgentUsage {
+			readonly context?: { readonly tokens: number; readonly window?: number };
+			readonly models: readonly { readonly model: string; readonly inputTokens: number; readonly outputTokens: number; readonly cacheReadTokens: number; readonly cacheWriteTokens: number }[];
+		}
+
 		export interface AgentReply {
 			/** More of the reply; `parent`: the subagent call whose words they are. */
 			text(text: string, parent?: string): void;
@@ -432,6 +491,19 @@ declare module 'vscode' {
 			 * goes on (its next event).
 			 */
 			retrying?(retry: { readonly attempt: number; readonly maxAttempts: number; readonly delayMs: number; readonly error?: string }): void;
+			/**
+			 * What the agent's model requests used (Breezell newer than 1.4.65), once or more a turn: `context`, how much of
+			 * its model's context its conversation now takes (its last request's input, cached parts too) and that model's
+			 * window, for the chat's context ring; `models`, the tokens used since it last said this, per model, for Box ›
+			 * Usage and the reply's token count.
+			 */
+			usage?(usage: AgentUsage): void;
+			/**
+			 * The agent compresses its context (Breezell newer than 1.4.65): when the turn has `compact` (the user chose
+			 * Manual compress), or by itself when its context fills up. Say `started`, then `done` with its size before and
+			 * after, or `failed`: Breezell shows that it compresses and the context ring its new size.
+			 */
+			compaction?(compaction: AgentCompaction): void;
 			/**
 			 * Breezell's own tools the agent may call in this turn (now: `memories_recall`, the user's memories as Breezell's own model looks them up;
 			 * `run_terminal_cmd`, a command in Breezell's terminal; `await`, waiting on one in the background; `edit_file` and `write_to_file`,
