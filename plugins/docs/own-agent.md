@@ -16,7 +16,7 @@ All of this needs a Breezell newer than 1.4.64.
   written, its thinking, its tool calls as Breezell's own steps, approval cards, Stop, an error card with
   Retry, how long it worked.
 - Breezell sends no model request for these turns and bills nothing for them. Answering with a plugin's
-  agent needs a Breezell plan that includes Custom API, as the user's own API keys do.
+  agent is open to every signed-in user, as the user's own API keys (BYOK) are.
 
 ## Declaring it
 

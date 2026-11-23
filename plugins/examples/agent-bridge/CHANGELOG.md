@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1
+
+- The README said chatting needs a paid Breezell plan. It does not: a signed-in Breezell account is enough.
+
 ## 1.0.0
 
 First release in the Breezell plugin market. Needs a Breezell newer than 1.4.64.
@@ -16,4 +20,4 @@ First release in the Breezell plugin market. Needs a Breezell newer than 1.4.64.
 - In a conversation another model answered, or after you edited an earlier message, Claude Code is told what it has not seen.
 - Your Claude Code conversations of the projects you open in Breezell show in that project's conversation list and go on in Claude Code when you continue them. They are brought in when Claude Code connects, every few minutes after, and with "Sync conversations". With "Delete in Claude Code too" (off by default, asked before it turns on), deleting a conversation in Breezell also deletes it in Claude Code.
 - Box › Plugins › Agent Bridge shows the connection, your account, your usage and how the last sync went.
-- Breezell asks once whether the plugin may answer conversations. Chatting needs a Breezell plan that includes Custom API.
+- Breezell asks once whether the plugin may answer conversations. A signed-in Breezell account is enough; no paid plan is needed.

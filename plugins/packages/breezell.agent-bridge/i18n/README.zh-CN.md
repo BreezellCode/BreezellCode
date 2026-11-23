@@ -8,7 +8,7 @@
 
 - 比 1.4.64 新的 Breezell。较旧的版本无法安装。
 - 这台电脑上的 Claude Code（Windows 上可以装在 Windows 或 WSL 里），用你自己的账号或 API 密钥登录。
-- 要在 Breezell 中和它对话，需要包含自定义 API 的 Breezell 方案。
+- 登录的 Breezell 账号，不需要付费套餐。
 
 ## 如何连接
 
@@ -41,7 +41,7 @@ Claude Code 连接后，它的模型会出现在对话的模型菜单中，位�
 - Claude Code 改的文件都经过 Breezell 的编辑器：和 Breezell 自己的模型一样，可以在编辑器里保留或撤销，也会列在代码审查和待审核文件栏。“自动批准编辑”“自动接受代码更改”“编辑时自动打开文件”都适用，修改后文件的 lint 与类型错误会反馈给 Claude Code（自动修复 Lint 错误）。
 - Claude Code 的命令在 Breezell 的终端里执行，用的是这个窗口的默认 shell：卡片实时显示输出，可以打开终端、停止或移到后台，哪些命令不必询问由 Breezell 的批准规则决定。后台命令结束时，Claude Code 会收到通知。
 
-Breezell 会询问一次是否允许这个插件回答对话。对话功能需要包含自定义 API 的 Breezell 方案。
+Breezell 会询问一次是否允许这个插件回答对话。
 
 ## 你的 Claude Code 对话也会出现在 Breezell
 

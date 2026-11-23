@@ -8,7 +8,7 @@ Anthropic's rules do not let other apps sign you in to a Claude account, and Bre
 
 - A Breezell newer than 1.4.64. An older Breezell does not install it.
 - Claude Code on this computer (on Windows, in Windows or inside WSL), signed in with your own account or API key.
-- To chat with it: a Breezell plan that includes Custom API.
+- A signed-in Breezell account. No paid plan is needed.
 
 ## How to connect
 
@@ -41,7 +41,7 @@ Once Claude Code is connected, its models are in the chat's model picker, under 
 - A request to the model that fails on the way (a dropped connection, a busy API, a rate limit, or a reply that stays silent for 4 minutes) is handled as Breezell handles its own: you see its reconnecting countdown, and Claude Code goes on in the same session from where it stopped, as often as Box › Network & chat says. Retry on an error does the same.
 - What Breezell remembers goes with your message (the message's memory row shows which), and Breezell learns from finished turns as it does from its own (Super Memory). Claude Code can also look up Breezell's memories itself while it works, with Breezell's own memory lookup; each lookup shows in the chat as Breezell's own does.
 
-Breezell asks once whether the plugin may answer conversations. Chatting needs a Breezell plan that includes Custom API.
+Breezell asks once whether the plugin may answer conversations.
 
 ## Your Claude Code conversations in Breezell
 

@@ -49,7 +49,7 @@ each plugin declares before it is installed.
 - `chat.agent` gives the plugin the conversations where the user picked one of its models: each message
   sent with that model, what Breezell recalls for it, and what was said there before that the agent has
   not seen. Never other conversations. The agent's tool calls go through Breezell's approval cards when
-  it asks, and answering with a plugin's agent needs a plan that includes Custom API. See
+  it asks, and answering with a plugin's agent is open to every signed-in user, like their own API keys. See
   [An agent of your own](own-agent.md).
 - `providers.read` hands out the custom APIs' keys: a plugin can call those APIs itself, outside
   Breezell, and the providers bill the user. It works only for an account whose Breezell plan
