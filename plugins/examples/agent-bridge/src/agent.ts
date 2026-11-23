@@ -94,6 +94,50 @@ export function contextOfReport(report: unknown): { tokens: number; window: numb
 	return Number.isFinite(tokens) && Number.isFinite(window) && window > 0 ? { tokens, window } : undefined;
 }
 
+/** Each model's context window, as Claude Code's results said it: the context ring's size while a turn is under way. */
+const contextWindows = new Map<string, number>();
+
+/** One model request's tokens as an Anthropic usage object says them (input, output, cache read, cache write). */
+export function requestUsageOf(model: string, usage: unknown): ModelUsage | undefined {
+	const u = usage && typeof usage === 'object' ? usage as Record<string, unknown> : undefined;
+	if (!u) {
+		return undefined;
+	}
+	const count = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
+	return { model, inputTokens: count(u.input_tokens), outputTokens: count(u.output_tokens), cacheReadTokens: count(u.cache_read_input_tokens), cacheWriteTokens: count(u.cache_creation_input_tokens) };
+}
+
+/**
+ * The request records a result settles, Breezell's own way (a row a model request). The lead's requests were told as
+ * they ended (`told`); its subagents' are told now (`subagents`: their input and cache exact, their output in part);
+ * what the result counts beyond all of them (the subagents' output, a compression, Claude Code's own small requests)
+ * goes onto that model's last subagent request, or a row of its own, so that the rows add up to Claude Code's count.
+ */
+export function requestRows(counted: readonly ModelUsage[], told: ReadonlyMap<string, ModelUsage>, subagents: readonly ModelUsage[]): ModelUsage[] {
+	const keys = ['inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens'] as const;
+	const out: ModelUsage[] = [];
+	for (const model of [...new Set([...counted.map(c => c.model), ...subagents.map(s => s.model)])]) {
+		const rows = subagents.filter(s => s.model === model).map(s => ({ ...s }));
+		const total = counted.find(c => c.model === model);
+		if (total) {
+			const before = told.get(model);
+			const rest = { model } as ModelUsage;
+			for (const key of keys) {
+				rest[key] = Math.max(0, total[key] - (before?.[key] ?? 0) - rows.reduce((sum, row) => sum + row[key], 0));
+			}
+			if (rows.length) {
+				for (const key of keys) {
+					rows[rows.length - 1][key] += rest[key];
+				}
+			} else if (keys.some(key => rest[key] > 0)) {
+				rows.push(rest);
+			}
+		}
+		out.push(...rows.filter(row => keys.some(key => row[key] > 0)));
+	}
+	return out;
+}
+
 /** What a result says this turn used (its `usage`: the lead's requests), as the tokens of one model. */
 export function turnUsageOf(usage: unknown, model: string): ModelUsage[] {
 	const u = usage && typeof usage === 'object' ? usage as Record<string, unknown> : {};
@@ -558,6 +602,11 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 		let compacted = false;
 		/** Its last request's context (not a subagent's), and the model it went to. */
 		let context: { tokens: number; model?: string } | undefined;
+		/** The lead's request under way: its model (message_start), told as a request record when it ends (message_delta). */
+		let leadModel: string | undefined;
+		/** The lead's requests told since the last result, per model; its subagents' requests since then, by message. */
+		let toldSince = new Map<string, ModelUsage>();
+		let subagentRequests = new Map<string, ModelUsage>();
 		/**
 		 * What the session had used before, per model (usageSince): nothing for a new one; unknown (undefined) for one
 		 * this plugin has not seen end a turn, whose first result then tells this turn's own count instead.
@@ -781,7 +830,20 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 					if (subagent) {
 						return;
 					}
-					const event = (message.event ?? {}) as { type?: string; index?: number; message?: { id?: string }; content_block?: { type?: string; id?: string; name?: string }; delta?: { type?: string; text?: string; thinking?: string; partial_json?: string } };
+					const event = (message.event ?? {}) as { type?: string; index?: number; message?: { id?: string; model?: string }; usage?: unknown; content_block?: { type?: string; id?: string; name?: string }; delta?: { type?: string; text?: string; thinking?: string; partial_json?: string } };
+					// A request of the lead: a record of its own when it ends, as Breezell's own requests have; the ring follows it.
+					if (event.type === 'message_start' && typeof event.message?.model === 'string') {
+						leadModel = event.message.model;
+					} else if (event.type === 'message_delta' && leadModel && reply.usage) {
+						const row = requestUsageOf(leadModel, event.usage);
+						if (row && (row.inputTokens || row.outputTokens || row.cacheReadTokens || row.cacheWriteTokens)) {
+							const sum = toldSince.get(leadModel) ?? { model: leadModel, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
+							toldSince.set(leadModel, { model: leadModel, inputTokens: sum.inputTokens + row.inputTokens, outputTokens: sum.outputTokens + row.outputTokens, cacheReadTokens: sum.cacheReadTokens + row.cacheReadTokens, cacheWriteTokens: sum.cacheWriteTokens + row.cacheWriteTokens });
+							const tokens = row.inputTokens + row.cacheReadTokens + row.cacheWriteTokens;
+							const window = contextWindows.get(leadModel);
+							reply.usage({ ...(window && tokens ? { context: { tokens, window } } : {}), models: [row] });
+						}
+					}
 					// A call as Claude Code writes it: shown from its first words, growing (a file's content, a command).
 					if (event.type === 'content_block_start' && event.content_block?.type === 'tool_use' && event.content_block.id && event.content_block.name && typeof event.index === 'number') {
 						called();
@@ -826,6 +888,14 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 				}
 				case 'assistant': {
 					const m = (message.message ?? {}) as { id?: string; content?: unknown[]; model?: unknown; usage?: Record<string, unknown> };
+					// A subagent's request: its input and cache as they are, its output so far (the result settles the rest).
+					if (subagent && typeof m.id === 'string' && typeof m.model === 'string') {
+						const row = requestUsageOf(m.model, m.usage);
+						const before = subagentRequests.get(m.id);
+						if (row) {
+							subagentRequests.set(m.id, before ? { ...row, outputTokens: Math.max(before.outputTokens, row.outputTokens) } : row);
+						}
+					}
 					// How much of its context the conversation takes: its last request's input, cached parts too (not a subagent's).
 					if (!subagent && m.usage && typeof m.usage === 'object') {
 						const n = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
@@ -991,10 +1061,19 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 					if (resultSession) {
 						controls?.usageTotals?.keep(resultSession, Object.fromEntries(usageTold));
 					}
-					if (reply.usage && (models.length || context)) {
-						const usage = message.modelUsage as Record<string, { contextWindow?: unknown }> | undefined;
+					const usage = message.modelUsage as Record<string, { contextWindow?: unknown }> | undefined;
+					for (const [model, used] of Object.entries(usage && typeof usage === 'object' ? usage : {})) {
+						if (typeof used?.contextWindow === 'number' && used.contextWindow > 0) {
+							contextWindows.set(model, used.contextWindow);
+						}
+					}
+					// The request records not told yet (its subagents', and what no request said), adding up to its count.
+					const rows = requestRows(models, toldSince, [...subagentRequests.values()]);
+					toldSince = new Map();
+					subagentRequests = new Map();
+					if (reply.usage && (rows.length || context)) {
 						const window = context?.model ? usage?.[context.model]?.contextWindow : undefined;
-						reply.usage({ ...(context ? { context: { tokens: context.tokens, ...(typeof window === 'number' && window > 0 ? { window } : {}) } } : {}), models });
+						reply.usage({ ...(context ? { context: { tokens: context.tokens, ...(typeof window === 'number' && window > 0 ? { window } : {}) } } : {}), models: rows });
 					}
 					if (typeof message.session_id === 'string') {
 						session = message.session_id;

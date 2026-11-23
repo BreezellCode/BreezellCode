@@ -33,6 +33,8 @@ export interface Texts {
 	readonly locale: string;
 	/** A conversation sent while Claude Code is not connected. */
 	readonly notConnected: string;
+	/** Said once at the top of a conversation's reply when the user picked Entanglement, which is Breezell's own models' mode. */
+	readonly entanglementNote: string;
 	/** A conversation whose folder that Claude Code cannot work in: {folder}. */
 	readonly folderUnreachable: string;
 	/** The row of the conversations brought into Breezell, and what it says. */
@@ -78,6 +80,7 @@ export const TEXTS: Readonly<Record<LanguageKey, Texts>> = {
 		resets: 'Resets {time}',
 		locale: 'en-US',
 		notConnected: 'Claude Code is not connected. Turn it on in Box › Models › Sign in, then send again.',
+		entanglementNote: 'Claude Code works in Agent mode here. Entanglement is a mode of Breezell\'s own models, so the Entanglement Dashboard does not apply.',
 		folderUnreachable: 'The Claude Code connected cannot work in this conversation\'s folder ({folder}). Install Claude Code where the folder is (in WSL for a WSL folder), or open a folder of this computer.',
 		conversations: 'Conversations',
 		syncRunning: 'Bringing the Claude Code conversations of {project} into its conversation list…',
@@ -113,6 +116,7 @@ export const TEXTS: Readonly<Record<LanguageKey, Texts>> = {
 		resets: '重設時間：{time}',
 		locale: 'zh-TW',
 		notConnected: 'Claude Code 尚未連接。請在 Box › 模型 › 帳號登入 中開啟後再送出。',
+		entanglementNote: 'Claude Code 在這裡以「代理」模式運作。「糾纏」是 Breezell 自己模型的模式，所以不會顯示糾纏模式面板。',
 		folderUnreachable: '目前連接的 Claude Code 無法在這個對話的資料夾（{folder}）中工作。請在資料夾所在的環境安裝 Claude Code（WSL 資料夾就裝在 WSL 裡），或開啟這台電腦上的資料夾。',
 		conversations: '對話同步',
 		syncRunning: '正在把{project}的 Claude Code 對話同步到它的對話清單…',
@@ -148,6 +152,7 @@ export const TEXTS: Readonly<Record<LanguageKey, Texts>> = {
 		resets: '重置时间：{time}',
 		locale: 'zh-CN',
 		notConnected: 'Claude Code 尚未连接。请在 Box › 模型 › 账号登录 中开启后再发送。',
+		entanglementNote: 'Claude Code 在这里以“代理”模式运行。“纠缠”是 Breezell 自己模型的模式，所以不会显示纠缠模式面板。',
 		folderUnreachable: '当前连接的 Claude Code 无法在这个对话的文件夹（{folder}）中工作。请在文件夹所在的环境安装 Claude Code（WSL 文件夹就装在 WSL 里），或打开这台电脑上的文件夹。',
 		conversations: '对话同步',
 		syncRunning: '正在把{project}的 Claude Code 对话同步到它的对话列表…',

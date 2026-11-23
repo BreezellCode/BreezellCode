@@ -56,6 +56,7 @@ const Uri = {
 function fakeVscode({ enabled = false, language = 'zh-TW', breezellUi = true, agents = false } = {}) {
 	const config = { enabled, deleteSessions: false };
 	const conversationsDeleted = emitter();
+	const turnStarted = emitter();
 	const configChanged = emitter();
 	const languageChanged = emitter();
 	const windowState = emitter();
@@ -72,6 +73,7 @@ function fakeVscode({ enabled = false, language = 'zh-TW', breezellUi = true, ag
 		breezell: {
 			language,
 			onDidChangeLanguage: languageChanged,
+			chat: { onDidStartTurn: turnStarted },
 			ui: breezellUi ? { setSignInStatus: async (tile, status) => { reported.push([tile, status === undefined ? undefined : JSON.parse(JSON.stringify(status))]); } } : {},
 			...(agents ? {
 				agents: {
@@ -96,7 +98,7 @@ function fakeVscode({ enabled = false, language = 'zh-TW', breezellUi = true, ag
 		},
 	};
 	const setEnabled = value => { config.enabled = value; configChanged.fire({ affectsConfiguration: name => name === 'agentBridge.claudeCode.enabled' }); };
-	return { api, config, commands, reported, agentLog, setEnabled, languageChanged, windowState, configChanged, foldersChanged, conversationsDeleted, notices };
+	return { api, config, commands, reported, agentLog, setEnabled, languageChanged, windowState, configChanged, foldersChanged, conversationsDeleted, notices, turnStarted };
 }
 
 const SIGNED_IN = JSON.stringify({ loggedIn: true, authMethod: 'claude.ai', email: 'dev@example.com', orgName: 'Example Org' });
@@ -373,6 +375,33 @@ test('a turn: Claude Code in the conversation\'s folder, with its model and sess
 	turn.child.end(0);
 	assert.deepEqual(await running, { session: 's-1' });
 	assert.deepEqual(log, [['session', 's-1']]);
+	bridge.dispose();
+});
+
+test('Entanglement picked: the conversation says once, above Claude Code\'s reply, that it works in Agent mode; other modes and later turns say nothing', async () => {
+	const nowRef = { t: 1_000 };
+	const { vs, bridge } = await start({ enabled: true, agents: true }, nowRef);
+	await settle();
+	const agent = vs.agentLog.agents.get('claudeCode');
+	const turnOf = async (mode, conversationId, extra = {}) => {
+		started.length = 0;
+		if (mode) vs.turnStarted.fire({ turnId: `t-${nowRef.t}`, conversationId: 'hashed', mode });
+		const { log, reply } = replySink();
+		const running = agent.runTurn({ conversationId, model: 'opus', text: 'hi', attachments: [], folders: ['file:///w/p'], mode: 'agent', ...extra }, reply, noToken);
+		await settle();
+		const [turn] = turnsStarted();
+		turn.child.say({ type: 'result', subtype: 'success', session_id: 's-1', result: 'ok' });
+		turn.child.end(0);
+		await running;
+		return log.filter(entry => entry[0] === 'text').map(entry => entry[1]);
+	};
+	const note = '> Claude Code 在這裡以「代理」模式運作。「糾纏」是 Breezell 自己模型的模式，所以不會顯示糾纏模式面板。\n\n';
+	assert.deepEqual(await turnOf('entanglement', 'c1'), [note], 'said before its reply');
+	assert.deepEqual(await turnOf('entanglement', 'c1'), [], 'once a conversation');
+	assert.deepEqual(await turnOf('agent', 'c2'), [], 'Agent: nothing');
+	assert.deepEqual(await turnOf('entanglement', 'c3', { continuing: { after: 'x' } }), [], 'going on after a failed request: nothing');
+	nowRef.t += 60_000;
+	assert.deepEqual(await turnOf(undefined, 'c4'), [], 'no start heard just before it (an old one): nothing');
 	bridge.dispose();
 });
 

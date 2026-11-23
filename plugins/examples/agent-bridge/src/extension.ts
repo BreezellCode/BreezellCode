@@ -239,6 +239,9 @@ export function wslWindowOf(remoteName: string | undefined, folders: readonly { 
 
 type BreezellUi = { setSignInStatus?(tileId: string, status: SignInStatus | undefined): Thenable<void> };
 
+/** How soon after Breezell says a turn started its Claude Code turn begins: the start that said the mode. */
+const ENTANGLEMENT_NOTE_WINDOW_MS = 15_000;
+
 /** How many sessions' usage totals are kept (the most recent): one a conversation. */
 const USAGE_SESSIONS_KEPT = 500;
 
@@ -258,6 +261,13 @@ export class ClaudeCodeBridge implements vscode.Disposable {
 	};
 
 	private readonly listeners: vscode.Disposable[] = [];
+	/**
+	 * The chat mode of the last turn Breezell said started (chat.events), and when. A turn of Claude Code starts
+	 * right after it: its mode as the user picked it (Entanglement included, which the turn itself carries as Agent).
+	 */
+	private lastTurnStart?: { readonly mode: string; readonly at: number };
+	/** Conversations told, this run, that Entanglement does not apply to Claude Code. */
+	private readonly entanglementTold = new Set<string>();
 	private running: Promise<void> | undefined;
 	/** A check asked for while one runs: one more runs after it, with its busy line if either wanted one. */
 	private queued: { loud: boolean } | undefined;
@@ -311,6 +321,15 @@ export class ClaudeCodeBridge implements vscode.Disposable {
 		const deleted = this.agentsApi()?.onDidDeleteConversations;
 		if (typeof deleted === 'function') {
 			this.listeners.push(deleted(e => { void this.deleteSessions(e); }));
+		}
+		// The mode of each turn as the user picked it (no content): Entanglement is said once in the conversation.
+		try {
+			const started = (vscode as { breezell?: { chat?: { onDidStartTurn?: vscode.Event<{ readonly mode: string }> } } }).breezell?.chat?.onDidStartTurn;
+			if (typeof started === 'function') {
+				this.listeners.push(started(e => { this.lastTurnStart = { mode: String(e?.mode ?? ''), at: this.deps.now?.() ?? Date.now() }; }));
+			}
+		} catch {
+			// chat.events turned off by the user: nothing is said.
 		}
 		this.listeners.push(vscode.workspace.onDidChangeWorkspaceFolders(() => {
 			if (this.enabled() && this.target) {
@@ -502,6 +521,12 @@ export class ClaudeCodeBridge implements vscode.Disposable {
 		const cwd = folder ? folderFor(folder, target) ?? await this.hosts.folderFor(folder, target) : await this.ownFolder();
 		if (!cwd) {
 			throw new Error(this.texts().folderUnreachable.replace('{folder}', folder));
+		}
+		// Entanglement picked: Claude Code works as in Agent mode, which the conversation says once, before its reply.
+		const start = this.lastTurnStart;
+		if (start?.mode === 'entanglement' && (this.deps.now?.() ?? Date.now()) - start.at < ENTANGLEMENT_NOTE_WINDOW_MS && turn.text && !turn.continuing && !this.entanglementTold.has(turn.conversationId)) {
+			this.entanglementTold.add(turn.conversationId);
+			reply.text(`> ${this.texts().entanglementNote}\n\n`);
 		}
 		// The rest of the window's folders too: Claude Code works in the whole workspace (those it can reach).
 		const others = await Promise.all(turn.folders.slice(1).map(async other => folderFor(other, target) ?? await this.hosts.folderFor(other, target)));

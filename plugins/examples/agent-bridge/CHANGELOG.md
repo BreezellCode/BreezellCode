@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.4
+
+- Box › Models: Cache hits and Request records list each of Claude Code's model requests on its own row, as for Breezell's own models (before: one row a turn). Its subagents' requests are rows of their own too, and the rows add up to Claude Code's own count. The context ring follows each request while a turn is under way.
+- With Entanglement picked, a Claude Code conversation says once, above its reply, that Claude Code works in Agent mode: Entanglement is a mode of Breezell's own models, and its Entanglement Dashboard does not apply.
+
 ## 1.0.3
 
 - A new icon.

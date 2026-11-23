@@ -672,6 +672,48 @@ test('Breezell\'s Manual compress is Claude Code\'s /compact in its session, alo
 	assert.deepEqual(told2, [{ phase: 'started', trigger: 'auto' }, { phase: 'done', trigger: 'auto', preTokens: 180_000, postTokens: 30_000 }, { phase: 'started', trigger: 'auto' }, { phase: 'failed', trigger: 'auto' }]);
 });
 
+test('a request record a model request, as Breezell\'s own: the lead\'s as each ends, its subagents\' when the turn ends, adding up to Claude Code\'s own count', async () => {
+	const child = fakeChild();
+	const { reply } = replyLog();
+	const used = [];
+	reply.usage = usage => used.push(JSON.parse(JSON.stringify(usage)));
+	const running = agent.runTurn(target(child), { model: 'haiku', text: 'go', attachments: [], cwd: '/w' }, reply, token());
+	await tick();
+	const usage = (input, read, write, output) => ({ input_tokens: input, cache_read_input_tokens: read, cache_creation_input_tokens: write, output_tokens: output });
+	const leadRequest = (id, u) => {
+		child.say({ type: 'stream_event', parent_tool_use_id: null, event: { type: 'message_start', message: { id, model: 'claude-haiku-5-5', usage: { ...u, output_tokens: 2 } } } });
+		child.say({ type: 'stream_event', parent_tool_use_id: null, event: { type: 'message_delta', usage: u } });
+	};
+	leadRequest('m1', usage(2, 11_844, 12_766, 178));
+	leadRequest('m2', usage(2, 24_610, 3_442, 557));
+	// A subagent's requests: their output only in part.
+	const sub = (id, u) => child.say({ type: 'assistant', parent_tool_use_id: 'task-1', message: { id, model: 'claude-haiku-5-5', content: [{ type: 'text', text: 'x' }], usage: u } });
+	sub('s1', usage(2, 0, 16_539, 16));
+	sub('s2', usage(2, 16_539, 2_480, 3));
+	sub('s2', usage(2, 16_539, 2_480, 3));
+	leadRequest('m3', usage(4, 29_076, 1_068, 269));
+	child.say({ type: 'result', subtype: 'success', session_id: 's-1', modelUsage: { 'claude-haiku-5-5': { inputTokens: 12, outputTokens: 1_583, cacheReadInputTokens: 82_069, cacheCreationInputTokens: 36_295, contextWindow: 1_000_000 } } });
+	child.end(0);
+	await running;
+	const rows = used.flatMap(u => u.models.map(m => [m.inputTokens, m.cacheReadTokens, m.cacheWriteTokens, m.outputTokens]));
+	assert.deepEqual(rows, [[2, 11_844, 12_766, 178], [2, 24_610, 3_442, 557], [4, 29_076, 1_068, 269], [2, 0, 16_539, 16], [2, 16_539, 2_480, 3 + 560]], 'three of the lead, two of its subagent; what the count has beyond them goes onto its last');
+	const sum = rows.reduce((a, r) => a.map((v, i) => v + r[i]), [0, 0, 0, 0]);
+	assert.deepEqual(sum, [12, 82_069, 36_295, 1_583], 'they add up to Claude Code\'s count');
+	// The ring follows each lead request once a window is known (from a result before).
+	const child2 = fakeChild();
+	const used2 = [];
+	const r2 = replyLog().reply;
+	r2.usage = u => used2.push(u);
+	const running2 = agent.runTurn(target(child2), { model: 'haiku', text: 'go', attachments: [], cwd: '/w' }, r2, token());
+	await tick();
+	child2.say({ type: 'stream_event', parent_tool_use_id: null, event: { type: 'message_start', message: { id: 'n1', model: 'claude-haiku-5-5' } } });
+	child2.say({ type: 'stream_event', parent_tool_use_id: null, event: { type: 'message_delta', usage: usage(3, 30_000, 500, 40) } });
+	assert.deepEqual(used2[0].context, { tokens: 30_503, window: 1_000_000 });
+	child2.say({ type: 'result', subtype: 'success', session_id: 's-2' });
+	child2.end(0);
+	await running2;
+});
+
 test('what its model requests used goes to Breezell: its context from its last request (not a subagent\'s) and that model\'s window, and each model\'s tokens once', async () => {
 	const child = fakeChild();
 	const { reply } = replyLog();

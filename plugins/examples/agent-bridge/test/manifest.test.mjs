@@ -21,7 +21,7 @@ test('one tile, turned by the plugin\'s own setting, which is off by default and
 });
 
 test('only ui.contribute and chat.agent (the tile answers conversations); runs on the user\'s own computer, where their Claude Code is', () => {
-	assert.deepEqual(pkg.breezell.permissions, ['ui.contribute', 'chat.agent']);
+	assert.deepEqual(pkg.breezell.permissions, ['ui.contribute', 'chat.agent', 'chat.events']);
 	assert.equal(tile.agent, true);
 	assert.deepEqual(pkg.extensionKind, ['ui']);
 	assert.deepEqual(pkg.activationEvents, ['onStartupFinished']);
