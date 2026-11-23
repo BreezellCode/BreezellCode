@@ -25,7 +25,9 @@ export type ToolView =
 	| { kind: 'webSearch'; query: string }
 	| { kind: 'todos'; items: { text: string; status: 'pending' | 'in_progress' | 'completed' }[] }
 	| { kind: 'subagent'; description: string; prompt?: string; agentType?: string; step?: string; report?: string; background?: boolean; stopped?: boolean; model?: string }
-	| { kind: 'memories'; query?: string; ids?: string[]; resultType?: 'search' | 'list' | 'open' | 'l0_index'; count?: number };
+	| { kind: 'memories'; query?: string; ids?: string[]; resultType?: 'search' | 'list' | 'open' | 'l0_index'; count?: number }
+	/** A tool of one of the user's MCP servers in Breezell: Breezell draws it as its MCP row of that server. */
+	| { kind: 'mcp'; server: string; tool: string };
 
 /** Breezell's memory lookup as Claude Code names it: a tool of the "breezell" server the plugin hosts (agent.ts). */
 export const BREEZELL_MEMORY_TOOL = 'mcp__breezell__memories_recall';

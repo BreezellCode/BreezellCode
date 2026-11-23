@@ -4,5 +4,6 @@
 	"command.recheck": "重新检查 Claude Code",
 	"config.enabled": "连接这台电脑上安装的 Claude Code。请在 Box › 模型 › 账号登录 中开启，并同意开启时显示的内容。",
 	"command.sync": "同步 Claude Code 对话",
-	"config.deleteSessions": "在 Breezell 删除对话时，一并删除 Claude Code 中的对话。关闭时只删除 Breezell 这边。"
+	"config.deleteSessions": "在 Breezell 删除对话时，一并删除 Claude Code 中的对话。关闭时只删除 Breezell 这边。",
+	"config.ownMcpServers": "Claude Code 自己的 MCP 服务器（它的配置、它的插件、你在 claude.ai 的连接器）会和你在 Breezell 配置的 MCP 服务器一起提供。关闭：只用 Breezell 的。"
 }

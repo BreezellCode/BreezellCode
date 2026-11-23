@@ -6,14 +6,32 @@
  * session goes on with `--resume`. Nothing here reads Claude Code's files or its credentials.
  */
 import type { ChildProcess } from 'node:child_process';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import type { Target } from './claudeCode';
-import { BREEZELL_EDIT_TOOL, BREEZELL_TERMINAL_TOOL, BREEZELL_WRITE_TOOL, isSubagentTool, partialInput, UNSHOWN_TOOLS, viewOfResult, viewOfUse, viewOfWrite, withUri, type ToolView } from './views';
+import { BREEZELL_EDIT_TOOL, BREEZELL_TERMINAL_TOOL, BREEZELL_WRITE_TOOL, isSubagentTool, partialInput, UNSHOWN_TOOLS, viewOfResult, viewOfUse as ownViewOfUse, viewOfWrite, withUri, type ToolView } from './views';
+
+export type Attachment = { readonly name: string; readonly kind: string; readonly path?: string; readonly lines?: readonly [number, number]; readonly text?: string; readonly data?: { readonly mimeType: string; readonly base64: string } };
 
 /** What Breezell gives a turn and takes back (vscode.breezell.AgentTurn / AgentReply, kept plain here for tests). */
 export interface Turn {
 	readonly model: string;
 	readonly text: string;
-	readonly attachments: readonly { readonly name: string; readonly kind: string; readonly path?: string }[];
+	/**
+	 * What the user attached in Breezell. A file or a folder: its path, Claude Code opens it. A picture or a PDF: its
+	 * bytes, sent with the message. Anything else: the text Breezell's own model is given of it (a code selection's
+	 * lines, problems, console or terminal output, a quoted message, a skill…). None of these: its name only.
+	 */
+	readonly attachments: readonly Attachment[];
+	/**
+	 * Breezell's chat mode, as Claude Code works in it (vscode.breezell.AgentTurn.mode). `plan`: its own plan mode, its
+	 * plan shown as Breezell's plan card; `analyze` and `chat`: it reads and answers, with no tool that changes a file or
+	 * runs a command. None or `agent`: as it is set up to work.
+	 */
+	readonly mode?: 'agent' | 'plan' | 'analyze' | 'chat';
+	/** Breezell's Manual compress: Claude Code compresses the session's context (/compact), and nothing else. */
+	readonly compact?: true;
 	/** The folder it works in, as a path of this computer or of WSL. */
 	readonly cwd?: string;
 	readonly session?: string;
@@ -25,6 +43,12 @@ export interface Turn {
 	readonly history?: readonly { readonly role: 'user' | 'assistant'; readonly text: string }[];
 	/** What Breezell remembers that bears on this message: told with it. */
 	readonly memories?: string;
+	/**
+	 * The user's rules in Breezell for this conversation's project. Without `session`: a new session takes them in its
+	 * system prompt (Claude Code keeps them with the session, as it keeps CLAUDE.md; resuming never repeats them). With
+	 * `session`: they changed since the session started (`''`: they were removed), told once with this message.
+	 */
+	readonly rules?: string;
 	/** Breezell's notices for the agent (how commands it ran in Breezell's terminal ended in the background); with an empty `text`, the whole message. */
 	readonly notices?: readonly string[];
 	/** Going on in `session` after its model request failed (`after`: that error): asked to continue, not told the message again. */
@@ -42,6 +66,57 @@ export interface Reply {
 	approve(request: { toolId: string; name: string; title?: string; input?: Record<string, unknown>; kind: 'edit' | 'command' | 'other'; reason?: string; view?: ToolView }): PromiseLike<boolean>;
 	/** Claude Code sends a failed model request again by itself, in `delayMs` (its api_retry). */
 	retrying?(retry: { attempt: number; maxAttempts: number; delayMs: number; error?: string }): void;
+	/** What its model requests used (a Breezell newer than 1.4.65): the context ring, Box › Usage, the reply's tokens. */
+	usage?(usage: Usage): void;
+	/** Claude Code compresses its context (a Breezell newer than 1.4.65): Breezell's "Compressing…", then the ring's new size. */
+	compaction?(compaction: { phase: 'started' | 'done' | 'failed'; trigger: 'manual' | 'auto'; preTokens?: number; postTokens?: number }): void;
+}
+
+export type ModelUsage = { model: string; inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number };
+export type Usage = { context?: { tokens: number; window?: number }; models: ModelUsage[] };
+
+/**
+ * What Claude Code's result says it used, per model, less what was told before in the same run (`told`, kept up to
+ * date): its totals grow when it goes on after a background subagent and ends again.
+ */
+/**
+ * The context size Claude Code's /context reports ("**Tokens:** 30.1k / 1m (3%)"): what the conversation takes of its
+ * model's window, without a model request. Undefined when the report does not say it so.
+ */
+export function contextOfReport(report: unknown): { tokens: number; window: number } | undefined {
+	const found = typeof report === 'string' ? /\*\*Tokens:\*\*\s*([\d.,]+)\s*([km]?)\s*\/\s*([\d.,]+)\s*([km]?)/i.exec(report) : null;
+	if (!found) {
+		return undefined;
+	}
+	const count = (digits: string, unit: string) => Math.round(Number(digits.replace(/,/g, '')) * (/m/i.test(unit) ? 1_000_000 : /k/i.test(unit) ? 1_000 : 1));
+	const tokens = count(found[1], found[2]);
+	const window = count(found[3], found[4]);
+	return Number.isFinite(tokens) && Number.isFinite(window) && window > 0 ? { tokens, window } : undefined;
+}
+
+/** What a result says this turn used (its `usage`: the lead's requests), as the tokens of one model. */
+export function turnUsageOf(usage: unknown, model: string): ModelUsage[] {
+	const u = usage && typeof usage === 'object' ? usage as Record<string, unknown> : {};
+	const count = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
+	const used = { model, inputTokens: count(u.input_tokens), outputTokens: count(u.output_tokens), cacheReadTokens: count(u.cache_read_input_tokens), cacheWriteTokens: count(u.cache_creation_input_tokens) };
+	return used.inputTokens || used.outputTokens || used.cacheReadTokens || used.cacheWriteTokens ? [used] : [];
+}
+
+export function usageSince(modelUsage: unknown, told: Map<string, ModelUsage>): ModelUsage[] {
+	const out: ModelUsage[] = [];
+	const count = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
+	for (const [model, raw] of Object.entries(modelUsage && typeof modelUsage === 'object' ? modelUsage as Record<string, Record<string, unknown>> : {})) {
+		const total: ModelUsage = { model, inputTokens: count(raw?.inputTokens), outputTokens: count(raw?.outputTokens), cacheReadTokens: count(raw?.cacheReadInputTokens), cacheWriteTokens: count(raw?.cacheCreationInputTokens) };
+		const before = told.get(model);
+		told.set(model, total);
+		const since: ModelUsage = before
+			? { model, inputTokens: Math.max(0, total.inputTokens - before.inputTokens), outputTokens: Math.max(0, total.outputTokens - before.outputTokens), cacheReadTokens: Math.max(0, total.cacheReadTokens - before.cacheReadTokens), cacheWriteTokens: Math.max(0, total.cacheWriteTokens - before.cacheWriteTokens) }
+			: total;
+		if (since.inputTokens || since.outputTokens || since.cacheReadTokens || since.cacheWriteTokens) {
+			out.push(since);
+		}
+	}
+	return out;
 }
 
 /** What Breezell may ask of a turn under way: stopping one of its subagents (its call's id), the turn going on. */
@@ -52,8 +127,15 @@ export interface TurnControls {
 	/** How long a model response may stay silent before the turn stops as stalled (MODEL_STALL_MS); tests set a shorter one. */
 	stallMs?: number;
 	/** Breezell's tools to offer Claude Code in this turn (its memory lookup), and how to run its calls of them. */
-	breezellTools?: readonly { readonly name: string; readonly inputSchema: unknown; readonly shell?: string }[];
-	callBreezellTool?: (name: string, input: Record<string, unknown>, toolUseId?: string) => PromiseLike<{ text: string; isError?: boolean; resultType?: string; count?: number }>;
+	breezellTools?: readonly { readonly name: string; readonly inputSchema: unknown; readonly shell?: string; readonly mcpServer?: string; readonly mcpTool?: string; readonly description?: string }[];
+	/** Claude Code's own MCP servers (its settings, its plugins, claude.ai's connectors) stay on beside Breezell's. Default: on. */
+	ownMcpServers?: boolean;
+	callBreezellTool?: (name: string, input: Record<string, unknown>, toolUseId?: string) => PromiseLike<{ text: string; isError?: boolean; resultType?: string; count?: number; answers?: readonly { question_id: string; selected: readonly string[] }[] }>;
+	/**
+	 * What each session has used so far, per model, as Claude Code last said it: its totals are the whole session's,
+	 * so a turn tells only what it added to them.
+	 */
+	usageTotals?: { of(session: string): Readonly<Record<string, ModelUsage>> | undefined; keep(session: string, totals: Record<string, ModelUsage>): void };
 }
 
 /** The MCP server this plugin hosts for Claude Code in a turn (its tools are Breezell's: mcp__breezell__<name>). */
@@ -173,16 +255,27 @@ export function promptOf(turn: Turn, pathFor: (path: string) => string): string 
 		const after = turn.continuing.after.split(/\r?\n/)[0].trim().slice(0, 300);
 		return `Your previous request to the model failed before you finished${after ? ` (${after})` : ''}. Continue the task from where you stopped. Do not start over, and do not repeat steps that are already done.`;
 	}
-	const files = turn.attachments.filter(a => a.path).map(a => `- ${a.kind === 'folder' ? 'Folder' : 'File'}: ${pathFor(a.path!)}`);
-	const others = turn.attachments.filter(a => !a.path).map(a => `- ${a.name} (${a.kind}, not passed on)`);
-	const lines = [...files, ...others];
+	const files = turn.attachments.filter(a => a.path && !a.text && !a.data).map(a => `- ${a.kind === 'folder' ? 'Folder' : 'File'}: ${pathFor(a.path!)}`);
+	const withMessage = sentWithMessage(turn.attachments);
+	const sent = withMessage.map(a => `- ${a.kind === 'document' ? 'PDF' : 'Image'}: ${a.name} (with this message)`);
+	// Neither a path to open, nor sent, nor told as text (a video, a kind Claude does not take, one too large): its name.
+	const others = turn.attachments.filter(a => !a.text && !withMessage.includes(a) && !(a.path && !a.data)).map(a => `- ${a.name} (${a.kind}, not passed on)`);
+	const lines = [...files, ...sent, ...others];
+	// Code selections, problems, console output and the like, as Breezell's own model is given them: with the agent's paths.
+	const texts = turn.attachments.filter(a => a.text).map(a => a.path ? a.text!.split(a.path).join(pathFor(a.path)) : a.text!);
 	const remembered = turn.memories?.trim()
 		? `\n\n<breezell-memories>\nWhat Breezell remembers that may bear on this message (notes from earlier work: check them against the code before relying on them):\n\n${turn.memories.trim()}\n</breezell-memories>`
+		: '';
+	// The rules changed while the session went on: Claude Code keeps the ones it started with, so this message says the new ones.
+	const rulesChange = turn.session && turn.rules !== undefined
+		? turn.rules.trim()
+			? `<breezell-rules>\nThe user changed their rules in Breezell. These replace the Breezell rules you were given at the start of this conversation:\n\n${turn.rules.trim()}\n</breezell-rules>`
+			: '<breezell-rules>\nThe user removed their rules in Breezell: the Breezell rules you were given at the start of this conversation no longer apply.\n</breezell-rules>'
 		: '';
 	const notices = turn.notices?.map(notice => notice.trim()).filter(Boolean) ?? [];
 	const noticed = notices.length ? `<breezell-notices>\nFrom Breezell, not from the user:\n\n${notices.join('\n\n')}\n</breezell-notices>` : '';
 	const text = turn.text.trim() ? turn.text : 'No new message from the user. Breezell has news of commands you ran in its terminal:';
-	const message = [(lines.length ? `${text}\n\nAttached in Breezell:\n${lines.join('\n')}` : text) + remembered, noticed].filter(Boolean).join('\n\n');
+	const message = [(lines.length ? `${text}\n\nAttached in Breezell:\n${lines.join('\n')}` : text), ...texts, remembered.trim(), rulesChange, noticed, modeNoteOf(turn.mode)].filter(Boolean).join('\n\n');
 	if (!turn.history?.length) {
 		return message;
 	}
@@ -200,6 +293,178 @@ const THINKING_DISPLAY = ['--thinking-display', 'summarized'];
 const refusedThinkingDisplay = new Set<string>();
 const installOf = (target: Target) => `${target.where}\0${target.path}`;
 
+/** Pictures and PDFs whose bytes go with the message (Claude Code takes them as image and document blocks). */
+function sentWithMessage(attachments: readonly Attachment[]): Attachment[] {
+	return attachments.filter(a => a.data && (a.kind === 'image' ? /^image\/(png|jpeg|gif|webp)$/.test(a.data.mimeType) : a.kind === 'document' && a.data.mimeType === 'application/pdf'));
+}
+
+/** The user message Claude Code gets: the prompt, and the pictures and PDFs attached in Breezell as blocks of their own. */
+export function contentOf(turn: Turn, pathFor: (path: string) => string): string | unknown[] {
+	// Breezell's Manual compress: Claude Code's own command, alone.
+	if (turn.compact) {
+		return '/compact';
+	}
+	const prompt = promptOf(turn, pathFor);
+	const media = turn.continuing ? [] : sentWithMessage(turn.attachments);
+	if (!media.length) {
+		return prompt;
+	}
+	return [{ type: 'text', text: prompt }, ...media.map(a => ({ type: a.kind === 'document' ? 'document' : 'image', source: { type: 'base64', media_type: a.data!.mimeType, data: a.data!.base64 } }))];
+}
+
+/**
+ * Permission rules for the files and folders the user attached from outside the folders Claude Code works in, so that
+ * it opens them without asking: the user gave them. Paths a rule cannot spell plainly (commas, wildcards, brackets…)
+ * get none, and Claude Code asks as usual.
+ */
+export function attachedReadRules(turn: Turn, pathFor: (path: string) => string): string[] {
+	const comparable = (p: string) => p.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+	const roots = [turn.cwd, turn.cwd && pathFor(turn.cwd), ...(turn.addDirs ?? [])].filter((dir): dir is string => !!dir).map(comparable);
+	const rules: string[] = [];
+	for (const attachment of turn.continuing ? [] : turn.attachments) {
+		if (!attachment.path || attachment.data || (attachment.kind !== 'file' && attachment.kind !== 'folder')) {
+			continue;
+		}
+		const at = pathFor(attachment.path);
+		if (roots.some(root => comparable(at) === root || comparable(at).startsWith(`${root}/`))) {
+			continue;
+		}
+		// Claude Code matches Windows paths in POSIX form: C:\a\b is /c/a/b; an absolute path in a rule starts with //.
+		const drive = /^([A-Za-z]):[\\/]/.exec(at);
+		const posix = drive ? `/${drive[1].toLowerCase()}/${at.slice(3).replace(/\\/g, '/')}` : at.startsWith('/') ? at : undefined;
+		if (!posix || /[,*?[\]{}()!\\"']/.test(posix)) {
+			continue;
+		}
+		const spelled = `/${posix.replace(/\/+$/, '')}`;
+		rules.push(...(attachment.kind === 'folder' ? ['Read', 'Glob', 'Grep'].map(tool => `${tool}(${spelled}/**)`) : [`Read(${spelled})`]));
+	}
+	return rules;
+}
+
+/** Claude Code's own tools a mode turns off: commands always go through Breezell's terminal, and Analyze and Chat change nothing. */
+export function toolsOffIn(mode: Turn['mode']): string[] {
+	return mode === 'plan' ? ['Bash', 'Monitor']
+		: mode === 'analyze' || mode === 'chat' ? ['Bash', 'Monitor', 'Edit', 'MultiEdit', 'Write', 'NotebookEdit', 'ExitPlanMode']
+			: [];
+}
+
+/**
+ * Claude Code's plan (ExitPlanMode's), as Breezell's plan card takes it: its title (the first heading), the plan itself,
+ * and its steps for the card's to-dos (the numbered lines, else the bulleted ones outside a Context section, else the
+ * sections), at least one.
+ */
+export function planCardOf(markdown: string): { title?: string; markdown: string; plan: { step: string }[] } {
+	const lines = markdown.split(/\r?\n/);
+	const heading = lines.map(line => /^#\s+(.+)$/.exec(line.trim())?.[1]).find(Boolean);
+	const title = heading?.replace(/^plan\s*:\s*/i, '').trim();
+	const plain = (text: string) => text.replace(/\*\*|__/g, '').replace(/\s+/g, ' ').trim().slice(0, 240);
+	let section = '';
+	const numbered: string[] = [];
+	const bulleted: string[] = [];
+	const sections: string[] = [];
+	for (const line of lines) {
+		const sub = /^#{2,3}\s+(.+)$/.exec(line.trim());
+		if (sub) {
+			section = sub[1].trim();
+			if (!/^(context|overview|summary|background|verification|testing|notes?)\b/i.test(section)) {
+				sections.push(plain(section));
+			}
+			continue;
+		}
+		const aside = /^(context|overview|background)\b/i.test(section);
+		const number = /^(\d+)[.)]\s+(.+)$/.exec(line);
+		if (number) {
+			numbered.push(plain(number[2]));
+		} else if (!aside && /^[-*]\s+(.+)$/.test(line)) {
+			bulleted.push(plain(line.replace(/^[-*]\s+/, '')));
+		}
+	}
+	const steps = (numbered.length ? numbered : bulleted.length ? bulleted : sections).filter(Boolean).slice(0, 30);
+	return { ...(title ? { title } : {}), markdown, plan: (steps.length ? steps : [title || 'Carry out the plan']).map(step => ({ step })) };
+}
+
+/**
+ * Claude Code's own tools Breezell's own model has the like of and runs without asking (reading and searching files,
+ * anywhere; fetching a page, searching the web): Claude Code's run so too, whatever the user's auto-approve settings.
+ */
+export const UNASKED_OWN_TOOLS: ReadonlySet<string> = new Set(['Read', 'Glob', 'Grep', 'LS', 'NotebookRead', 'WebFetch', 'WebSearch']);
+
+type ClaudeQuestion = { question?: unknown; header?: unknown; multiSelect?: unknown; options?: unknown };
+
+/**
+ * Claude Code's questions (AskUserQuestion's) as Breezell's question card takes them: each option's label with its
+ * description, so the user sees what Claude Code shows. `labels` turns what the card gives back into Claude Code's labels.
+ */
+export function questionCardOf(input: unknown): { questions: { id: string; question: string; options: { id: string; label: string }[]; allow_multiple: boolean }[]; labels: Map<string, string>[] } | undefined {
+	const raw = input && typeof input === 'object' && Array.isArray((input as { questions?: unknown }).questions) ? (input as { questions: ClaudeQuestion[] }).questions : [];
+	const labels: Map<string, string>[] = [];
+	const questions = raw.map((q, i) => {
+		const own = new Map<string, string>();
+		labels.push(own);
+		const options = (Array.isArray(q?.options) ? q.options as { label?: unknown; description?: unknown }[] : []).flatMap((o, j) => {
+			const label = typeof o?.label === 'string' ? o.label.trim() : '';
+			if (!label) {
+				return [];
+			}
+			const description = typeof o.description === 'string' ? o.description.trim() : '';
+			// A description that only says the label again (or ends in it) adds nothing.
+			const shown = description && description.toLowerCase().replace(/[.\s]+$/, '') !== label.toLowerCase() ? `${label} — ${description}` : label;
+			own.set(shown, label);
+			return [{ id: `o${j}`, label: shown }];
+		});
+		return { id: `q${i}`, question: typeof q?.question === 'string' ? q.question : `Question ${i + 1}`, options, allow_multiple: q?.multiSelect === true };
+	});
+	return questions.length && questions.every(q => q.options.length >= 2) ? { questions, labels } : undefined;
+}
+
+/** What the card gave back, as AskUserQuestion's `answers`: each question's text, the labels picked (or the user's own words). */
+export function answersOf(input: unknown, card: NonNullable<ReturnType<typeof questionCardOf>>, answers: readonly { question_id: string; selected: readonly string[] }[]): Record<string, string> {
+	const raw = (input as { questions: ClaudeQuestion[] }).questions;
+	const out: Record<string, string> = {};
+	card.questions.forEach((q, i) => {
+		const picked = answers.find(a => a.question_id === q.id)?.selected ?? [];
+		if (picked.length && typeof raw[i]?.question === 'string') {
+			out[raw[i].question as string] = picked.map(shown => card.labels[i].get(shown) ?? shown).join(', ');
+		}
+	});
+	return out;
+}
+
+/** What Claude Code is told when its plan went to Breezell's plan card: its turn ends there. */
+export const PLAN_SHOWN = 'Breezell shows your plan to the user as a plan card. End your turn now with one short line and make no changes: the user chooses Execute to have you carry it out, or tells you what to change.';
+
+/** A line for the message in a mode that changes nothing: its tools for changes are off, and it should not try. */
+function modeNoteOf(mode: Turn['mode']): string {
+	return mode === 'analyze' ? 'Breezell is in Analyze mode for this message: read, search and answer. Make no changes and run no commands.'
+		: mode === 'chat' ? 'Breezell is in Chat mode for this message: answer in the conversation. Make no changes and run no commands.'
+			: '';
+}
+
+/**
+ * The name Claude Code knows a tool of one of the user's MCP servers in Breezell by, under this plugin's server
+ * (mcp__breezell__<name>): the server's and the tool's names, kept to what a tool name may hold and to 64 characters
+ * in all, cut short with a hash of the whole when longer, so that two never meet.
+ */
+export function mcpToolNameOf(server: string, tool: string): string {
+	const plain = (text: string) => text.replace(/[^A-Za-z0-9_-]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '') || 'x';
+	const name = `${plain(server)}__${plain(tool)}`;
+	const room = 64 - `mcp__${BREEZELL_MCP_SERVER}__`.length;
+	if (name.length <= room && name === `${server}__${tool}`) {
+		return name;
+	}
+	let hash = 0;
+	for (const char of `${server}\n${tool}`) {
+		hash = (Math.imul(hash, 31) + char.charCodeAt(0)) | 0;
+	}
+	const tag = (hash >>> 0).toString(36);
+	return `${name.slice(0, room - tag.length - 1)}_${tag}`;
+}
+
+/** What a new session's system prompt gets of the user's Breezell rules. */
+export function rulesPromptOf(rules: string): string {
+	return `# The user's rules from Breezell\n\nThe user set these rules in Breezell, the editor this conversation runs in, for this project. Follow them as you follow the instructions in CLAUDE.md.\n\n${rules.trim()}\n`;
+}
+
 /** The arguments of one turn; `summaries`: ask for its thinking as a summary (THINKING_DISPLAY). */
 export function turnArgs(turn: Turn, summaries = true): string[] {
 	return [
@@ -209,6 +474,7 @@ export function turnArgs(turn: Turn, summaries = true): string[] {
 		...(turn.model && turn.model !== 'default' ? ['--model', turn.model] : []),
 		...(turn.effort && (EFFORTS as readonly string[]).includes(turn.effort) ? ['--effort', turn.effort] : []),
 		...(turn.addDirs ?? []).flatMap(dir => ['--add-dir', dir]),
+		...(turn.mode === 'plan' ? ['--permission-mode', 'plan'] : []),
 		...(turn.session ? ['--resume', turn.session] : []),
 	];
 }
@@ -244,20 +510,34 @@ export function onJsonLines(stream: NodeJS.ReadableStream | null | undefined, ha
  */
 export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel, pathFor: (path: string) => string = p => p, files?: TurnFiles, controls?: TurnControls): Promise<{ session?: string; error?: string; entry?: string; apiError?: string }> {
 	const named = (view: ToolView | undefined) => files ? withUri(view, path => files.uriOf(path)) : view;
+	// A tool of one of the user's MCP servers in Breezell (under this plugin's server): its server and tool, for Breezell's MCP row.
+	const mcpViews = new Map((controls?.callBreezellTool ? controls.breezellTools ?? [] : []).filter(tool => tool.mcpServer && tool.mcpTool)
+		.map(tool => [`mcp__${BREEZELL_MCP_SERVER}__${mcpToolNameOf(tool.mcpServer!, tool.mcpTool!)}`, { kind: 'mcp' as const, server: tool.mcpServer!, tool: tool.mcpTool! }]));
+	const viewOfUse = (name: string, input: Parameters<typeof ownViewOfUse>[1]): ToolView | undefined => mcpViews.get(name) ?? ownViewOfUse(name, input);
 	return new Promise((resolve, reject) => {
 		let child: ChildProcess;
+		// A new session's rules from Breezell, in its system prompt: through a file (a command line has a length limit), gone with the process.
+		const rulesFile = !turn.session && turn.rules?.trim() ? path.join(os.tmpdir(), `breezell-rules-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.md`) : undefined;
+		const dropRulesFile = () => { if (rulesFile) { try { fs.rmSync(rulesFile, { force: true }); } catch { /* already gone */ } } };
 		try {
+			if (rulesFile) {
+				fs.writeFileSync(rulesFile, rulesPromptOf(turn.rules!), 'utf8');
+			}
 			// Breezell's tools it is offered: a lookup or a wait runs without asking; a command or a change is asked about
 			// as Breezell's own are, and Claude Code's own tools for those are off, so every command and change goes there.
 			const tools = (controls?.callBreezellTool ? controls.breezellTools ?? [] : []).filter(tool => BREEZELL_TOOL_DESCRIPTIONS[tool.name]);
-			const allowed = tools.filter(tool => UNASKED_BREEZELL_TOOLS.has(tool.name)).map(tool => `mcp__${BREEZELL_MCP_SERVER}__${tool.name}`);
-			const replaced = tools.flatMap(tool => OWN_TOOLS_REPLACED[tool.name] ?? []);
+			const allowed = [...tools.filter(tool => UNASKED_BREEZELL_TOOLS.has(tool.name)).map(tool => `mcp__${BREEZELL_MCP_SERVER}__${tool.name}`), ...attachedReadRules(turn, pathFor)];
+			const replaced = [...new Set([...tools.flatMap(tool => OWN_TOOLS_REPLACED[tool.name] ?? []), ...toolsOffIn(turn.mode)])];
 			child = target.start([
 				...turnArgs(turn, !refusedThinkingDisplay.has(installOf(target))),
 				...(allowed.length ? ['--allowedTools', allowed.join(',')] : []),
 				...(replaced.length ? ['--disallowedTools', replaced.join(',')] : []),
+				...(rulesFile ? ['--append-system-prompt-file', pathFor(rulesFile)] : []),
+				// Only Breezell's MCP servers (and this plugin's): Claude Code's own are left out when the user said so.
+				...(controls?.ownMcpServers === false ? ['--strict-mcp-config'] : []),
 			], turn.cwd);
 		} catch (error) {
+			dropRulesFile();
 			reject(error);
 			return;
 		}
@@ -272,6 +552,18 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 		 */
 		let apiError: string | undefined;
 		let gotResult = false;
+		/** Manual compress: /context was sent after /compact. */
+		let sizeAsked = false;
+		/** It compressed its context in this run. */
+		let compacted = false;
+		/** Its last request's context (not a subagent's), and the model it went to. */
+		let context: { tokens: number; model?: string } | undefined;
+		/**
+		 * What the session had used before, per model (usageSince): nothing for a new one; unknown (undefined) for one
+		 * this plugin has not seen end a turn, whose first result then tells this turn's own count instead.
+		 */
+		const before = turn.session ? controls?.usageTotals?.of(turn.session) : {};
+		let usageTold: Map<string, ModelUsage> | undefined = before ? new Map(Object.entries(before)) : undefined;
 		let stderr = '';
 		let killTimer: ReturnType<typeof setTimeout> | undefined;
 		/** A model response is coming (message_start to message_stop), and when Claude Code last said anything. */
@@ -348,6 +640,11 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 		}
 		/** Breezell's tools offered in this turn, and what each call of them came to (its row shows the kind and count). */
 		const offered = (controls?.callBreezellTool ? controls.breezellTools ?? [] : []).filter(tool => BREEZELL_TOOL_DESCRIPTIONS[tool.name]);
+		// The tools of the user's MCP servers in Breezell, under this plugin's server: Breezell runs them with its own
+		// connections. Not loaded at the start: Claude Code finds them with its tool search, as its own servers' tools.
+		const mcpOffered = new Map((controls?.callBreezellTool ? controls.breezellTools ?? [] : [])
+			.filter(tool => tool.mcpServer && tool.mcpTool)
+			.map(tool => [mcpToolNameOf(tool.mcpServer!, tool.mcpTool!), tool] as const));
 		const recalled = new Map<string, { resultType?: string; count?: number }>();
 		/** One MCP message for the server this plugin hosts (Claude Code's mcp_message): its JSON-RPC answer. */
 		const answerMcp = async (rpc: { id?: unknown; method?: unknown; params?: { name?: unknown; arguments?: unknown; protocolVersion?: unknown; _meta?: Record<string, unknown> } }): Promise<unknown> => {
@@ -356,12 +653,21 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 				case 'initialize':
 					return reply({ protocolVersion: typeof rpc.params?.protocolVersion === 'string' ? rpc.params.protocolVersion : '2025-06-18', capabilities: { tools: {} }, serverInfo: { name: BREEZELL_MCP_SERVER, version: '1.0.0' } });
 				case 'tools/list':
-					return reply({ tools: offered.map(tool => ({ name: tool.name, description: descriptionOf(tool), inputSchema: tool.inputSchema, ...(ALWAYS_LOADED_BREEZELL_TOOLS.has(tool.name) ? { _meta: { 'anthropic/alwaysLoad': true } } : {}) })) });
+					return reply({ tools: [
+						...offered.map(tool => ({ name: tool.name, description: descriptionOf(tool), inputSchema: tool.inputSchema, ...(ALWAYS_LOADED_BREEZELL_TOOLS.has(tool.name) ? { _meta: { 'anthropic/alwaysLoad': true } } : {}) })),
+						...[...mcpOffered].map(([name, tool]) => ({ name, description: `${tool.description?.trim() || tool.mcpTool}\n\n(Tool "${tool.mcpTool}" of the user's MCP server "${tool.mcpServer}" in Breezell.)`, inputSchema: tool.inputSchema })),
+					] });
 				case 'tools/call': {
 					const name = typeof rpc.params?.name === 'string' ? rpc.params.name : '';
 					const input = rpc.params?.arguments && typeof rpc.params.arguments === 'object' ? rpc.params.arguments as Record<string, unknown> : {};
-					if (!offered.some(tool => tool.name === name) || !controls?.callBreezellTool) {
+					const mcpTool = mcpOffered.get(name);
+					if ((!offered.some(tool => tool.name === name) && !mcpTool) || !controls?.callBreezellTool) {
 						return reply({ content: [{ type: 'text', text: `No tool named ${name}.` }], isError: true });
+					}
+					if (mcpTool) {
+						const callId = typeof rpc.params?._meta?.['claudecode/toolUseId'] === 'string' ? rpc.params._meta['claudecode/toolUseId'] as string : undefined;
+						const ran = await Promise.resolve(controls.callBreezellTool(mcpTool.name, input, callId)).then(r => r, error => ({ text: String(error?.message ?? error), isError: true }));
+						return reply({ content: [{ type: 'text', text: ran.text || '(nothing)' }], ...(ran.isError ? { isError: true } : {}) });
 					}
 					// The call's own id (Claude Code names it): Breezell shows what it ran on that call's row.
 					const toolUseId = typeof rpc.params?._meta?.['claudecode/toolUseId'] === 'string' ? rpc.params._meta['claudecode/toolUseId'] as string : undefined;
@@ -396,6 +702,24 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 					if (message.subtype === 'init' && typeof message.session_id === 'string') {
 						session = message.session_id;
 						reply.session(session);
+						// A new session, the old one could not go on: its totals are its own from here.
+						if (turn.session && session !== turn.session) {
+							usageTold = new Map();
+						}
+					}
+					// It compresses its context: asked (/compact), or by itself, its context full.
+					const trigger = turn.compact ? 'manual' as const : 'auto' as const;
+					if (message.subtype === 'status' && message.status === 'compacting') {
+						reply.compaction?.({ phase: 'started', trigger });
+					} else if (message.subtype === 'status' && message.compact_result === 'failed') {
+						reply.compaction?.({ phase: 'failed', trigger });
+					} else if (message.subtype === 'compact_boundary') {
+						compacted = true;
+						const meta = (message.compact_metadata ?? {}) as { trigger?: unknown; pre_tokens?: unknown; post_tokens?: unknown };
+						const size = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? { value } : undefined;
+						const pre = size(meta.pre_tokens);
+						const post = size(meta.post_tokens);
+						reply.compaction?.({ phase: 'done', trigger: meta.trigger === 'manual' ? 'manual' : meta.trigger === 'auto' ? 'auto' : trigger, ...(pre ? { preTokens: pre.value } : {}), ...(post ? { postTokens: post.value } : {}) });
 					}
 					// A subagent's task: what stop_task names; a stopped one ends as an error of its call (marked stopped below).
 					if (message.subtype === 'task_started' && typeof message.tool_use_id === 'string' && typeof message.task_id === 'string') {
@@ -501,7 +825,15 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 					return;
 				}
 				case 'assistant': {
-					const m = (message.message ?? {}) as { id?: string; content?: unknown[]; model?: unknown };
+					const m = (message.message ?? {}) as { id?: string; content?: unknown[]; model?: unknown; usage?: Record<string, unknown> };
+					// How much of its context the conversation takes: its last request's input, cached parts too (not a subagent's).
+					if (!subagent && m.usage && typeof m.usage === 'object') {
+						const n = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
+						const tokens = n(m.usage.input_tokens) + n(m.usage.cache_read_input_tokens) + n(m.usage.cache_creation_input_tokens);
+						if (tokens > 0) {
+							context = { tokens, ...(typeof m.model === 'string' ? { model: m.model } : {}) };
+						}
+					}
 					// A subagent's first message names the model it runs on (maybe not its lead's): told with its call.
 					const call = parent ? tools.get(parent) : undefined;
 					if (parent && call && !modelTold.has(parent) && typeof m.model === 'string' && m.model) {
@@ -580,7 +912,7 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 						return;
 					}
 					// A message for the MCP server this plugin hosts (Breezell's tools): answered with its reply.
-					if (request.subtype === 'mcp_message' && offered.length) {
+					if (request.subtype === 'mcp_message' && (offered.length || mcpOffered.size)) {
 						const mcp = request as { server_name?: unknown; message?: { id?: unknown; method?: unknown } };
 						if (mcp.server_name === BREEZELL_MCP_SERVER && mcp.message && typeof mcp.message === 'object') {
 							void answerMcp(mcp.message).then(response => write({ type: 'control_response', response: { subtype: 'success', request_id: requestId, response: { mcp_response: response } } }));
@@ -596,6 +928,36 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 					}
 					const name = request.tool_name;
 					const toolId = request.tool_use_id ?? `ask-${requestId}`;
+					// Reading, searching, the web: as Breezell's own model, without asking.
+					if (UNASKED_OWN_TOOLS.has(name)) {
+						answer(requestId, true, request.input);
+						return;
+					}
+					// Its questions to the user: Breezell's question card, never answered for the user (auto-approve or not).
+					const card = name === 'AskUserQuestion' && controls?.callBreezellTool && controls.breezellTools?.some(tool => tool.name === 'ask_question') ? questionCardOf(request.input) : undefined;
+					if (card) {
+						Promise.resolve(controls!.callBreezellTool!('ask_question', { questions: card.questions }, request.tool_use_id)).then(result => {
+							const answers = !result.isError && result.answers ? answersOf(request.input, card, result.answers) : {};
+							write({ type: 'control_response', response: { subtype: 'success', request_id: requestId, response: Object.keys(answers).length
+								? { behavior: 'allow', updatedInput: { ...(request.input ?? {}), answers } }
+								: { behavior: 'deny', message: result.isError ? `The question could not be shown in Breezell: ${result.text.slice(0, 300)}` : 'The user skipped the questions in Breezell.' } } });
+						}, () => write({ type: 'control_response', response: { subtype: 'success', request_id: requestId, response: { behavior: 'deny', message: 'The question could not be shown in Breezell.' } } }));
+						return;
+					}
+					// Its own plan in Agent mode (it went into plan mode by itself): the user's request is the approval, as
+					// for Breezell's own model in Agent mode.
+					if (name === 'ExitPlanMode' && turn.mode !== 'plan') {
+						answer(requestId, true, request.input);
+						return;
+					}
+					// Its plan, in Plan mode: Breezell's plan card on its row, where the user chooses Execute. Not carried out here.
+					if (name === 'ExitPlanMode' && turn.mode === 'plan' && controls?.callBreezellTool && controls.breezellTools?.some(tool => tool.name === 'update_plan')) {
+						const markdown = typeof request.input?.plan === 'string' ? request.input.plan : '';
+						Promise.resolve(controls.callBreezellTool('update_plan', planCardOf(markdown), request.tool_use_id))
+							.then(shown => shown.isError ? `The plan card could not be shown (${shown.text.slice(0, 300)}). End your turn with the plan written out in your reply; make no changes.` : PLAN_SHOWN, () => 'End your turn with the plan written out in your reply; make no changes.')
+							.then(message => write({ type: 'control_response', response: { subtype: 'success', request_id: requestId, response: { behavior: 'deny', message } } }));
+						return;
+					}
 					const title = toolTitle(name, request.input) ?? firstLine(request.description);
 					// A Write of a file that is there: the card shows what it changes, not a new file.
 					const writes = name === 'Write' && typeof request.input?.file_path === 'string' && files ? files.textOf(request.input.file_path).catch(() => undefined) : Promise.resolve(undefined);
@@ -605,14 +967,47 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 					}).then(allowed => answer(requestId, allowed && !token.isCancellationRequested, request.input), () => answer(requestId, false, request.input));
 					return;
 				}
-				case 'result':
+				case 'result': {
 					gotResult = true;
+					// Breezell's Manual compress: after /compact, /context says how much the context takes now (no model request).
+					if (turn.compact && sizeAsked) {
+						const size = contextOfReport(message.result);
+						if (size) {
+							reply.usage?.({ context: size, models: [] });
+						}
+						child.stdin?.end();
+						return;
+					}
+					const resultSession = typeof message.session_id === 'string' ? message.session_id : undefined;
+					let models: ModelUsage[];
+					if (usageTold) {
+						models = usageSince(message.modelUsage, usageTold);
+					} else {
+						// Totals of a session not seen before: this turn's own count (its lead's model; a subagent's is not in it).
+						models = turnUsageOf(message.usage, context?.model ?? (typeof turn.model === 'string' ? turn.model : 'claude'));
+						usageTold = new Map();
+						usageSince(message.modelUsage, usageTold);
+					}
+					if (resultSession) {
+						controls?.usageTotals?.keep(resultSession, Object.fromEntries(usageTold));
+					}
+					if (reply.usage && (models.length || context)) {
+						const usage = message.modelUsage as Record<string, { contextWindow?: unknown }> | undefined;
+						const window = context?.model ? usage?.[context.model]?.contextWindow : undefined;
+						reply.usage({ ...(context ? { context: { tokens: context.tokens, ...(typeof window === 'number' && window > 0 ? { window } : {}) } } : {}), models });
+					}
 					if (typeof message.session_id === 'string') {
 						session = message.session_id;
 					}
 					// Stopped as stalled: what the interruption ends with is not the error.
 					if (!stalled && (message.is_error || (typeof message.subtype === 'string' && message.subtype !== 'success'))) {
 						error = firstLine(message.result, 600) ?? `Claude Code ended with ${String(message.subtype ?? 'an error')}.`;
+					}
+					// The context compressed: its size now, asked before the run ends.
+					if (turn.compact && !error && compacted) {
+						sizeAsked = true;
+						write({ type: 'user', message: { role: 'user', content: '/context' }, parent_tool_use_id: null });
+						return;
 					}
 					// The turn is told: its input closes, and Claude Code ends. Not while a subagent still works in the
 					// background: Claude Code goes on once it ends (and may ask approvals for it meanwhile).
@@ -626,6 +1021,7 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 						child.stdin?.end();
 					}
 					return;
+				}
 			}
 		};
 		onJsonLines(child.stdout, handle);
@@ -653,10 +1049,12 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 		child.on('error', err => {
 			clearInterval(watchdog);
 			stopping.dispose();
+			dropRulesFile();
 			if (killTimer) { clearTimeout(killTimer); }
 			reject(err);
 		});
 		child.on('close', code => {
+			dropRulesFile();
 			clearInterval(watchdog);
 			stopping.dispose();
 			if (killTimer) { clearTimeout(killTimer); }
@@ -676,10 +1074,10 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 			resolve({ ...(session ? { session } : {}), ...(failure ? { error: failure } : {}), ...(entry ? { entry } : {}), ...(failure && apiError ? { apiError } : {}) });
 		});
 		// Breezell's tools, through the MCP server this plugin hosts here (named before the message, as the SDK does).
-		if (offered.length) {
+		if (offered.length || mcpOffered.size) {
 			write({ type: 'control_request', request_id: `breezell-init-${nextRequest++}`, request: { subtype: 'initialize', sdkMcpServers: [BREEZELL_MCP_SERVER] } });
 		}
-		write({ type: 'user', message: { role: 'user', content: promptOf(turn, pathFor) }, parent_tool_use_id: null });
+		write({ type: 'user', message: { role: 'user', content: contentOf(turn, pathFor) }, parent_tool_use_id: null });
 	});
 }
 

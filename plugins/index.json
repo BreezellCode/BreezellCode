@@ -1,12 +1,12 @@
 {
 	"schemaVersion": 1,
-	"updatedAt": "2026-11-23T08:40:15.064Z",
+	"updatedAt": "2026-11-23T13:36:40.886Z",
 	"plugins": [
 		{
 			"id": "breezell.agent-bridge",
 			"displayName": "Agent Bridge",
 			"description": "Connects Breezell to the Claude Code you installed and signed in to yourself, and lets you chat with it in Breezell. Shows on Box › Models › Sign in.",
-			"version": "1.0.1",
+			"version": "1.0.2",
 			"apiVersion": 1,
 			"categories": [
 				"AI",
@@ -25,8 +25,7 @@
 			"source": "open",
 			"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/agent-bridge",
 			"author": {
-				"name": "Breezell",
-				"url": "https://breezell.com"
+				"name": "DreamfallSerena"
 			},
 			"license": "MIT",
 			"icon": "packages/breezell.agent-bridge/icon.png",
@@ -46,11 +45,11 @@
 				}
 			},
 			"package": {
-				"path": "packages/breezell.agent-bridge/1.0.1/breezell.agent-bridge-1.0.1.vsix",
-				"sha256": "96bbba62abf3551b51b65c0cba83885b3ec5e6a7b450e9ba9dce80606312e8b1",
-				"size": 170174
+				"path": "packages/breezell.agent-bridge/1.0.2/breezell.agent-bridge-1.0.2.vsix",
+				"sha256": "d935b4dd1e4139dfe7fc45ced969c6d02dcf4299aada7722f02bc901ec5c6be4",
+				"size": 199083
 			},
-			"updatedAt": "2026-11-23T08:40:15.064Z"
+			"updatedAt": "2026-11-23T13:36:40.886Z"
 		},
 		{
 			"id": "breezell.chat-mirror",

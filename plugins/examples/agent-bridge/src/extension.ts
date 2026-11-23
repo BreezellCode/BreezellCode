@@ -11,7 +11,10 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { Check, Runner, Target, UsageLine, createRunner, detect, fetchUsage, wslPathOf, type Starter } from './claudeCode';
-import { fetchModels, runTurn, toolTitle, type ClaudeModel, type Reply, type TurnControls } from './agent';
+import { fetchModels, runTurn, toolTitle, type ClaudeModel, type ModelUsage, type Reply, type TurnControls } from './agent';
+
+/** Where each session's usage so far is kept (ClaudeCodeBridge.usageTotals). */
+const USAGE_KEY = 'claudeCode.usageTotals';
 import { SessionSync, type SyncState } from './sync';
 import { deleteSession, joinFor } from './sessions';
 import { TEXTS, languageKey, statusOf, syncNotice, type SignInStatus } from './texts';
@@ -25,6 +28,8 @@ export const RECHECK_COMMAND = 'agentBridge.claudeCode.recheck';
 export const SYNC_COMMAND = 'agentBridge.claudeCode.sync';
 /** On: a conversation deleted in Breezell is deleted in Claude Code too (off by default; asked before it turns on). */
 export const DELETE_SESSIONS_KEY = 'claudeCode.deleteSessions';
+/** Claude Code's own MCP servers stay on beside Breezell's (on by default). */
+export const OWN_MCP_SERVERS_KEY = 'claudeCode.ownMcpServers';
 /** A check that finds Claude Code signed in brings the conversations in, at most this often. */
 export const AUTO_SYNC_MS = 120_000;
 /** Coming back to Breezell checks again, at most this often: a sign-in made in a terminal shows up by itself. */
@@ -43,6 +48,8 @@ export interface BridgeDeps {
 		readonly start?: Starter;
 		/** The plugin's own folder (its global storage): where Claude Code works for a window without a folder. */
 		readonly storageDir?: string;
+		/** Where the plugin keeps small things between runs (its global state): each session's usage so far. */
+		readonly memento?: Pick<vscode.Memento, 'get' | 'update'>;
 		/** A file of this computer, as text (a distribution's through \\wsl.localhost): tests give their own. */
 		readonly readLocal?: (file: string) => Promise<string>;
 		/** A file of the window's remote (an SSH host), as text, read through the window: tests give their own. */
@@ -232,7 +239,24 @@ export function wslWindowOf(remoteName: string | undefined, folders: readonly { 
 
 type BreezellUi = { setSignInStatus?(tileId: string, status: SignInStatus | undefined): Thenable<void> };
 
+/** How many sessions' usage totals are kept (the most recent): one a conversation. */
+const USAGE_SESSIONS_KEPT = 500;
+
 export class ClaudeCodeBridge implements vscode.Disposable {
+	/** Each session's usage so far, per model (TurnControls.usageTotals), kept between runs. */
+	private readonly usageTotals: NonNullable<TurnControls['usageTotals']> = {
+		of: session => this.deps.memento?.get<Record<string, { totals: Record<string, ModelUsage>; at: number }>>(USAGE_KEY)?.[session]?.totals,
+		keep: (session, totals) => {
+			const memento = this.deps.memento;
+			if (!memento) {
+				return;
+			}
+			const all = { ...(memento.get<Record<string, { totals: Record<string, ModelUsage>; at: number }>>(USAGE_KEY) ?? {}), [session]: { totals, at: Date.now() } };
+			const kept = Object.entries(all).sort((a, b) => b[1].at - a[1].at).slice(0, USAGE_SESSIONS_KEPT);
+			void memento.update(USAGE_KEY, Object.fromEntries(kept));
+		},
+	};
+
 	private readonly listeners: vscode.Disposable[] = [];
 	private running: Promise<void> | undefined;
 	/** A check asked for while one runs: one more runs after it, with its busy line if either wanted one. */
@@ -455,7 +479,8 @@ export class ClaudeCodeBridge implements vscode.Disposable {
 			return;
 		}
 		this.modelsOf = which;
-		await Promise.resolve(agents.setModels(TILE, models)).catch(error => console.warn(`[Agent Bridge] the models were not taken: ${error?.message ?? error}`));
+		// Each compresses its context when asked (/compact): Breezell's Manual compress asks it.
+		await Promise.resolve(agents.setModels(TILE, models.map(model => ({ ...model, compacts: true })))).catch(error => console.warn(`[Agent Bridge] the models were not taken: ${error?.message ?? error}`));
 	}
 
 	private dropAgent(): void {
@@ -490,12 +515,14 @@ export class ClaudeCodeBridge implements vscode.Disposable {
 			? await Promise.resolve(reply.breezellTools()).then(tools => tools, () => [])
 			: [];
 		const controls: TurnControls = {
+			usageTotals: this.usageTotals,
+			ownMcpServers: vscode.workspace.getConfiguration(SECTION).get<boolean>(OWN_MCP_SERVERS_KEY, true) !== false,
 			modelIdOf: model => this.models?.find(m => m.id !== 'default' && (m.id === model || m.resolved === model))?.id,
 			...(breezellTools.length ? { breezellTools, callBreezellTool: (...call: Parameters<NonNullable<typeof reply.callBreezellTool>>) => reply.callBreezellTool!(...call) } : {}),
 		};
 		this.turns.set(turn.conversationId, controls);
 		try {
-			return await runTurn(target, { model: turn.model, text: turn.text, attachments: turn.attachments, cwd, session: turn.session, history: turn.history, effort: turn.effort, addDirs, memories: turn.memories, continuing: turn.continuing, notices: turn.notices }, reply as Reply, token,
+			return await runTurn(target, { model: turn.model, text: turn.text, attachments: turn.attachments, cwd, session: turn.session, history: turn.history, effort: turn.effort, addDirs, memories: turn.memories, continuing: turn.continuing, notices: turn.notices, rules: turn.rules, mode: turn.mode, ...(turn.compact ? { compact: true } : {}) }, reply as Reply, token,
 				path => target.where === 'wsl' ? wslPathOf(path) : path, files, controls);
 		} finally {
 			// What it wrote stays, an error shows after it, and the session goes on next time either way.
@@ -588,6 +615,7 @@ export function activate(context: vscode.ExtensionContext, deps?: Partial<Bridge
 			now: deps?.now,
 			start: deps?.start,
 			storageDir: deps?.storageDir ?? context.globalStorageUri?.fsPath,
+			memento: deps?.memento ?? context.globalState,
 		});
 	context.subscriptions.push(bridge);
 	context.subscriptions.push(vscode.commands.registerCommand(RECHECK_COMMAND, () => bridge.check(true)));

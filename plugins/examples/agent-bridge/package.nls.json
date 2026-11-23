@@ -4,5 +4,6 @@
 	"command.recheck": "Check Claude Code Again",
 	"config.enabled": "Connect the Claude Code installed on this computer. Turn it on from Box › Models › Sign in, after agreeing to what it asks.",
 	"command.sync": "Sync Claude Code Conversations",
-	"config.deleteSessions": "Deleting a conversation in Breezell also deletes its Claude Code conversation. Off: only Breezell's copy is deleted."
+	"config.deleteSessions": "Deleting a conversation in Breezell also deletes its Claude Code conversation. Off: only Breezell's copy is deleted.",
+	"config.ownMcpServers": "Claude Code's own MCP servers (its settings, its plugins, your claude.ai connectors) are offered beside your MCP servers in Breezell. Off: only Breezell's."
 }

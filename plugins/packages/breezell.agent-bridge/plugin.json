@@ -15,8 +15,7 @@
 	"source": "open",
 	"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/agent-bridge",
 	"author": {
-		"name": "Breezell",
-		"url": "https://breezell.com"
+		"name": "DreamfallSerena"
 	},
 	"license": "MIT",
 	"icon": "packages/breezell.agent-bridge/icon.png",
@@ -36,6 +35,18 @@
 		}
 	},
 	"versions": [
+		{
+			"version": "1.0.2",
+			"path": "packages/breezell.agent-bridge/1.0.2/breezell.agent-bridge-1.0.2.vsix",
+			"sha256": "d935b4dd1e4139dfe7fc45ced969c6d02dcf4299aada7722f02bc901ec5c6be4",
+			"size": 199083,
+			"apiVersion": 1,
+			"permissions": [
+				"ui.contribute",
+				"chat.agent"
+			],
+			"publishedAt": "2026-11-23T13:36:40.886Z"
+		},
 		{
 			"version": "1.0.1",
 			"path": "packages/breezell.agent-bridge/1.0.1/breezell.agent-bridge-1.0.1.vsix",

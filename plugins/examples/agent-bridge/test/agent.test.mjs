@@ -527,6 +527,256 @@ test('Breezell\'s terminal offered to Claude Code: its own shell is off, a comma
 	await plainRun;
 });
 
+test('the user\'s MCP servers in Breezell: their tools under this plugin\'s server, run by Breezell, not loaded at the start; Claude Code\'s own servers off only when the user says so', async () => {
+	const child = fakeChild();
+	const { reply } = replyLog(async () => true);
+	const views = [];
+	reply.tool = t => views.push(['tool', t.id, t.view]);
+	const approve = reply.approve;
+	reply.approve = async r => { views.push(['approve', r.toolId, r.view, r.kind]); return approve(r); };
+	const calls = [];
+	const schema = { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] };
+	const controls = {
+		breezellTools: [
+			{ name: 'memories_recall', inputSchema: { type: 'object', properties: {}, required: [] } },
+			{ name: 'mcp:github/search_issues', mcpServer: 'github', mcpTool: 'search_issues', description: 'Search issues.', inputSchema: schema },
+			{ name: 'mcp:my%20db/run%20query', mcpServer: 'my db', mcpTool: 'run query', inputSchema: schema },
+		],
+		callBreezellTool: async (name, input, toolUseId) => { calls.push([name, input, toolUseId]); return { text: '3 issues' }; },
+	};
+	const answers = [];
+	child.onSent = message => { if (message.type === 'control_response') answers.push(message.response); };
+	const running = agent.runTurn(target(child), { model: 'haiku', text: 'go', attachments: [], cwd: '/w' }, reply, token(), p => p, undefined, controls);
+	await tick();
+	assert.equal(child.args.includes('--strict-mcp-config'), false, 'its own servers stay by default');
+	const mcp = (id, message) => child.say({ type: 'control_request', request_id: id, request: { subtype: 'mcp_message', server_name: 'breezell', message } });
+	mcp('l1', { jsonrpc: '2.0', id: 1, method: 'tools/list' });
+	await tick();
+	const listed = answers.find(r => r.request_id === 'l1').response.mcp_response.result.tools;
+	assert.deepEqual(listed.map(t => t.name), ['memories_recall', 'github__search_issues', agent.mcpToolNameOf('my db', 'run query')]);
+	assert.match(agent.mcpToolNameOf('my db', 'run query'), /^my_db__run_query_[0-9a-z]+$/, 'a name it may hold, told apart by a hash');
+	assert.equal(listed[1].description, 'Search issues.\n\n(Tool "search_issues" of the user\'s MCP server "github" in Breezell.)');
+	assert.deepEqual(listed[1].inputSchema, schema);
+	assert.equal(listed[1]._meta, undefined, 'found with its tool search, as its own servers\' tools');
+	// Its row and its card: Breezell's MCP row of that server from the start.
+	child.say({ type: 'assistant', parent_tool_use_id: null, message: { id: 'm1', content: [{ type: 'tool_use', id: 'tu-9', name: 'mcp__breezell__github__search_issues', input: { query: 'bug' } }] } });
+	child.say({ type: 'control_request', request_id: 'p9', request: { subtype: 'can_use_tool', tool_name: 'mcp__breezell__github__search_issues', tool_use_id: 'tu-9', input: { query: 'bug' } } });
+	await tick();
+	assert.deepEqual(views.filter(v => v[1] === 'tu-9').map(v => [v[0], v[2], v[3]]), [['tool', { kind: 'mcp', server: 'github', tool: 'search_issues' }, undefined], ['approve', { kind: 'mcp', server: 'github', tool: 'search_issues' }, 'other']], 'Auto-approve MCP tools decides, as for Breezell\'s own MCP calls');
+	mcp('c1', { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'github__search_issues', arguments: { query: 'bug' }, _meta: { 'claudecode/toolUseId': 'tu-9' } } });
+	await new Promise(resolve => setTimeout(resolve, 20));
+	assert.deepEqual(calls, [['mcp:github/search_issues', { query: 'bug' }, 'tu-9']], 'Breezell runs it, on the row of its call');
+	assert.deepEqual(answers.find(r => r.request_id === 'c1').response.mcp_response.result, { content: [{ type: 'text', text: '3 issues' }] });
+	child.say({ type: 'result', subtype: 'success', session_id: 's-1' });
+	child.end(0);
+	await running;
+	const long = agent.mcpToolNameOf('a-very-long-server-name-for-testing', 'an_even_longer_tool_name_that_goes_on_and_on');
+	assert.ok(long.length <= 64 - 'mcp__breezell__'.length && long !== agent.mcpToolNameOf('a-very-long-server-name-for-testing', 'an_even_longer_tool_name_that_goes_on_and_off'), long);
+	// Only Breezell's: Claude Code's own MCP servers left out.
+	const strict = fakeChild();
+	const strictRun = agent.runTurn(target(strict), { model: 'haiku', text: 'go', attachments: [], cwd: '/w' }, replyLog().reply, token(), p => p, undefined, { ...controls, ownMcpServers: false });
+	await tick();
+	assert.ok(strict.args.includes('--strict-mcp-config'));
+	strict.say({ type: 'result', subtype: 'success', session_id: 's-2' });
+	strict.end(0);
+	await strictRun;
+});
+
+test('Claude Code\'s questions are Breezell\'s question card, never answered for the user; reading, searching and the web ask nothing; its own plan in Agent mode goes on', async () => {
+	const child = fakeChild();
+	const { reply, log } = replyLog(async () => true);
+	const calls = [];
+	let picked = [{ question_id: 'q0', selected: ['Blue — The calm one.'] }, { question_id: 'q1', selected: ['Apple', 'grapes, please'] }];
+	const controls = {
+		breezellTools: ['memories_recall', 'ask_question'].map(name => ({ name, inputSchema: { type: 'object', properties: {}, required: [] } })),
+		callBreezellTool: async (name, input, toolUseId) => { calls.push([name, input, toolUseId]); return { text: 'answered', answers: picked }; },
+	};
+	const answers = [];
+	child.onSent = message => { if (message.type === 'control_response') answers.push(message.response); };
+	const running = agent.runTurn(target(child), { model: 'haiku', text: 'go', attachments: [], cwd: '/w' }, reply, token(), p => p, undefined, controls);
+	await tick();
+	const questions = [
+		{ question: 'Which color?', header: 'Color', multiSelect: false, options: [{ label: 'Red', description: '' }, { label: 'Blue', description: 'The calm one.' }] },
+		{ question: 'Which fruits?', header: 'Fruits', multiSelect: true, options: [{ label: 'Apple' }, { label: 'Pear' }] },
+	];
+	const ask = (id, name, input, toolUseId) => child.say({ type: 'control_request', request_id: id, request: { subtype: 'can_use_tool', tool_name: name, tool_use_id: toolUseId, input } });
+	ask('a1', 'AskUserQuestion', { questions }, 'tq1');
+	await new Promise(resolve => setTimeout(resolve, 20));
+	assert.deepEqual(calls[0], ['ask_question', { questions: [
+		{ id: 'q0', question: 'Which color?', allow_multiple: false, options: [{ id: 'o0', label: 'Red' }, { id: 'o1', label: 'Blue — The calm one.' }] },
+		{ id: 'q1', question: 'Which fruits?', allow_multiple: true, options: [{ id: 'o0', label: 'Apple' }, { id: 'o1', label: 'Pear' }] },
+	] }, 'tq1'], 'Breezell\'s card, on the row of its call');
+	assert.deepEqual(answers.at(-1).response, { behavior: 'allow', updatedInput: { questions, answers: { 'Which color?': 'Blue', 'Which fruits?': 'Apple, grapes, please' } } }, 'its own labels back; the user\'s own words as they wrote them');
+	// Skipped on the card.
+	picked = [];
+	ask('a2', 'AskUserQuestion', { questions }, 'tq2');
+	await new Promise(resolve => setTimeout(resolve, 20));
+	assert.deepEqual(answers.at(-1).response, { behavior: 'deny', message: 'The user skipped the questions in Breezell.' });
+	// Reading anywhere, searching, the web: no card, whatever the settings.
+	for (const [id, name] of [['r1', 'Read'], ['r2', 'Glob'], ['r3', 'WebFetch'], ['r4', 'WebSearch']]) ask(id, name, { file_path: '/etc/hostname' }, `t-${id}`);
+	// Its own plan, in Agent mode: goes on.
+	ask('p1', 'ExitPlanMode', { plan: '# Plan' }, 'tp1');
+	await new Promise(resolve => setTimeout(resolve, 20));
+	assert.deepEqual(answers.slice(-5).map(r => [r.request_id, r.response.behavior]), [['r1', 'allow'], ['r2', 'allow'], ['r3', 'allow'], ['r4', 'allow'], ['p1', 'allow']]);
+	assert.ok(!log.some(entry => entry[0] === 'approve'), 'no approval card for any of them');
+	child.say({ type: 'result', subtype: 'success', session_id: 's-1' });
+	child.end(0);
+	await running;
+	// A Breezell without the question card: asked as before.
+	assert.equal(agent.questionCardOf({ questions: [{ question: 'x', options: [{ label: 'only one' }] }] }), undefined, 'a question it cannot show: not taken');
+	assert.deepEqual(agent.questionCardOf({ questions: [{ question: 'x', options: [{ label: 'Red', description: 'Red' }, { label: 'Blue', description: 'blue.' }] }] }).questions[0].options.map(o => o.label), ['Red', 'Blue'], 'a description that says the label again: the label');
+});
+
+test('Breezell\'s Manual compress is Claude Code\'s /compact in its session, alone; its compressing, asked or by itself, is told with its size before and after', async () => {
+	const child = fakeChild();
+	const { reply } = replyLog();
+	const told = [];
+	reply.compaction = c => told.push(c);
+	const used = [];
+	reply.usage = u => used.push(u);
+	const sent = [];
+	child.onSent = message => sent.push(message);
+	const running = agent.runTurn(target(child), { model: 'haiku', text: '', attachments: [], cwd: '/w', session: 's-1', compact: true, memories: 'notes', notices: ['a command ended'] }, reply, token());
+	await tick();
+	assert.deepEqual(sent.filter(m => m.type === 'user').map(m => m.message.content), ['/compact'], 'the command alone: no memories, notices or notes');
+	assert.equal(child.args[child.args.indexOf('--resume') + 1], 's-1');
+	child.say({ type: 'system', subtype: 'status', status: 'compacting', session_id: 's-1' });
+	child.say({ type: 'system', subtype: 'status', status: null, compact_result: 'success', session_id: 's-1' });
+	child.say({ type: 'system', subtype: 'compact_boundary', session_id: 's-1', compact_metadata: { trigger: 'manual', pre_tokens: 29_971, post_tokens: 9_692 } });
+	child.say({ type: 'result', subtype: 'success', result: '', session_id: 's-1' });
+	await tick();
+	// Its size now, from /context (no model request): post_tokens is its summary's alone.
+	assert.deepEqual(sent.filter(m => m.type === 'user').map(m => m.message.content), ['/compact', '/context']);
+	assert.equal(child.stdinEnded ?? false, false, 'the run goes on for it');
+	child.say({ type: 'result', subtype: 'success', result: '## Context Usage\n\n**Model:** claude-haiku-5-5  \n**Tokens:** 30.1k / 1m (3%)\n', session_id: 's-1' });
+	child.end(0);
+	const result = await running;
+	assert.deepEqual(told, [{ phase: 'started', trigger: 'manual' }, { phase: 'done', trigger: 'manual', preTokens: 29_971, postTokens: 9_692 }]);
+	assert.deepEqual(used.at(-1), { context: { tokens: 30_100, window: 1_000_000 }, models: [] });
+	assert.equal(result.error, undefined);
+	assert.deepEqual([agent.contextOfReport('**Tokens:** 1,234 / 200k (1%)'), agent.contextOfReport('Tokens: lots'), agent.contextOfReport(undefined)], [{ tokens: 1_234, window: 200_000 }, undefined, undefined]);
+	// By itself in a turn, its context full; and one that failed.
+	const full = fakeChild();
+	const r2 = replyLog().reply;
+	const told2 = [];
+	r2.compaction = c => told2.push(c);
+	const running2 = agent.runTurn(target(full), { model: 'haiku', text: 'go on', attachments: [], cwd: '/w', session: 's-1' }, r2, token());
+	await tick();
+	full.say({ type: 'system', subtype: 'status', status: 'compacting', session_id: 's-1' });
+	full.say({ type: 'system', subtype: 'compact_boundary', session_id: 's-1', compact_metadata: { trigger: 'auto', pre_tokens: 180_000, post_tokens: 30_000 } });
+	full.say({ type: 'system', subtype: 'status', status: 'compacting', session_id: 's-1' });
+	full.say({ type: 'system', subtype: 'status', status: null, compact_result: 'failed', session_id: 's-1' });
+	full.say({ type: 'result', subtype: 'success', result: 'ok', session_id: 's-1' });
+	full.end(0);
+	await running2;
+	assert.deepEqual(told2, [{ phase: 'started', trigger: 'auto' }, { phase: 'done', trigger: 'auto', preTokens: 180_000, postTokens: 30_000 }, { phase: 'started', trigger: 'auto' }, { phase: 'failed', trigger: 'auto' }]);
+});
+
+test('what its model requests used goes to Breezell: its context from its last request (not a subagent\'s) and that model\'s window, and each model\'s tokens once', async () => {
+	const child = fakeChild();
+	const { reply } = replyLog();
+	const used = [];
+	reply.usage = usage => used.push(usage);
+	const running = agent.runTurn(target(child), { model: 'opus', text: 'go', attachments: [], cwd: '/w' }, reply, token());
+	await tick();
+	const assistant = (id, usage, parent) => child.say({ type: 'assistant', parent_tool_use_id: parent ?? null, message: { id, model: parent ? 'claude-haiku-5-5' : 'claude-opus-5-5', content: [{ type: 'text', text: 'x' }], usage } });
+	assistant('m1', { input_tokens: 2, cache_read_input_tokens: 11_000, cache_creation_input_tokens: 1_000, output_tokens: 5 });
+	assistant('s1', { input_tokens: 9, cache_read_input_tokens: 90_000, cache_creation_input_tokens: 0, output_tokens: 5 }, 'task-1');
+	assistant('m2', { input_tokens: 3, cache_read_input_tokens: 12_000, cache_creation_input_tokens: 500, output_tokens: 7 });
+	const modelUsage = grow => ({
+		'claude-opus-5-5': { inputTokens: 5 + grow, outputTokens: 400, cacheReadInputTokens: 23_000, cacheCreationInputTokens: 1_500, contextWindow: 1_000_000 },
+		'claude-haiku-5-5': { inputTokens: 9, outputTokens: 50, cacheReadInputTokens: 90_000, cacheCreationInputTokens: 0, contextWindow: 200_000 },
+	});
+	child.say({ type: 'result', subtype: 'success', session_id: 's-1', modelUsage: modelUsage(0) });
+	// It went on after a background subagent and ended again: only what came since.
+	child.say({ type: 'result', subtype: 'success', session_id: 's-1', modelUsage: modelUsage(4) });
+	child.end(0);
+	await running;
+	assert.deepEqual(used, [
+		{ context: { tokens: 12_503, window: 1_000_000 }, models: [
+			{ model: 'claude-opus-5-5', inputTokens: 5, outputTokens: 400, cacheReadTokens: 23_000, cacheWriteTokens: 1_500 },
+			{ model: 'claude-haiku-5-5', inputTokens: 9, outputTokens: 50, cacheReadTokens: 90_000, cacheWriteTokens: 0 },
+		] },
+		{ context: { tokens: 12_503, window: 1_000_000 }, models: [{ model: 'claude-opus-5-5', inputTokens: 4, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 }] },
+	]);
+	// Going on in a session: Claude Code's totals are the whole session's; a turn tells what it added to the totals kept.
+	const kept = new Map();
+	const usageTotals = { of: id => kept.get(id), keep: (id, totals) => kept.set(id, totals) };
+	const resumed = async (session, result) => {
+		const c = fakeChild();
+		const log = [];
+		const r = replyLog().reply;
+		r.usage = usage => log.push(usage.models);
+		const running = agent.runTurn(target(c), { model: 'haiku', text: 'go', attachments: [], cwd: '/w', session }, r, token(), p => p, undefined, { usageTotals });
+		await tick();
+		c.say({ type: 'system', subtype: 'init', session_id: result.session_id });
+		c.say({ type: 'assistant', parent_tool_use_id: null, message: { id: 'm', model: 'claude-haiku-5-5', content: [{ type: 'text', text: 'x' }], usage: { input_tokens: 2, cache_read_input_tokens: 24_571, cache_creation_input_tokens: 162 } } });
+		c.say({ type: 'result', subtype: 'success', ...result });
+		c.end(0);
+		await running;
+		return log;
+	};
+	const haiku = (input, output, read, write) => ({ 'claude-haiku-5-5': { inputTokens: input, outputTokens: output, cacheReadInputTokens: read, cacheCreationInputTokens: write } });
+	assert.deepEqual(await resumed('s-9', { session_id: 's-9', usage: { input_tokens: 2, output_tokens: 14, cache_read_input_tokens: 24_571, cache_creation_input_tokens: 162 }, modelUsage: haiku(4, 143, 36_415, 12_889) }),
+		[[{ model: 'claude-haiku-5-5', inputTokens: 2, outputTokens: 14, cacheReadTokens: 24_571, cacheWriteTokens: 162 }]], 'a session not seen before: this turn\'s own count');
+	assert.deepEqual(await resumed('s-9', { session_id: 's-9', modelUsage: haiku(6, 160, 61_000, 13_000) }),
+		[[{ model: 'claude-haiku-5-5', inputTokens: 2, outputTokens: 17, cacheReadTokens: 24_585, cacheWriteTokens: 111 }]], 'seen before: what it added');
+	assert.deepEqual(await resumed('s-9', { session_id: 's-new', modelUsage: haiku(2, 129, 11_844, 12_727) }),
+		[[{ model: 'claude-haiku-5-5', inputTokens: 2, outputTokens: 129, cacheReadTokens: 11_844, cacheWriteTokens: 12_727 }]], 'it could not go on and started anew: all of the new one\'s');
+	assert.deepEqual(kept.get('s-new'), { 'claude-haiku-5-5': { model: 'claude-haiku-5-5', inputTokens: 2, outputTokens: 129, cacheReadTokens: 11_844, cacheWriteTokens: 12_727 } });
+	// A Breezell without reply.usage: nothing breaks.
+	const old = fakeChild();
+	const oldRun = agent.runTurn(target(old), { model: 'opus', text: 'go', attachments: [], cwd: '/w' }, replyLog().reply, token());
+	await tick();
+	old.say({ type: 'result', subtype: 'success', session_id: 's-2', modelUsage: modelUsage(0) });
+	old.end(0);
+	assert.equal((await oldRun).session, 's-2');
+});
+
+test('Breezell\'s modes: Plan is Claude Code\'s plan mode and its plan goes to Breezell\'s plan card, not carried out; Analyze and Chat change nothing', async () => {
+	const schema = { type: 'object', properties: {}, required: [] };
+	// Plan: its own plan mode, no shell of its own; ExitPlanMode becomes the plan card on its row, and the turn ends there.
+	const child = fakeChild();
+	const { reply, log } = replyLog();
+	const calls = [];
+	const answers = [];
+	child.onSent = message => { if (message.type === 'control_response') answers.push(message.response); };
+	const running = agent.runTurn(target(child), { model: 'opus', text: 'plan it', attachments: [], cwd: '/w', mode: 'plan' }, reply, token(), p => p, undefined, {
+		breezellTools: ['memories_recall', 'update_plan'].map(name => ({ name, inputSchema: schema })),
+		callBreezellTool: async (name, input, toolUseId) => { calls.push([name, input, toolUseId]); return { text: 'Plan prepared (not executed yet).' }; },
+	});
+	await tick();
+	const arg = flag => child.args[child.args.indexOf(flag) + 1];
+	assert.equal(arg('--permission-mode'), 'plan');
+	assert.equal(arg('--disallowedTools'), 'Bash,Monitor', 'commands only through Breezell\'s terminal, which Plan mode does not offer');
+	const plan = '# Plan: Add a README\n\n## Context\n- app.js prints 1\n\n## Steps\n1. Write **README.md**\n2. Change app.js to print 2\n\n## Verification\n- run it';
+	child.say({ type: 'control_request', request_id: 'x1', request: { subtype: 'can_use_tool', tool_name: 'ExitPlanMode', tool_use_id: 'ep1', input: { plan } } });
+	await new Promise(resolve => setTimeout(resolve, 20));
+	assert.deepEqual(calls, [['update_plan', { title: 'Add a README', markdown: plan, plan: [{ step: 'Write README.md' }, { step: 'Change app.js to print 2' }] }, 'ep1']], 'the plan card, on the row of its call');
+	assert.deepEqual(answers.map(r => [r.request_id, r.response.behavior, r.response.message]), [['x1', 'deny', agent.PLAN_SHOWN]], 'not carried out: the user chooses Execute');
+	assert.ok(!log.some(entry => entry[0] === 'approve'), 'no approval card for it');
+	child.say({ type: 'result', subtype: 'success', session_id: 's-1' });
+	child.end(0);
+	await running;
+	// Analyze: none of its tools that change or run, and the message says so.
+	const quiet = fakeChild();
+	const sent = [];
+	quiet.onSent = message => sent.push(message);
+	const quietRun = agent.runTurn(target(quiet), { model: 'opus', text: 'why?', attachments: [], cwd: '/w', mode: 'analyze' }, replyLog().reply, token(), p => p, undefined, { breezellTools: [{ name: 'memories_recall', inputSchema: schema }], callBreezellTool: async () => ({ text: '' }) });
+	await tick();
+	assert.equal(quiet.args[quiet.args.indexOf('--disallowedTools') + 1], 'Bash,Monitor,Edit,MultiEdit,Write,NotebookEdit,ExitPlanMode');
+	assert.equal(quiet.args.includes('--permission-mode'), false);
+	assert.match(sent.find(m => m.type === 'user').message.content, /\n\nBreezell is in Analyze mode for this message: read, search and answer\. Make no changes and run no commands\.$/);
+	quiet.say({ type: 'result', subtype: 'success', session_id: 's-2' });
+	quiet.end(0);
+	await quietRun;
+	// Agent: as before.
+	assert.deepEqual(agent.toolsOffIn('agent'), []);
+	assert.deepEqual(agent.toolsOffIn(undefined), []);
+	assert.deepEqual(agent.planCardOf('Just do it.').plan, [{ step: 'Carry out the plan' }], 'always a step');
+	assert.deepEqual(agent.planCardOf('# Fix\n## Read the code\n## Change it\n## Testing\nrun').plan.map(p => p.step), ['Read the code', 'Change it'], 'its sections when it has no list');
+});
+
 test('Breezell\'s edit tools offered to Claude Code: its own Edit and Write are off, a change is asked about as a change, with what it changes', async () => {
 	const child = fakeChild();
 	const { reply } = replyLog();
@@ -574,6 +824,83 @@ test('Breezell\'s edit tools offered to Claude Code: its own Edit and Write are 
 	shellOnly.say({ type: 'result', subtype: 'success', session_id: 's-2' });
 	shellOnly.end(0);
 	await shellRun;
+});
+
+test('the project\'s rules: a new session takes them in its system prompt from a file that goes with the process; a change is said once in the message', async () => {
+	const { readFileSync, existsSync } = await import('node:fs');
+	const child = fakeChild();
+	const run = agent.runTurn(target(child), { model: 'opus', text: 'go', attachments: [], cwd: '/w', rules: 'Use tabs.' }, replyLog().reply, token());
+	await tick();
+	const file = child.args[child.args.indexOf('--append-system-prompt-file') + 1];
+	assert.ok(child.args.includes('--append-system-prompt-file') && file, 'in the system prompt');
+	assert.match(readFileSync(file, 'utf8'), /^# The user's rules from Breezell[\s\S]*Use tabs\.\n$/);
+	assert.ok(!child.sent.find(m => m.type === 'user').message.content.includes('Use tabs.'), 'not in the message');
+	child.say({ type: 'result', subtype: 'success', session_id: 's-1' });
+	child.end(0);
+	await run;
+	assert.equal(existsSync(file), false, 'gone with the process');
+	// Going on in the session: it has them; nothing is added.
+	const resumed = fakeChild();
+	const goOn = agent.runTurn(target(resumed), { model: 'opus', text: 'more', attachments: [], cwd: '/w', session: 's-1' }, replyLog().reply, token());
+	await tick();
+	assert.equal(resumed.args.includes('--append-system-prompt-file'), false);
+	resumed.end(0);
+	await goOn;
+	// Changed or removed since the session got them: said once, in the message.
+	const changed = agent.promptOf({ text: 'more', attachments: [], session: 's-1', rules: 'Use spaces.' }, p => p);
+	assert.match(changed, /^more\n\n<breezell-rules>\nThe user changed their rules in Breezell\. These replace[\s\S]*Use spaces\.\n<\/breezell-rules>$/);
+	assert.match(agent.promptOf({ text: 'more', attachments: [], session: 's-1', rules: '' }, p => p), /removed their rules in Breezell/);
+	assert.equal(agent.promptOf({ text: 'go', attachments: [], rules: 'Use tabs.' }, p => p), 'go', 'a new session: in the system prompt, not the message');
+	assert.equal(agent.turnArgs({ model: 'opus', text: '', attachments: [], rules: 'x' }).includes('--append-system-prompt-file'), false, 'the file is runTurn\'s, with the process');
+});
+
+test('what the user attached: pasted pictures and PDFs as blocks of the message, files and folders by path, a code selection and the like as Breezell\'s text, with the agent\'s paths', () => {
+	const toWsl = p => p.replace(/^C:\\/, '/mnt/c/').replace(/\\/g, '/');
+	const turn = {
+		text: 'what is wrong here?', attachments: [
+			{ name: 'screenshot.png', kind: 'image', data: { mimeType: 'image/png', base64: 'iVBORw0KGgo=' } },
+			{ name: 'spec.pdf', kind: 'document', data: { mimeType: 'application/pdf', base64: 'JVBERi0=' } },
+			{ name: 'a.ts', kind: 'file', path: 'C:\\w\\a.ts' },
+			{ name: 'src', kind: 'folder', path: 'C:\\w\\src' },
+			{ name: 'b.ts', kind: 'file', path: 'C:\\w\\b.ts', lines: [3, 4], text: '[Code Selection] C:\\w\\b.ts (lines 3:4)\n```\n3| let x = 1\n4| x++\n```' },
+			{ name: 'Problems', kind: 'other', text: '[Problems] 1 error in a.ts' },
+			{ name: 'clip.mp4', kind: 'other' },
+			{ name: 'huge.png', kind: 'other' },
+		],
+	};
+	const content = agent.contentOf(turn, toWsl);
+	assert.deepEqual(content.slice(1), [
+		{ type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'iVBORw0KGgo=' } },
+		{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: 'JVBERi0=' } },
+	], 'the picture and the PDF themselves');
+	const text = content[0].text;
+	assert.match(text, /^what is wrong here\?\n\nAttached in Breezell:\n- File: \/mnt\/c\/w\/a\.ts\n- Folder: \/mnt\/c\/w\/src\n- Image: screenshot\.png \(with this message\)\n- PDF: spec\.pdf \(with this message\)\n- clip\.mp4 \(other, not passed on\)\n- huge\.png \(other, not passed on\)/);
+	assert.ok(text.includes('[Code Selection] /mnt/c/w/b.ts (lines 3:4)\n```\n3| let x = 1'), 'the selected lines, at the agent\'s path');
+	assert.ok(text.includes('[Problems] 1 error in a.ts'));
+	assert.ok(!text.includes('iVBORw0KGgo='), 'bytes are not text');
+	assert.equal(typeof agent.contentOf({ text: 'hi', attachments: [{ name: 'a.ts', kind: 'file', path: '/w/a.ts' }] }, p => p), 'string', 'nothing to send but text: a plain message');
+	assert.equal(typeof agent.contentOf({ ...turn, continuing: { after: 'x' } }, p => p), 'string', 'going on: the session has them');
+	assert.deepEqual(agent.contentOf({ text: 'x', attachments: [{ name: 'a.svg', kind: 'image', data: { mimeType: 'image/svg+xml', base64: 'PHN2Zz4=' } }] }, p => p), 'x\n\nAttached in Breezell:\n- a.svg (image, not passed on)', 'a kind Claude does not take: named only');
+});
+
+test('files and folders attached from outside the project are read without asking; inside it, or spelled oddly, nothing is added', () => {
+	const toWsl = p => p.replace(/^C:\\/, '/mnt/c/').replace(/\\/g, '/');
+	const turn = { text: 'x', cwd: '/mnt/c/w', addDirs: ['/mnt/c/other'], attachments: [
+		{ name: 'a.ts', kind: 'file', path: 'C:\\w\\a.ts' },
+		{ name: 'b.ts', kind: 'file', path: 'C:\\other\\b.ts' },
+		{ name: 'note.txt', kind: 'file', path: 'C:\\Users\\u\\Downloads\\note.txt' },
+		{ name: 'docs', kind: 'folder', path: 'C:\\Users\\u\\docs\\' },
+		{ name: 'odd', kind: 'file', path: 'C:\\Users\\u\\a,b (1).txt' },
+		{ name: 'shot.png', kind: 'image', data: { mimeType: 'image/png', base64: 'x' } },
+		{ name: 'Problems', kind: 'other', text: 'x' },
+	] };
+	assert.deepEqual(agent.attachedReadRules(turn, toWsl), [
+		'Read(//mnt/c/Users/u/Downloads/note.txt)',
+		'Read(//mnt/c/Users/u/docs/**)', 'Glob(//mnt/c/Users/u/docs/**)', 'Grep(//mnt/c/Users/u/docs/**)',
+	]);
+	assert.deepEqual(agent.attachedReadRules({ text: 'x', cwd: 'C:\\w', attachments: [{ name: 'n', kind: 'file', path: 'D:\\Notes\\n.md' }] }, p => p), ['Read(//d/Notes/n.md)'], 'a Windows Claude Code: its POSIX form');
+	assert.deepEqual(agent.attachedReadRules({ ...turn, continuing: { after: 'x' } }, toWsl), [], 'going on: none attached');
+	assert.ok(agent.turnArgs !== undefined);
 });
 
 test('Breezell\'s notices go with the message; with no message of the user\'s, they are the message', () => {

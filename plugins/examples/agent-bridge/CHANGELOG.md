@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.2
+
+- Published by DreamfallSerena.
+- The chat mode you pick applies to Claude Code. In Plan it plans with Claude Code's own plan mode and changes nothing; its plan shows as Breezell's plan card, which you can edit, and Execute has Claude Code carry it out in Agent mode. In Analyze it reads and answers, in Chat it answers; neither changes a file or runs a command. Needs Breezell 1.4.66 or newer.
+- What Claude Code uses shows in Breezell: the context ring under the chat shows how much of its model's context the conversation takes, Box › Token usage lists its requests by model (its subagents' models too), and each reply carries its token count. Needs Breezell 1.4.66 or newer.
+- Manual compress on the context ring compresses Claude Code's own context, in its session (its /compact), showing "Compressing…" as for Breezell's own models. The ring then shows the size Claude Code counts after it. When Claude Code compresses by itself because its context is full, the chat shows "Condensing" meanwhile, as it does for Breezell's own models. Needs Breezell 1.4.66 or newer.
+- Your MCP servers in Breezell work in Claude Code. Breezell runs them with its own connections, so a server already signed in, or one on Windows while Claude Code runs in WSL, just works. Turning a server or tool off in Breezell turns it off for Claude Code too, Plan and Chat use none (as for Breezell's own models), Auto-approve MCP tools decides as usual, and each call shows as Breezell's own MCP step of that server. A new switch on the plugin's page, "Use Claude Code's own MCP servers" (on by default), keeps or leaves out the MCP servers Claude Code has of its own. Needs Breezell 1.4.66 or newer.
+- When Claude Code asks you something, Breezell's question card shows its questions and options, with room for your own answer, and Claude Code gets what you picked. It waits for you even with auto-approve on; Skip tells Claude Code you skipped. Needs Breezell 1.4.66 or newer.
+- Claude Code no longer asks before reading or searching files outside the project, fetching a page or searching the web, as Breezell's own models don't. Its own MCP tools still follow Auto-approve MCP tools. A plan it makes by itself in Agent mode goes ahead, as in Breezell's Agent mode.
+- Files you attach from outside the project are read without asking: you gave them.
+- Pictures you paste and PDFs you attach in Breezell's chat go to Claude Code with your message, and it sees them. What you drag in from the Explorer reaches it too: files and folders by their path, selected code with its lines, and problems, terminal output or quoted messages as text. Needs Breezell 1.4.66 or newer.
+- Your Breezell rules for the project go to Claude Code once, when a conversation starts, as standing instructions beside its CLAUDE.md, not again with each message. A change is told once, with your next message. Each project gets its own rules. Needs Breezell 1.4.66 or newer.
+
 ## 1.0.1
 
 - The README said chatting needs a paid Breezell plan. It does not: a signed-in Breezell account is enough.

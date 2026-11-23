@@ -3,11 +3,10 @@
 	"publisher": "breezell",
 	"displayName": "%displayName%",
 	"description": "%description%",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"license": "MIT",
 	"author": {
-		"name": "Breezell",
-		"url": "https://breezell.com"
+		"name": "DreamfallSerena"
 	},
 	"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/agent-bridge",
 	"icon": "media/icon.png",
@@ -126,6 +125,19 @@
 										"zh-CN": "开启"
 									}
 								}
+							},
+							{
+								"setting": "agentBridge.claudeCode.ownMcpServers",
+								"title": "Use Claude Code's own MCP servers",
+								"l10n": {
+									"zh-TW": "使用 Claude Code 自己設定的 MCP 伺服器",
+									"zh-CN": "使用 Claude Code 自己配置的 MCP 服务器"
+								},
+								"description": "Your MCP servers in Breezell are always offered to Claude Code, run by Breezell. On: the MCP servers Claude Code has of its own (its settings, its plugins, your claude.ai connectors) are offered too. Off: only Breezell's.",
+								"descriptionL10n": {
+									"zh-TW": "你在 Breezell 設定的 MCP 伺服器一律會提供給 Claude Code，由 Breezell 執行。開啟：Claude Code 自己的 MCP 伺服器（它的設定、它的外掛、你在 claude.ai 的連接器）也一併提供。關閉：只用 Breezell 的。",
+									"zh-CN": "你在 Breezell 配置的 MCP 服务器一律会提供给 Claude Code，由 Breezell 执行。开启：Claude Code 自己的 MCP 服务器（它的配置、它的插件、你在 claude.ai 的连接器）也一并提供。关闭：只用 Breezell 的。"
+								}
 							}
 						]
 					}
@@ -158,6 +170,12 @@
 					"default": false,
 					"scope": "application",
 					"description": "%config.deleteSessions%"
+				},
+				"agentBridge.claudeCode.ownMcpServers": {
+					"type": "boolean",
+					"default": true,
+					"scope": "application",
+					"description": "%config.ownMcpServers%"
 				}
 			}
 		}
