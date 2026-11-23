@@ -108,6 +108,18 @@ spent, subagents included (Breezell newer than 1.4.56); checks that run beside a
 | Member | Permission | What it is |
 |---|---|---|
 | `onDidOpenSurface` | none (the page is declared) | One of the plugin's pages opened: `surfaceId`, `context`, `postMessage(m)`, `onDidReceiveMessage`, `onDidClose`, `screenRect()`. See [Pages](ui.md#pages) |
+| `setSignInStatus(tileId, status)` | `ui.contribute` | How one of its sign-in tiles' connections stands: `connected`, `busy`, `detail`, `account` rows, `usage` bars; `undefined` forgets it. See [Sign-in tiles](ui.md#sign-in-tiles-new) |
+
+## `agents`
+
+All need `chat.agent` and a Breezell newer than 1.4.64. See [An agent of your own](own-agent.md).
+
+| Member | Permission | What it is |
+|---|---|---|
+| `register(tileId, agent)` | `chat.agent` | The plugin answers the conversations on its tile's models: `agent.runTurn(turn, reply, token)`, and `stopSubagent(conversationId, toolId)`. The user is asked for `chat.agent` the first time. One per tile |
+| `setModels(tileId, models)` | `chat.agent` | The models it answers with now, in the model picker under the tile; they replace the ones listed before |
+| `importConversation(tileId, conversation)` | `chat.agent` | One of the agent's own conversations (one session) into the window that has its folder open: `created`, `updated`, `unchanged`, `deleted`, `busy` or `elsewhere` |
+| `onDidDeleteConversations` | `chat.agent` | Conversations of its agents the user deleted, with their sessions and folders |
 
 ## `windows`
 

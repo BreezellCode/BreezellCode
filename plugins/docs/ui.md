@@ -24,6 +24,7 @@ it declares here that it does not know.
 | Variants | `ui.variants`, `when` | `ui.modify` | Looks that follow one of the plugin's own settings |
 | Fences | `ui.renderers` | `chat.render` | A code fence of a language drawn by one of its pages |
 | Modes | `ui.modes` | `ui.contribute` | An entry in the mode picker: a built-in mode plus the plugin's instructions |
+| Sign-in tiles | `ui.signIns` | `ui.contribute` | A tile on Box › Models › Sign in for a service the plugin connects to *(new)* |
 
 A plugin needs the permission whichever list it is in (`permissions` or `optionalPermissions`), and
 `validate` says when one is missing. An entry that does not pass is left out and the rest stay, so one
@@ -369,3 +370,78 @@ want the same language, the plugin whose id sorts first has it.
 billing are all that mode's, and the file's text (up to 8,000 characters) is added to what the AI is told
 while the mode is picked. The modes behind an unlock cannot be a base. The mode ends when the picker moves
 to another mode, and it does not come back by itself. At most 4 per plugin.
+
+## Sign-in tiles *(new)*
+
+A tile on **Box › Models › Sign in**, beside Breezell's own sign-ins, for a service or tool the plugin
+connects to: a switch, the plugin's note, and what the plugin says of the connection. Nothing on it can be
+typed into, so a tile never takes a password or a key: the user signs in to the service in its own app,
+and the plugin connects to that. Needs a Breezell newer than 1.4.64; at most 2 tiles per plugin.
+
+```json
+"contributes": {
+	"configuration": {
+		"properties": {
+			"myService.enabled": { "type": "boolean", "default": false, "scope": "application", "description": "Connect My Service" },
+			"myService.deleteThere": { "type": "boolean", "default": false, "scope": "application", "description": "Also delete there" }
+		}
+	},
+	"commands": [
+		{ "command": "myService.check", "title": "Check My Service Again" },
+		{ "command": "myService.sync", "title": "Sync My Service" }
+	],
+	"breezell": {
+		"ui": {
+			"signIns": [{
+				"id": "myService", "title": "My Service", "icon": "plug",
+				"setting": "myService.enabled", "switchTitle": "Connect My Service",
+				"description": "Sign in to My Service in its own app first; Breezell never asks for your password.",
+				"consent": { "title": "Connect My Service?", "message": "What it reads and where it goes.", "agree": "Connect" },
+				"command": "myService.check",
+				"actions": [{ "title": "Sync now", "command": "myService.sync", "description": "Brings your items in." }],
+				"options": [{
+					"setting": "myService.deleteThere", "title": "Also delete there",
+					"description": "Deleting here also deletes it in My Service.",
+					"confirm": { "title": "Also delete in My Service?", "message": "That cannot be undone." }
+				}]
+			}]
+		}
+	}
+}
+```
+
+| Field | What it is |
+|---|---|
+| `id` | The tile's id, for `setSignInStatus`, `agents` and a launcher |
+| `title`, `l10n` | Its name (40 characters), not named after Breezell |
+| `icon` | A codicon's name. A tile takes no image: a brand's logo is not the plugin's to show |
+| `setting` | One of the plugin's own boolean settings, `false` by default: what the switch turns. The user turns it on |
+| `switchTitle`, `switchL10n` | What the switch says |
+| `description`, `descriptionL10n` | A note shown whatever the state (600 characters) |
+| `consent` | Asked before the switch turns on: `title`, `message` (1,200 characters), `agree`, with `l10n`, `messageL10n`, `agreeL10n` |
+| `command` | One of the plugin's commands: what the page's **Check again** runs |
+| `actions` | Up to 3 buttons on its page while connected, each running one of the plugin's commands; `description` is said under the switches and on the button's tooltip |
+| `options` | Up to 3 more switches while the tile's is on, each over another boolean setting of the plugin's own; `confirm` asks before one turns on |
+| `agent` | `true`: the connection answers conversations, see [An agent of your own](own-agent.md) |
+
+While the switch is on, the plugin says how the connection stands with
+`vscode.breezell.ui.setSignInStatus(tileId, status)`; `undefined` forgets it, and so does an extension host
+that stops:
+
+```ts
+await vscode.breezell.ui.setSignInStatus('myService', {
+	connected: true,
+	account: [{ label: 'Email', value: 'me@example.com' }, { label: 'Plan', value: 'Pro' }],
+	usage: [{ label: 'This week', percent: 42, detail: 'Resets Monday, 9:00' }],
+});
+```
+
+- `busy`: still finding out; `detail`: one line under the state, such as why it is not connected (300
+  characters).
+- `account`: up to 8 rows of a label (40 characters) and a value (160), while connected.
+- `usage`: up to 6 bars of a label (40 characters), a percent from 0 to 100 and a line under it (120),
+  such as when it resets. Breezell colours a bar from 70% and from 90%.
+- Every text is shown as one plain line. Say nothing, and run nothing, while the switch is off.
+- `"launcher": { "signIn": "myService" }` gives the plugin a page in Box: its tile's page (see
+  [Opening a plugin](manifest.md#opening-a-plugin)).
+

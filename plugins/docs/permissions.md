@@ -23,6 +23,7 @@ each plugin declares before it is installed.
 | `editor.read` | dangerous | The plugin asks with `requestPermission`. A plugin is an extension, so VS Code's API reaches open files whatever this says: this is how it says that it does, and how the user tells it not to |
 | `chat.input` | dangerous | Asked for the first time the plugin reads the chat box |
 | `chat.intercept` | dangerous | Asked when the plugin registers a send handler |
+| `chat.agent` | dangerous | Asked the first time the plugin registers an agent: in conversations where the user picked one of its models, what they send goes to the plugin, which writes the replies (Breezell newer than 1.4.64) |
 | `ui.contribute` | normal | On from the start; the user can turn it off, which takes the plugin's buttons, pages and modes out of Breezell's screens |
 | `ui.modify` | dangerous | Asked when a plugin that declares `ui.patches`, `ui.tokens`, `ui.variants`, `ui.fonts`, `ui.stylesheet`, a companion or a page in the title bar first runs |
 | `chat.render` | dangerous | Asked when a plugin that declares `ui.renderers` first runs: a drawn code fence hands the plugin its text |
@@ -45,6 +46,11 @@ each plugin declares before it is installed.
   conversation; its messages are billed like the user's own.
 - `chat.read` also says how many commands a conversation runs in the background, and the tokens its
   replies used as the provider reported them: nothing about money, plans or quota.
+- `chat.agent` gives the plugin the conversations where the user picked one of its models: each message
+  sent with that model, what Breezell recalls for it, and what was said there before that the agent has
+  not seen. Never other conversations. The agent's tool calls go through Breezell's approval cards when
+  it asks, and answering with a plugin's agent needs a plan that includes Custom API. See
+  [An agent of your own](own-agent.md).
 - `providers.read` hands out the custom APIs' keys: a plugin can call those APIs itself, outside
   Breezell, and the providers bill the user. It works only for an account whose Breezell plan
   includes Custom API; otherwise the call fails with `BreezellPlanRequired` and the user is not

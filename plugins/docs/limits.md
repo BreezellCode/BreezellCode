@@ -13,6 +13,7 @@ What Breezell allows a plugin, in one place. Pages explain each.
 | Tool call handler | 3 seconds per plugin, 6 for all; a refusal's reason 500 characters |
 | Agent tools | 16 per plugin; a description 2,000 characters, a schema 16,000; 5 minutes per call; a result 400,000 characters |
 | Rules | 8,000 characters per file, 24,000 for all plugins |
+| Agents (`chat.agent`) | 32 models per tile (an id 120 characters, a title 60, a description 160); a piece of text 400,000 characters; a tool call's input and output 200,000 each, its title 300; a reason to ask 600; history 60,000 characters; an imported conversation's newest 2,000 messages, a title 120; a view's file text 400,000, 100 edits |
 | Restart | A reason 300 characters; after **Later**, 30 minutes of quiet; forcing once per plugin version, waiting up to 10 minutes for a reply to end |
 
 ## Screens (`contributes.breezell.ui`)
@@ -32,3 +33,4 @@ What Breezell allows a plugin, in one place. Pages explain each.
 | Modes | 4; instructions 8,000 characters |
 | Settings in Feature Options | 12; 2 to 6 choices; a text 200 characters |
 | Descriptions | 200 characters |
+| Sign-in tiles | 2; a title 40 characters, a note 600, a consent 1,200; 3 actions and 3 options each. At run time: a detail 300, 8 account rows (label 40, value 160), 6 usage bars (label 40, detail 120) |

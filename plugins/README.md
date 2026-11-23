@@ -58,6 +58,7 @@ A Breezell plugin is a VS Code extension with a `breezell` object in its `packag
 | **Screens** | Buttons, pages, restyled parts, drawn code fences and modes in Breezell's own screens | [Desk Pet](examples/pet) | — |
 | **Companion** | A pet on the chat box that follows what the AI is doing | [Desk Pet](examples/pet) | — |
 | **Long-running** | Keeps a conversation going until something is done, with limits and a page of its own | [Goal](examples/goal) | — |
+| **Agent** | Answers conversations with an agent of its own (a command-line agent the user signed in to), from a tile on Box › Models › Sign in, with Breezell's terminal, edits and review for it | [Agent Bridge](examples/agent-bridge) | — |
 
 The kinds combine: one plugin can bring skills, a panel, AI commands and a window. For a large plugin
 with its own settings page, data downloaded from a GitHub release and a part installed in the system, see
@@ -122,6 +123,8 @@ The typings are in [`devkit/breezell.d.ts`](devkit/breezell.d.ts); the templates
 | `breezell.chat.readInput()` | `chat.input` | What is in the chat box, its part before the caret, and the recent messages of the conversation |
 | `breezell.chat.registerSendHandler(handler)` | `chat.intercept` | See each message before it is sent: change it or stop it (see [A message before it is sent](docs/chat.md#a-message-before-it-is-sent)) |
 | `breezell.ui.onDidOpenSurface` | — (the page is declared in `package.json`) | One of the plugin's pages opened; returns it with `context`, `postMessage`, `onDidReceiveMessage`, `onDidClose` (see [Changing Breezell's screens](docs/ui.md)) |
+| `breezell.ui.setSignInStatus(tileId, status)` | `ui.contribute` | How the connection of one of its tiles on Box › Models › Sign in stands: connected, the account, usage bars (see [Sign-in tiles](docs/ui.md#sign-in-tiles-new)) |
+| `breezell.agents.register(tileId, agent)`, `setModels`, `importConversation`, `onDidDeleteConversations` | `chat.agent` | Answer the conversations on the plugin's own models with its agent: the reply, tool calls as Breezell's own steps, approvals, Breezell's terminal and edit tools for it, the agent's own conversations brought in (see [An agent of your own](docs/own-agent.md)) |
 
 
 Every call with its options, results, errors and limits: [API reference](docs/api.md). What each permission
@@ -142,7 +145,8 @@ Start with [Getting started](docs/getting-started.md), then read the page for wh
 | [The chat](docs/chat.md) | Turn events, reading conversations, sending, stopping, work over many turns, a message before it is sent |
 | [Models and providers](docs/models.md) | The user's models: requests, streaming, images, JSON; the model picker; custom APIs |
 | [The agent](docs/agent.md) | Packs (skills, rules, MCP servers), agent tools, watching and refusing the agent's tool calls |
-| [Breezell's screens](docs/ui.md) | Buttons, the slash menu, pages, a companion, settings, patches, tokens, fonts, a stylesheet, variants, code fences, modes |
+| [An agent of your own](docs/own-agent.md) | Answering conversations with an agent the plugin runs: its models in the picker, turns, tool calls, approvals, Breezell's tools for it, sessions |
+| [Breezell's screens](docs/ui.md) | Buttons, the slash menu, pages, a companion, settings, patches, tokens, fonts, a stylesheet, variants, code fences, modes, sign-in tiles |
 | [Windows](docs/windows.md) | Windows of the plugin's own, also without an editor |
 | [Restarting Breezell](docs/restart.md) | Asking for a restart, after an install or an update too |
 | [Translations](docs/translations.md) | The README, name, description and commands in other languages |

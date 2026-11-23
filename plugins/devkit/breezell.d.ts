@@ -209,6 +209,286 @@ declare module 'vscode' {
 		export namespace ui {
 			/** One of this plugin's surfaces opened, or was already open when the plugin started listening. */
 			export const onDidOpenSurface: Event<PluginSurface>;
+			/**
+			 * `ui.contribute`: how one of the plugin's tiles in `contributes.breezell.ui.signIns` stands now,
+			 * shown on Box › Models › Sign in while its switch is on. `undefined` forgets what was said.
+			 * Text is shown as one plain line each. What was said goes when the extension host stops.
+			 * Breezell newer than 1.4.64.
+			 */
+			export function setSignInStatus(tileId: string, status: SignInStatus | undefined): Thenable<void>;
+		}
+
+		/**
+		 * `chat.agent`: answer the conversations whose model is one of the plugin's own. The tile in
+		 * `contributes.breezell.ui.signIns` declares `"agent": true`; the models listed with `setModels`
+		 * go in the chat model picker under it. A turn of such a conversation is not sent to a model by
+		 * Breezell: `runTurn` gets the user's message and writes the reply through `reply`. Breezell newer
+		 * than 1.4.64.
+		 */
+		export namespace agents {
+			/** The plugin answers its tile's conversations. The user is asked for chat.agent the first time. */
+			export function register(tileId: string, agent: Agent): Disposable;
+			/** The models it answers with now: they replace the ones listed before. */
+			export function setModels(tileId: string, models: readonly AgentModel[]): Thenable<void>;
+			/**
+			 * One of the agent's own conversations (one session) into Breezell: into the window that has
+			 * its folder open, as a conversation on the agent's model that goes on in that session. The same
+			 * session again adds only the messages after the last record the conversation shows: the newest
+			 * imported, or the `entry` a turn there returned. A conversation the user deleted stays deleted.
+			 */
+			export function importConversation(tileId: string, conversation: AgentConversation): Thenable<AgentImportStatus>;
+			/**
+			 * Conversations of the plugin's agents that the user deleted in Breezell, with their sessions: the
+			 * plugin may remove its own copies, as its own settings say (only Breezell's copy is gone otherwise).
+			 */
+			export const onDidDeleteConversations: Event<AgentDeletedConversations>;
+		}
+
+		export interface AgentDeletedConversations {
+			readonly tileId: string;
+			/** `folder`: the folder (a URI as text) the conversation belonged to, when known. */
+			readonly conversations: readonly { readonly session: string; readonly folder?: string }[];
+		}
+
+		/**
+		 * `created`: a new conversation; `updated`: it got the session's newer messages; `unchanged`: nothing new
+		 * (or no record to go on from); `deleted`: the user deleted it; `busy`: it runs a turn now, try later;
+		 * `elsewhere`: this window does not have its folder open.
+		 */
+		export type AgentImportStatus = 'created' | 'updated' | 'unchanged' | 'deleted' | 'busy' | 'elsewhere';
+
+		export interface AgentConversation {
+			readonly session: string;
+			/** The folder it was in, a URI as text, as Breezell names the window's folders. */
+			readonly folder: string;
+			readonly title?: string;
+			/** One of the listed model ids; the first listed otherwise. */
+			readonly model?: string;
+			/** Oldest first, at most the newest 2000. `entry` is the id of the agent's record each comes from. */
+			readonly messages: readonly AgentConversationMessage[];
+		}
+
+		export type AgentConversationMessage =
+			| { readonly entry: string; readonly role: 'user'; readonly text: string; readonly at?: number }
+			| { readonly entry: string; readonly role: 'assistant'; readonly text: string; readonly reasoning?: string; readonly at?: number }
+			| { readonly entry: string; readonly role: 'tool'; readonly id: string; readonly name: string; readonly title?: string; readonly input?: Record<string, unknown>; readonly status: 'done' | 'error'; readonly output?: string; readonly view?: AgentToolView; readonly at?: number;
+				/** A subagent call's subagent (`view.kind` 'subagent'), as the agent kept it: its task first, then its messages (Breezell gives it its own page). */
+				readonly subagent?: { readonly messages: readonly AgentConversationMessage[] } };
+
+		export interface AgentModel {
+			/** Letters, digits and `._:@+-[]`, at most 120 characters. */
+			readonly id: string;
+			/** At most 60 characters. */
+			readonly title: string;
+			readonly description?: string;
+			/** Whose model it is, when it is one Breezell knows ('claude'): the picker shows Breezell's own icon of its maker. */
+			readonly family?: 'claude';
+			/** The effort levels it takes: the model menu offers them, and a turn says the one picked (`AgentTurn.effort`). */
+			readonly efforts?: readonly ('low' | 'medium' | 'high' | 'xhigh' | 'max')[];
+		}
+
+		export interface AgentAttachment {
+			readonly name: string;
+			readonly kind: 'file' | 'folder' | 'image' | 'other';
+			/** Where it is on this computer, for a file or a folder. */
+			readonly path?: string;
+		}
+
+		/** A turn of a conversation whose model is one of the plugin's. */
+		export interface AgentTurn {
+			readonly conversationId: string;
+			/** The id of the model picked, one of those listed. */
+			readonly model: string;
+			/** What the user wrote. */
+			readonly text: string;
+			readonly attachments: readonly AgentAttachment[];
+			/** The conversation's folders (URIs as text), the one it works in first. */
+			readonly folders: readonly string[];
+			/** What the plugin said of its session (`reply.session` or `session` in its result) in this conversation's last turn. */
+			readonly session?: string;
+			/** The effort level the user picked for this model, one of its `efforts`; none when the user picked none. */
+			readonly effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+			/**
+			 * The conversation's messages the agent has not seen, oldest first: those another model answered
+			 * since its last turn, or all of them when there is no `session` to go on with (none yet, or the
+			 * conversation was rewound or edited since). Tool calls are notes such as `[Breezell used read_file: a.ts (done)]`.
+			 */
+			readonly history?: readonly AgentHistoryEntry[];
+			/**
+			 * What Breezell remembers that bears on this message (its memories, as Breezell's own model gets them),
+			 * for the agent's prompt. Absent when none were found, and when the turn goes on (`continuing`).
+			 */
+			readonly memories?: string;
+			/**
+			 * The turn goes on in `session` after the agent's model request failed (`after`: that error), as Breezell
+			 * sends its own requests again (its waits and count, its countdown): continue from where it stopped.
+			 * `text` is the message it was answering, which the session has already; there are no attachments.
+			 */
+			readonly continuing?: { readonly after: string };
+			/**
+			 * Breezell's notices for the agent with this message: how commands it ran in Breezell's terminal
+			 * (`run_terminal_cmd`) ended in the background. A turn Breezell starts for them alone has an empty `text`.
+			 */
+			readonly notices?: readonly string[];
+		}
+
+		export interface AgentHistoryEntry {
+			readonly role: 'user' | 'assistant';
+			readonly text: string;
+		}
+
+		/** A tool call of the agent's own: tell it `running`, then `done` or `error`, under the same id. */
+		export interface AgentToolEvent {
+			readonly id: string;
+			readonly name: string;
+			/** One line saying what it does, such as the file or the command. */
+			readonly title?: string;
+			readonly input?: Record<string, unknown>;
+			/** `running` again tells how it goes (a subagent's step). */
+			readonly status: 'running' | 'done' | 'error';
+			readonly output?: string;
+			/** What it is, so Breezell draws it as its own tool of that kind; without one it shows under its own name. */
+			readonly view?: AgentToolView;
+			/** The id of the subagent call (`view.kind: 'subagent'`) this one is part of. */
+			readonly parent?: string;
+		}
+
+		/**
+		 * A tool call as Breezell draws its own: a file read, an edit (what it replaced, for its diff), a new
+		 * file, a command and what it printed, a text search, the files a pattern found, a folder listed, a page
+		 * fetched, a web search, the agent's to-do list, a subagent (its task, the step it is on, and its report
+		 * when done). A file is drawn as Breezell's own only with its `uri` (as Breezell opens it: a `file:` or
+		 * `vscode-remote:` URI); `path` is the agent's name of it. The agent's own file changes are its own: Breezell
+		 * shows them, and never reviews, keeps or undoes them as it does its own edits; changes made with Breezell's
+		 * edit tools (`callBreezellTool('edit_file')`) are reviewed, kept and undone as Breezell's own.
+		 */
+		export type AgentToolView =
+			| { readonly kind: 'read'; readonly path: string; readonly uri?: string; readonly startLine?: number; readonly endLine?: number; readonly totalLines?: number }
+			| { readonly kind: 'edit'; readonly path: string; readonly uri?: string; readonly edits?: readonly AgentToolEdit[] }
+			| { readonly kind: 'create'; readonly path: string; readonly uri?: string; readonly content?: string }
+			| { readonly kind: 'command'; readonly command: string; readonly description?: string; readonly background?: boolean; readonly output?: string }
+			| { readonly kind: 'search'; readonly query: string; readonly path?: string }
+			| { readonly kind: 'files'; readonly pattern: string; readonly files?: readonly string[] }
+			| { readonly kind: 'list'; readonly path: string; readonly uri?: string }
+			| { readonly kind: 'fetch'; readonly url: string }
+			| { readonly kind: 'webSearch'; readonly query: string }
+			| { readonly kind: 'todos'; readonly items: readonly { readonly text: string; readonly status: 'pending' | 'in_progress' | 'completed' }[] }
+			| { readonly kind: 'subagent'; readonly description: string; readonly prompt?: string; readonly agentType?: string; readonly step?: string; readonly report?: string; readonly background?: boolean; readonly stopped?: boolean; /** The model it runs on: one of the agent's models (AgentModel.id). */ readonly model?: string }
+			/** A lookup in Breezell's memories (`callBreezellTool('memories_recall', …)`): `resultType` and `count` as its result said them. */
+			| { readonly kind: 'memories'; readonly query?: string; readonly ids?: readonly string[]; readonly resultType?: 'search' | 'list' | 'open' | 'l0_index'; readonly count?: number };
+
+		/** One of Breezell's tools an agent may call through its plugin: its name and its parameters (a JSON schema). */
+		export interface AgentBreezellTool {
+			readonly name: string;
+			readonly inputSchema: { readonly type: 'object'; readonly properties: { readonly [key: string]: unknown }; readonly required: readonly string[] };
+			/** `run_terminal_cmd`: the system and shell Breezell's terminal runs its commands in ("windows | PowerShell"); tell the agent. */
+			readonly shell?: string;
+		}
+
+		/** What a call of one of Breezell's tools returned: the text for the agent's model; for its row the kind and count. */
+		export interface AgentBreezellToolResult {
+			readonly text: string;
+			readonly isError?: boolean;
+			readonly resultType?: string;
+			readonly count?: number;
+		}
+
+		/** One replacement in a file, as Breezell's edit card draws it. */
+		export interface AgentToolEdit {
+			readonly oldString: string;
+			readonly newString: string;
+			readonly replaceAll?: boolean;
+		}
+
+		/** Asking before one of the agent's tool calls runs (the call told as `running` first, under `toolId`). */
+		export interface AgentApprovalRequest {
+			readonly toolId: string;
+			readonly name: string;
+			readonly title?: string;
+			readonly input?: Record<string, unknown>;
+			/** Which of the user's auto-approve settings decides it: file changes, commands, or the rest. */
+			readonly kind: 'edit' | 'command' | 'other';
+			readonly reason?: string;
+			/** What the call is, as for AgentToolEvent.view: the card shows it as Breezell's own (a diff, a command). */
+			readonly view?: AgentToolView;
+		}
+
+		export interface AgentReply {
+			/** More of the reply; `parent`: the subagent call whose words they are. */
+			text(text: string, parent?: string): void;
+			/** More of its reasoning; `parent` as for text. */
+			reasoning(text: string, parent?: string): void;
+			/**
+			 * How far a thought whose text the model keeps hidden has gone (its estimated tokens, the total so far):
+			 * Breezell shows it thinks, for how long, and how much. Not for a thought whose text you give with reasoning.
+			 */
+			thinking(tokens: number): void;
+			tool(tool: AgentToolEvent): void;
+			/** The agent's own session: the next turn of the conversation gets it as `AgentTurn.session`. */
+			session(id: string): void;
+			/**
+			 * The agent's model request failed and it sends it again by itself in `delayMs` (attempt `attempt` of
+			 * `maxAttempts`; `error`: its kind of failure): Breezell shows its reconnecting countdown until the agent
+			 * goes on (its next event).
+			 */
+			retrying?(retry: { readonly attempt: number; readonly maxAttempts: number; readonly delayMs: number; readonly error?: string }): void;
+			/**
+			 * Breezell's own tools the agent may call in this turn (now: `memories_recall`, the user's memories as Breezell's own model looks them up;
+			 * `run_terminal_cmd`, a command in Breezell's terminal; `await`, waiting on one in the background; `edit_file` and `write_to_file`,
+			 * changes through Breezell's editor that the user reviews as Breezell's own). Offer them to the agent, and run its calls with callBreezellTool.
+			 */
+			breezellTools?(): Thenable<readonly AgentBreezellTool[]>;
+			/**
+			 * Runs one of them for this conversation; a failure is its result (`isError`), not a thrown error. `toolUseId`:
+			 * the agent's own id of the call (its tool event's `id`), so its row shows what Breezell ran (a command's terminal, a change's review step).
+			 */
+			callBreezellTool?(name: string, input: Record<string, unknown>, toolUseId?: string): Thenable<AgentBreezellToolResult>;
+			/** Shows Breezell's approval card unless the user's auto-approve settings allow it; false when refused or the turn stopped. */
+			approve(request: AgentApprovalRequest): Thenable<boolean>;
+		}
+
+		/**
+		 * How a turn ended. `apiError`: the error came from the agent's model request, of this kind (rate_limit,
+		 * overloaded, server_error, unknown for a dropped connection, stalled, or a kind a new attempt cannot get
+		 * past, such as billing_error): Breezell then sends the turn on in its `session` (AgentTurn.continuing)
+		 * when its own rules would send such a request of its own again.
+		 */
+		export interface AgentTurnResult {
+			readonly session?: string;
+			readonly error?: string;
+			readonly entry?: string;
+			readonly apiError?: string;
+		}
+
+		export interface Agent {
+			/**
+			 * Answers a turn; `token` is cancelled when the user stops it. Throwing, or `error`, shows the error
+			 * in the conversation after what was written; `session` is kept either way. `entry`: the id of the
+			 * last record of the agent's own this turn made, so that importing the session later
+			 * (importConversation) adds only what came after it.
+			 */
+			runTurn(turn: AgentTurn, reply: AgentReply, token: CancellationToken): Thenable<AgentTurnResult | void>;
+			/**
+			 * Stops one subagent of the turn running in `conversationId` (`toolId`: its call, the AgentToolEvent with
+			 * `view.kind` 'subagent'); the turn goes on. False, or none: it cannot, and the user is told to stop the turn.
+			 */
+			stopSubagent?(conversationId: string, toolId: string): boolean | Thenable<boolean>;
+		}
+
+		/** What a sign-in tile's page shows of the plugin's connection (`ui.setSignInStatus`). */
+		export interface SignInStatus {
+			readonly connected: boolean;
+			/** Still finding out: the page says so rather than connected or not. */
+			readonly busy?: boolean;
+			/** One line under the state, such as why it is not connected. At most 300 characters. */
+			readonly detail?: string;
+			/** The account, while connected: at most 8 rows of a label (40 characters) and a value (160). */
+			readonly account?: readonly { readonly label: string; readonly value: string }[];
+			/**
+			 * How much of a limit is used, while connected: at most 6 bars of a label (40 characters), a
+			 * percent from 0 to 100, and a line under it (120 characters), such as when it resets.
+			 */
+			readonly usage?: readonly { readonly label: string; readonly percent: number; readonly detail?: string }[];
 		}
 
 		/** What the command of a button in `contributes.breezell.ui.buttons` receives: where it was pressed. */

@@ -25,7 +25,8 @@ Typings: [`devkit/breezell.d.ts`](https://github.com/BreezellCode/BreezellCode/b
 | [The chat](chat.md) | Turn events, reading conversations, sending, stopping, work over many turns, a message before it is sent |
 | [Models and providers](models.md) | The user's models: requests, streaming, images, JSON; the model picker; custom APIs |
 | [The agent](agent.md) | Packs (skills, rules, MCP servers), agent tools, watching and refusing the agent's tool calls |
-| [Breezell's screens](ui.md) | Buttons, the slash menu, pages, a companion, settings, patches, tokens, fonts, a stylesheet, variants, code fences, modes |
+| [An agent of your own](own-agent.md) | Answering conversations with an agent the plugin runs: its models in the picker, turns, tool calls, approvals, Breezell's tools for it, sessions |
+| [Breezell's screens](ui.md) | Buttons, the slash menu, pages, a companion, settings, patches, tokens, fonts, a stylesheet, variants, code fences, modes, sign-in tiles |
 | [Windows](windows.md) | Windows of the plugin's own, also without an editor |
 | [Restarting Breezell](restart.md) | Asking for a restart, after an install or an update too |
 | [Translations](translations.md) | The README, name, description and commands in other languages |

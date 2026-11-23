@@ -29,7 +29,7 @@ import { fileURLToPath } from 'node:url';
 
 const DEVKIT_VERSION = '1.0.0';
 const API_VERSION = 1;
-const PERMISSIONS = ['chat.events', 'models.request', 'models.select', 'chat.read', 'chat.send', 'chat.approve', 'providers.read', 'providers.list', 'agent.tools', 'agent.hooks', 'app.restart', 'app.forceRestart', 'editor.read', 'chat.input', 'chat.intercept', 'chat.render', 'ui.contribute', 'ui.modify', 'ui.overlay', 'activity.read'];
+const PERMISSIONS = ['chat.events', 'models.request', 'models.select', 'chat.read', 'chat.send', 'chat.approve', 'providers.read', 'providers.list', 'agent.tools', 'agent.hooks', 'app.restart', 'app.forceRestart', 'editor.read', 'chat.input', 'chat.intercept', 'chat.render', 'chat.agent', 'ui.contribute', 'ui.modify', 'ui.overlay', 'activity.read'];
 /**
  * What Breezell lets a plugin do to its screens (contributes.breezell.ui). Breezell checks all of this
  * again when it loads a plugin, and what fails there is left out: this is to tell you sooner.
@@ -620,6 +620,74 @@ function checkUiOptions(raw, pkg, errors) {
 	return good > 0;
 }
 
+/**
+ * Tiles on Box › Models › Sign in (ui.signIns), at most 2. Keep in step with readPluginSignIn in Breezell.
+ * Returns how many pass.
+ */
+function checkUiSignIns(list, pkg, errors) {
+	if (list.length > 2) {
+		errors.push('ui.signIns: at most 2');
+	}
+	const own = uiOwnSettings(pkg);
+	const commands = (Array.isArray(pkg.contributes?.commands) ? pkg.contributes.commands : pkg.contributes?.commands ? [pkg.contributes.commands] : []).map(c => c?.command);
+	const ids = new Set();
+	const settings = new Set();
+	let good = 0;
+	for (const s of list.slice(0, 2)) {
+		const where = `ui.signIns: ${JSON.stringify(s?.id ?? s)}`;
+		const schema = typeof s?.setting === 'string' ? own[s.setting] : undefined;
+		const titles = [s?.title, ...Object.values(s?.l10n && typeof s.l10n === 'object' ? s.l10n : {})].filter(t => typeof t === 'string');
+		if (!UI_ID.test(s?.id ?? '')) {
+			errors.push(`${where}: "id" must match ${UI_ID}`);
+		} else if (typeof s?.title !== 'string' || !s.title.trim()) {
+			errors.push(`${where} needs a title`);
+		} else if (titles.some(t => /breezell/i.test(t))) {
+			errors.push(`${where}: a title named after Breezell is not for a plugin`);
+		} else if (!UI_CODICON.test(s?.icon ?? '')) {
+			errors.push(`${where}: "icon" must be a codicon's name`);
+		} else if (!schema) {
+			errors.push(`${where}: "setting" must be one of the plugin's own, in contributes.configuration`);
+		} else if (/breezell/i.test(s.setting)) {
+			errors.push(`${where}: a setting named after Breezell is not for a plugin`);
+		} else if (schema.type !== 'boolean') {
+			errors.push(`${where}: "${s.setting}" must be a boolean`);
+		} else if (schema.default === true) {
+			errors.push(`${where}: "${s.setting}" must be off by default: the user turns it on`);
+		} else if (s.command !== undefined && /breezell/i.test(String(s.command))) {
+			errors.push(`${where}: "${s.command}" is Breezell's`);
+		} else if (s.command !== undefined && !commands.includes(s.command)) {
+			errors.push(`${where}: "command" must be one of the plugin's own, in contributes.commands`);
+		} else if (s.actions !== undefined && (!Array.isArray(s.actions) || s.actions.length > 3)) {
+			errors.push(`${where}: "actions" must be a list of at most 3`);
+		} else if ((s.actions ?? []).some(a => typeof a?.title !== 'string' || !a.title.trim())) {
+			errors.push(`${where}: each of "actions" needs a title`);
+		} else if ((s.actions ?? []).some(a => /breezell/i.test(String(a?.command)) || !commands.includes(a?.command))) {
+			errors.push(`${where}: "actions[].command" must be one of the plugin's own, in contributes.commands`);
+		} else if ((s.actions ?? []).some(a => [a.title, ...Object.values(a?.l10n && typeof a.l10n === 'object' ? a.l10n : {})].some(t => typeof t === 'string' && /breezell/i.test(t)))) {
+			errors.push(`${where}: a button named after Breezell is not for a plugin`);
+		} else if (s.options !== undefined && (!Array.isArray(s.options) || s.options.length > 3)) {
+			errors.push(`${where}: "options" must be a list of at most 3`);
+		} else if ((s.options ?? []).some(o => typeof o?.setting !== 'string' || o.setting === s.setting || own[o.setting]?.type !== 'boolean')) {
+			errors.push(`${where}: each of "options" needs a boolean "setting" of the plugin's own (contributes.configuration), other than the tile's`);
+		} else if ((s.options ?? []).some(o => typeof o?.title !== 'string' || !o.title.trim() || [o.title, ...Object.values(o?.l10n && typeof o.l10n === 'object' ? o.l10n : {})].some(t => typeof t === 'string' && /breezell/i.test(t)) || /breezell/i.test(o.setting))) {
+			errors.push(`${where}: each of "options" needs a title, and none named after Breezell`);
+		} else if ((s.options ?? []).some(o => o.confirm !== undefined && (typeof o.confirm?.title !== 'string' || !o.confirm.title.trim() || typeof o.confirm?.message !== 'string' || !o.confirm.message.trim()))) {
+			errors.push(`${where}: an option's "confirm" needs a title and a message`);
+		} else if (s.consent !== undefined && (typeof s.consent?.title !== 'string' || !s.consent.title.trim() || typeof s.consent?.message !== 'string' || !s.consent.message.trim())) {
+			errors.push(`${where}: "consent" needs a title and a message`);
+		} else if (ids.has(s.id)) {
+			errors.push(`${where}: the id is used twice`);
+		} else if (settings.has(s.setting)) {
+			errors.push(`${where}: "${s.setting}" already turns another tile`);
+		} else {
+			ids.add(s.id);
+			settings.add(s.setting);
+			good++;
+		}
+	}
+	return good;
+}
+
 function checkUi(ui, pkg, errors, dir) {
 	if (ui === undefined) {
 		return;
@@ -875,14 +943,18 @@ function checkUi(ui, pkg, errors, dir) {
 	if (slashCommands.length > 8) {
 		errors.push('ui.slashCommands: at most 8');
 	}
-	if (buttons.length || surfaces.some(s => s?.slot && !UI_OWN_SCREEN_SLOTS.includes(s.slot)) || modes.length || hasOptions || slashCommands.length) {
-		needs('ui.contribute', 'ui.buttons, ui.surfaces, ui.options, ui.modes and ui.slashCommands');
+	const signIns = checkUiSignIns(list('signIns'), pkg, errors);
+	if (buttons.length || surfaces.some(s => s?.slot && !UI_OWN_SCREEN_SLOTS.includes(s.slot)) || modes.length || hasOptions || slashCommands.length || signIns) {
+		needs('ui.contribute', 'ui.buttons, ui.surfaces, ui.options, ui.modes, ui.slashCommands and ui.signIns');
 	}
 	if (patches.length || companion || tokenSets || variantPatches || fonts.length || stylesheet) {
 		needs('ui.modify', 'ui.patches, ui.tokens, ui.variants, ui.fonts, ui.stylesheet, a companion and a page in the title bar');
 	}
 	if (renderers.length) {
 		needs('chat.render', 'ui.renderers');
+	}
+	if (list('signIns').some(s => s?.agent === true)) {
+		needs('chat.agent', 'a sign-in tile with "agent"');
 	}
 }
 
@@ -1153,9 +1225,11 @@ function checkPackage(pkg, { forMarket = false, nls, dir } = {}) {
 		if (declared.launcher !== undefined) {
 			const own = (pkg.contributes?.commands ?? []).map(c => c?.command);
 			const l = declared.launcher;
-			const ok = l && typeof l === 'object' && (typeof l.command === 'string' ? own.includes(l.command) : typeof l.window === 'string' && (declared.windows ?? []).some(w => w?.id === l.window));
+			const ok = l && typeof l === 'object' && (typeof l.command === 'string' ? own.includes(l.command)
+				: typeof l.window === 'string' ? (declared.windows ?? []).some(w => w?.id === l.window)
+					: typeof l.signIn === 'string' && (declared.ui?.signIns ?? []).some(s => s?.id === l.signIn));
 			if (!ok) {
-				errors.push('"contributes.breezell.launcher" needs "command" (one of the plugin\'s contributes.commands) or "window" (one of its windows); "sidebar": false keeps it out of the Box sidebar');
+				errors.push('"contributes.breezell.launcher" needs "command" (one of the plugin\'s contributes.commands), "window" (one of its windows) or "signIn" (one of its ui.signIns, shown as a page in Box); "sidebar": false keeps it out of the Box sidebar');
 			}
 		}
 		const inside = p => typeof p === 'string' && !!p && !p.startsWith('/') && !p.split(/[\\/]/).includes('..');

@@ -59,9 +59,12 @@ Users should not need a command to open a plugin. Declare how it opens:
 }
 ```
 
-- `command`: one of the plugin's own `contributes.commands` (Breezell refuses any other), or
-  `window`: one of its windows (`"launcher": { "window": "timer" }`).
+- `command`: one of the plugin's own `contributes.commands` (Breezell refuses any other),
+  `window`: one of its windows (`"launcher": { "window": "timer" }`), or
+  `signIn`: the page of one of its [sign-in tiles](ui.md#sign-in-tiles-new) in Box
+  (`"launcher": { "signIn": "myService" }`, Breezell newer than 1.4.64).
 - The plugin then gets an **Open** button in Breezell Console › Plugins (market card and Installed page).
 - `sidebar` (default `true`): it is also listed by name under **Plugins** in the Box sidebar. Clicking it
-  leaves Box for the editor and opens the plugin there (or opens its window). Set `false` to stay out of the list.
+  leaves Box for the editor and opens the plugin there (or opens its window; a `signIn` launcher opens its
+  page in Box). Set `false` to stay out of the list.
 - Plugins without an interface (packs, right-click commands) need no launcher.
