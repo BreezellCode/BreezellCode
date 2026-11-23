@@ -1,0 +1,179 @@
+{
+	"name": "agent-bridge",
+	"publisher": "breezell",
+	"displayName": "%displayName%",
+	"description": "%description%",
+	"version": "1.0.0",
+	"license": "MIT",
+	"author": {
+		"name": "Breezell",
+		"url": "https://breezell.com"
+	},
+	"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/agent-bridge",
+	"icon": "media/icon.png",
+	"engines": {
+		"vscode": "^1.90.0"
+	},
+	"extensionKind": [
+		"ui"
+	],
+	"categories": [
+		"AI",
+		"Chat"
+	],
+	"keywords": [
+		"claude code",
+		"agent",
+		"cli",
+		"connect"
+	],
+	"main": "./dist/extension.js",
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"breezell": {
+		"apiVersion": 1,
+		"permissions": [
+			"ui.contribute",
+			"chat.agent"
+		],
+		"source": "open"
+	},
+	"contributes": {
+		"breezell": {
+			"launcher": {
+				"signIn": "claudeCode",
+				"sidebar": true
+			},
+			"ui": {
+				"signIns": [
+					{
+						"id": "claudeCode",
+						"title": "Claude Code",
+						"icon": "sparkle",
+						"setting": "agentBridge.claudeCode.enabled",
+						"switchTitle": "Connect Claude Code",
+						"switchL10n": {
+							"zh-TW": "連接 Claude Code",
+							"zh-CN": "连接 Claude Code"
+						},
+						"description": "Anthropic's rules do not let other apps sign you in to a Claude account, and Breezell follows them, so it cannot sign you in directly. Download Claude Code, sign in to your account in Claude Code itself, and Breezell connects to it.",
+						"descriptionL10n": {
+							"zh-TW": "因為 Anthropic 的規定，我們需要遵守規則，因此無法採用直接登入帳號的方式。請自行下載 Claude Code，在 Claude Code 中登入帳號，再整合到 Breezell 中使用。",
+							"zh-CN": "因为 Anthropic 的规定，我们需要遵守规则，因此无法采用直接登录账号的方式。请自行下载 Claude Code，在 Claude Code 中登录账号，再集成到 Breezell 中使用。"
+						},
+						"consent": {
+							"title": "Connect Claude Code?",
+							"l10n": {
+								"zh-TW": "連接 Claude Code",
+								"zh-CN": "连接 Claude Code"
+							},
+							"message": "By agreeing, you confirm that:\n• you follow Anthropic's terms, and use the Claude Code you installed and signed in to yourself;\n• Breezell may read and use what Claude Code reports about its connection, your account (email, organization, plan, sign-in method, version) and your usage limits;\n• what you send in Breezell with a Claude Code model goes to your Claude Code, which works on it in that conversation's folder; when it asks before changing files or running commands, Breezell's auto-approve settings answer, or you do;\n• Breezell may read the Claude Code conversations of the projects you open in it, and show them in those projects' conversation lists.\nBreezell never reads, stores or passes on your Claude sign-in credentials.",
+							"messageL10n": {
+								"zh-TW": "同意即表示：\n• 你會遵守 Anthropic 的相關規定，並使用自己安裝、自己登入的 Claude Code；\n• 你同意 Breezell 讀取並使用 Claude Code 回報的連接狀態、帳號資訊（電子郵件、組織、訂閱等級、登入方式、版本）與用量；\n• 你在 Breezell 中用 Claude Code 模型送出的內容會交給你的 Claude Code，由它在該對話的資料夾中處理；它在修改檔案或執行命令前詢問時，由 Breezell 的自動核准設定或你來回答；\n• Breezell 可以讀取你在其中開啟的專案的 Claude Code 對話，並顯示在這些專案的對話清單中。\nBreezell 不會讀取、儲存或轉交你的 Claude 登入憑證。",
+								"zh-CN": "同意即表示：\n• 你会遵守 Anthropic 的相关规定，并使用自己安装、自己登录的 Claude Code；\n• 你同意 Breezell 读取并使用 Claude Code 报告的连接状态、账号信息（电子邮件、组织、订阅等级、登录方式、版本）与用量；\n• 你在 Breezell 中用 Claude Code 模型发送的内容会交给你的 Claude Code，由它在该对话的文件夹中处理；它在修改文件或运行命令前询问时，由 Breezell 的自动批准设置或你来回答；\n• Breezell 可以读取你在其中打开的项目的 Claude Code 对话，并显示在这些项目的对话列表中。\nBreezell 不会读取、存储或转交你的 Claude 登录凭证。"
+							},
+							"agree": "Agree",
+							"agreeL10n": {
+								"zh-TW": "同意",
+								"zh-CN": "同意"
+							}
+						},
+						"command": "agentBridge.claudeCode.recheck",
+						"agent": true,
+						"actions": [
+							{
+								"command": "agentBridge.claudeCode.sync",
+								"title": "Sync conversations",
+								"l10n": {
+									"zh-TW": "同步對話",
+									"zh-CN": "同步对话"
+								},
+								"description": "Brings the Claude Code conversations of the project open in this window into that project's conversation list; on the Agents page they show under that project. A window with no project open has nothing to bring in. A project's conversations also come in by themselves when it opens, and every few minutes.",
+								"descriptionL10n": {
+									"zh-TW": "把這個視窗所開專案的 Claude Code 對話，同步到該專案的對話清單；在 Agents 頁中，它們會顯示在所屬的專案底下。沒有開啟專案的視窗不會同步。專案開啟時和之後每隔幾分鐘也會自動同步。",
+									"zh-CN": "把这个窗口所开项目的 Claude Code 对话，同步到该项目的对话列表；在 Agents 页中，它们会显示在所属的项目下。没有打开项目的窗口不会同步。项目打开时和之后每隔几分钟也会自动同步。"
+								}
+							}
+						],
+						"options": [
+							{
+								"setting": "agentBridge.claudeCode.deleteSessions",
+								"title": "Delete in Claude Code too",
+								"l10n": {
+									"zh-TW": "刪除對話時，一併刪除 Claude Code 中的對話",
+									"zh-CN": "删除对话时，一并删除 Claude Code 中的对话"
+								},
+								"description": "On: deleting a conversation in Breezell also deletes that conversation in Claude Code (it no longer shows in claude --resume). Off: only Breezell's copy is deleted, and the conversation stays in Claude Code.",
+								"descriptionL10n": {
+									"zh-TW": "開啟：在 Breezell 刪除對話時，Claude Code 中的這段對話也會一併刪除（claude --resume 不會再列出）。關閉：只刪除 Breezell 這邊的聊天訊息，Claude Code 中的對話會保留。",
+									"zh-CN": "开启：在 Breezell 删除对话时，Claude Code 中的这段对话也会一并删除（claude --resume 不会再列出）。关闭：只删除 Breezell 这边的聊天消息，Claude Code 中的对话会保留。"
+								},
+								"confirm": {
+									"title": "Also delete in Claude Code?",
+									"l10n": {
+										"zh-TW": "也刪除 Claude Code 中的對話？",
+										"zh-CN": "也删除 Claude Code 中的对话？"
+									},
+									"message": "From now on, deleting a conversation in Breezell also deletes that conversation in Claude Code. A deleted conversation cannot be brought back.",
+									"messageL10n": {
+										"zh-TW": "從現在起，在 Breezell 刪除對話時，Claude Code 中的這段對話也會一併刪除。刪除後無法復原。",
+										"zh-CN": "从现在起，在 Breezell 删除对话时，Claude Code 中的这段对话也会一并删除。删除后无法恢复。"
+									},
+									"agree": "Turn on",
+									"agreeL10n": {
+										"zh-TW": "開啟",
+										"zh-CN": "开启"
+									}
+								}
+							}
+						]
+					}
+				]
+			}
+		},
+		"commands": [
+			{
+				"command": "agentBridge.claudeCode.recheck",
+				"title": "%command.recheck%",
+				"category": "%displayName%"
+			},
+			{
+				"command": "agentBridge.claudeCode.sync",
+				"title": "%command.sync%",
+				"category": "%displayName%"
+			}
+		],
+		"configuration": {
+			"title": "%displayName%",
+			"properties": {
+				"agentBridge.claudeCode.enabled": {
+					"type": "boolean",
+					"default": false,
+					"description": "%config.enabled%",
+					"scope": "application"
+				},
+				"agentBridge.claudeCode.deleteSessions": {
+					"type": "boolean",
+					"default": false,
+					"scope": "application",
+					"description": "%config.deleteSessions%"
+				}
+			}
+		}
+	},
+	"scripts": {
+		"build": "node tools/breezell-plugin.mjs build",
+		"typecheck": "tsc -p .",
+		"validate": "node tools/breezell-plugin.mjs validate",
+		"test": "node --test test/*.test.mjs",
+		"package:open": "npm run build && node tools/breezell-plugin.mjs pack --open",
+		"submit": "node tools/breezell-plugin.mjs submit"
+	},
+	"devDependencies": {
+		"@types/node": "^20.19.43",
+		"@types/vscode": "^1.90.0",
+		"esbuild": "^0.28.0",
+		"typescript": "^5.6.0"
+	}
+}

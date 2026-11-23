@@ -1,0 +1,52 @@
+{
+	"id": "breezell.agent-bridge",
+	"displayName": "Agent Bridge",
+	"description": "Connects Breezell to the Claude Code you installed and signed in to yourself, and lets you chat with it in Breezell. Shows on Box › Models › Sign in.",
+	"categories": [
+		"AI",
+		"Chat"
+	],
+	"tags": [
+		"claude code",
+		"agent",
+		"cli",
+		"connect"
+	],
+	"source": "open",
+	"repository": "https://github.com/BreezellCode/BreezellCode/tree/main/plugins/examples/agent-bridge",
+	"author": {
+		"name": "Breezell",
+		"url": "https://breezell.com"
+	},
+	"license": "MIT",
+	"icon": "packages/breezell.agent-bridge/icon.png",
+	"readme": "packages/breezell.agent-bridge/README.md",
+	"readmes": {
+		"zh-CN": "packages/breezell.agent-bridge/i18n/README.zh-CN.md",
+		"zh-TW": "packages/breezell.agent-bridge/i18n/README.zh-TW.md"
+	},
+	"l10n": {
+		"zh-CN": {
+			"displayName": "Agent Bridge",
+			"description": "把你自己安装、自己登录的 Claude Code 连接到 Breezell，并在 Breezell 中和它对话。显示在 Box › 模型 › 账号登录。"
+		},
+		"zh-TW": {
+			"displayName": "Agent Bridge",
+			"description": "把你自己安裝、自己登入的 Claude Code 連接到 Breezell，並在 Breezell 中和它對話。顯示在 Box › 模型 › 帳號登入。"
+		}
+	},
+	"versions": [
+		{
+			"version": "1.0.0",
+			"path": "packages/breezell.agent-bridge/1.0.0/breezell.agent-bridge-1.0.0.vsix",
+			"sha256": "aebbf9268482423c14e960cf2338b3ce8a3c9ba46fb4ec9c3c383f44aa947aae",
+			"size": 170184,
+			"apiVersion": 1,
+			"permissions": [
+				"ui.contribute",
+				"chat.agent"
+			],
+			"publishedAt": "2026-11-23T07:29:49.397Z"
+		}
+	]
+}

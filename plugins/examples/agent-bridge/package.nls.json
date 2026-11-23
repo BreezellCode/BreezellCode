@@ -1,0 +1,8 @@
+{
+	"displayName": "Agent Bridge",
+	"description": "Connects Breezell to the Claude Code you installed and signed in to yourself, and lets you chat with it in Breezell. Shows on Box › Models › Sign in.",
+	"command.recheck": "Check Claude Code Again",
+	"config.enabled": "Connect the Claude Code installed on this computer. Turn it on from Box › Models › Sign in, after agreeing to what it asks.",
+	"command.sync": "Sync Claude Code Conversations",
+	"config.deleteSessions": "Deleting a conversation in Breezell also deletes its Claude Code conversation. Off: only Breezell's copy is deleted."
+}

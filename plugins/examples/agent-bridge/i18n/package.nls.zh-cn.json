@@ -1,0 +1,8 @@
+{
+	"displayName": "Agent Bridge",
+	"description": "把你自己安装、自己登录的 Claude Code 连接到 Breezell，并在 Breezell 中和它对话。显示在 Box › 模型 › 账号登录。",
+	"command.recheck": "重新检查 Claude Code",
+	"config.enabled": "连接这台电脑上安装的 Claude Code。请在 Box › 模型 › 账号登录 中开启，并同意开启时显示的内容。",
+	"command.sync": "同步 Claude Code 对话",
+	"config.deleteSessions": "在 Breezell 删除对话时，一并删除 Claude Code 中的对话。关闭时只删除 Breezell 这边。"
+}
