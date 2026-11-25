@@ -1,9 +1,13 @@
 {
 	"displayName": "Agent Bridge",
-	"description": "Connects Breezell to the Claude Code you installed and signed in to yourself, and lets you chat with it in Breezell. Shows on Box › Models › Sign in.",
+	"description": "Connects Breezell to the Claude Code and the Antigravity CLI you installed and signed in to yourself, and lets you chat with them in Breezell. Shows on Box › Models › Sign in.",
 	"command.recheck": "Check Claude Code Again",
 	"config.enabled": "Connect the Claude Code installed on this computer. Turn it on from Box › Models › Sign in, after agreeing to what it asks.",
 	"command.sync": "Sync Claude Code Conversations",
 	"config.deleteSessions": "Deleting a conversation in Breezell also deletes its Claude Code conversation. Off: only Breezell's copy is deleted.",
-	"config.ownMcpServers": "Claude Code's own MCP servers (its settings, its plugins, your claude.ai connectors) are offered beside your MCP servers in Breezell. Off: only Breezell's."
+	"config.ownMcpServers": "Claude Code's own MCP servers (its settings, its plugins, your claude.ai connectors) are offered beside your MCP servers in Breezell. Off: only Breezell's.",
+	"config.subagentsFollowModel": "Every subagent Claude Code starts works on the model and the effort picked for the conversation. Off: Claude Code picks a subagent's model itself.",
+	"command.recheckAntigravity": "Check Antigravity CLI Again",
+	"config.antigravityEnabled": "Connect the Antigravity CLI (agy) installed on this computer. Turn it on from Box › Models › Sign in, after agreeing to what it asks.",
+	"config.antigravityDeleteConversations": "Deleting a conversation in Breezell also deletes it in Antigravity CLI, with its subagents' conversations. Off: only Breezell's copy is deleted."
 }

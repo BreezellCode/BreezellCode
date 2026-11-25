@@ -1,9 +1,13 @@
 {
 	"displayName": "Agent Bridge",
-	"description": "把你自己安裝、自己登入的 Claude Code 連接到 Breezell，並在 Breezell 中和它對話。顯示在 Box › 模型 › 帳號登入。",
+	"description": "把你自己安裝、自己登入的 Claude Code 和 Antigravity CLI 連接到 Breezell，並在 Breezell 中和它們對話。顯示在 Box › 模型 › 帳號登入。",
 	"command.recheck": "重新檢查 Claude Code",
 	"config.enabled": "連接這台電腦上安裝的 Claude Code。請在 Box › 模型 › 帳號登入 中開啟，並同意開啟時顯示的內容。",
 	"command.sync": "同步 Claude Code 對話",
 	"config.deleteSessions": "在 Breezell 刪除對話時，一併刪除 Claude Code 中的對話。關閉時只刪除 Breezell 這邊。",
-	"config.ownMcpServers": "Claude Code 自己的 MCP 伺服器（它的設定、它的外掛、你在 claude.ai 的連接器）會和你在 Breezell 設定的 MCP 伺服器一起提供。關閉：只用 Breezell 的。"
+	"config.ownMcpServers": "Claude Code 自己的 MCP 伺服器（它的設定、它的外掛、你在 claude.ai 的連接器）會和你在 Breezell 設定的 MCP 伺服器一起提供。關閉：只用 Breezell 的。",
+	"config.subagentsFollowModel": "開啟時，Claude Code 開的每個子代理都使用對話選的模型和思考強度。關閉時，由 Claude Code 自己為子代理選模型。",
+	"command.recheckAntigravity": "重新檢查 Antigravity CLI",
+	"config.antigravityEnabled": "連接這台電腦上安裝的 Antigravity CLI（agy）。請在 Box › 模型 › 帳號登入 中開啟，並同意開啟時顯示的內容。",
+	"config.antigravityDeleteConversations": "在 Breezell 刪除對話時，一併刪除 Antigravity CLI 中的對話和它的子代理對話。關閉時只刪除 Breezell 這邊。"
 }

@@ -281,8 +281,8 @@ declare module 'vscode' {
 			/** At most 60 characters. */
 			readonly title: string;
 			readonly description?: string;
-			/** Whose model it is, when it is one Breezell knows ('claude'): the picker shows Breezell's own icon of its maker. */
-			readonly family?: 'claude';
+			/** Whose model it is, when it is one Breezell knows ('claude', and in a Breezell newer than 1.4.68 'gemini' and 'openai'): the picker shows Breezell's own icon of its maker. */
+			readonly family?: 'claude' | 'gemini' | 'openai';
 			/** The effort levels it takes: the model menu offers them, and a turn says the one picked (`AgentTurn.effort`). */
 			readonly efforts?: readonly ('low' | 'medium' | 'high' | 'xhigh' | 'max')[];
 			/** Its agent compresses its context when asked (AgentTurn.compact): Manual compress asks it, not Breezell's own summary (Breezell newer than 1.4.65). */
@@ -362,6 +362,12 @@ declare module 'vscode' {
 			 * it compresses its own. `text` is empty; say how it went with `reply.compaction`.
 			 */
 			readonly compact?: true;
+			/**
+			 * The user's auto-approve settings for the agent's own calls, which Breezell never sees before they run
+			 * (Breezell newer than 1.4.68). `mcp`: "MCP tools", for the MCP servers the agent has of its own. An agent that
+			 * cannot ask the user lets those run only when this says so; absent (an older Breezell): it does not.
+			 */
+			readonly autoApprove?: { readonly mcp: boolean };
 		}
 
 		export interface AgentHistoryEntry {
@@ -479,9 +485,16 @@ declare module 'vscode' {
 			reasoning(text: string, parent?: string): void;
 			/**
 			 * How far a thought whose text the model keeps hidden has gone (its estimated tokens, the total so far):
-			 * Breezell shows it thinks, for how long, and how much. Not for a thought whose text you give with reasoning.
+			 * Breezell shows it thinks, for how long, and how much. Not for a thought whose text you give with reasoning,
+			 * except one begun with thinkingStarted, whose size may come before its text.
 			 */
 			thinking(tokens: number): void;
+			/**
+			 * Its model began a request whose thought the agent tells only after (Breezell newer than 1.4.68): Breezell
+			 * shows it thinking from now until its words or a call come. That thought stays, with its time, when its text
+			 * (reasoning) or its size (thinking) comes before the next call or the turn's end; otherwise there was none.
+			 */
+			thinkingStarted?(): void;
 			tool(tool: AgentToolEvent): void;
 			/** The agent's own session: the next turn of the conversation gets it as `AgentTurn.session`. */
 			session(id: string): void;
@@ -507,7 +520,9 @@ declare module 'vscode' {
 			/**
 			 * Breezell's own tools the agent may call in this turn (now: `memories_recall`, the user's memories as Breezell's own model looks them up;
 			 * `run_terminal_cmd`, a command in Breezell's terminal; `await`, waiting on one in the background; `edit_file` and `write_to_file`,
-			 * changes through Breezell's editor that the user reviews as Breezell's own). Offer them to the agent, and run its calls with callBreezellTool.
+			 * changes through Breezell's editor that the user reviews as Breezell's own; and, in every mode, its language tools, read-only, on its
+			 * language servers: `read_lint_errors`, `find_symbol`, `breezell_lsp_find_definition`, `breezell_lsp_find_references`,
+			 * `breezell_lsp_call_hierarchy`, `breezell_lsp_hover`). Offer them to the agent, and run its calls with callBreezellTool.
 			 */
 			breezellTools?(): Thenable<readonly AgentBreezellTool[]>;
 			/**

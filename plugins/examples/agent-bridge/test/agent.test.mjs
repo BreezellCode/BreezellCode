@@ -18,7 +18,7 @@ await esbuild.build({ entryPoints: [join(root, 'src/agent.ts')], bundle: true, p
 const agent = require(join(out, 'agent.cjs'));
 rmSync(out, { recursive: true, force: true });
 
-const target = child => ({ where: 'native', path: '/bin/claude', start: (args, cwd) => { child.args = args; child.cwd = cwd; return child; } });
+const target = child => ({ where: 'native', path: '/bin/claude', start: (args, cwd, env) => { child.args = args; child.cwd = cwd; child.env = env; return child; } });
 const token = () => { const listeners = []; return { isCancellationRequested: false, onCancellationRequested: l => { listeners.push(l); return { dispose() { } }; }, cancel() { this.isCancellationRequested = true; listeners.forEach(l => l()); } }; };
 const replyLog = (approve = async () => true) => { const log = []; return { log, reply: { text: (t, parent) => log.push(parent ? ['text', t, parent] : ['text', t]), reasoning: (t, parent) => log.push(parent ? ['reasoning', t, parent] : ['reasoning', t]), tool: t => log.push(['tool', t.id, t.name, t.status, t.title ?? '', t.output ?? '']), session: id => log.push(['session', id]), approve: async r => { log.push(['approve', r.toolId, r.name, r.kind, r.title ?? '']); return approve(r); } } }; };
 const tick = () => new Promise(r => setImmediate(r));
@@ -527,6 +527,39 @@ test('Breezell\'s terminal offered to Claude Code: its own shell is off, a comma
 	await plainRun;
 });
 
+test('Breezell\'s language tools: listed with what they do, loaded at the start, run without asking, and none of Claude Code\'s own tools turned off for them', async () => {
+	const child = fakeChild();
+	const calls = [];
+	const schema = { type: 'object', properties: { file_path: { type: 'string', description: 'File containing the usage.' }, symbol_name: { type: 'string', description: 'Symbol to locate the definition of.' } }, required: ['file_path', 'symbol_name'] };
+	const names = ['read_lint_errors', 'find_symbol', 'breezell_lsp_find_definition', 'breezell_lsp_find_references', 'breezell_lsp_call_hierarchy', 'breezell_lsp_hover'];
+	const controls = {
+		breezellTools: names.map(name => ({ name, inputSchema: schema })),
+		callBreezellTool: async (name, input, toolUseId) => { calls.push([name, input, toolUseId]); return { text: '/w/src/parser.ts:3' }; },
+	};
+	const answers = [];
+	child.onSent = message => { if (message.type === 'control_response') answers.push(message.response); };
+	const running = agent.runTurn(target(child), { model: 'opus', text: 'where is parse?', attachments: [], cwd: '/w' }, replyLog().reply, token(), p => p, undefined, controls);
+	await tick();
+	const arg = flag => child.args[child.args.indexOf(flag) + 1];
+	assert.equal(arg('--allowedTools'), names.map(name => `mcp__breezell__${name}`).join(','), 'read-only: no asking');
+	assert.equal(child.args.includes('--disallowedTools'), false, 'its own reading and searching stay');
+	const mcp = (id, message) => child.say({ type: 'control_request', request_id: id, request: { subtype: 'mcp_message', server_name: 'breezell', message } });
+	mcp('r1', { jsonrpc: '2.0', id: 1, method: 'tools/list' });
+	mcp('r2', { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'breezell_lsp_find_definition', arguments: { file_path: '/w/src/a.ts', symbol_name: 'parse' }, _meta: { 'claudecode/toolUseId': 't1' } } });
+	await new Promise(resolve => setTimeout(resolve, 20));
+	child.say({ type: 'result', subtype: 'success', session_id: 's-1' });
+	child.end(0);
+	await running;
+	const listed = answers.find(r => r.request_id === 'r1').response.mcp_response.result.tools;
+	assert.deepEqual(listed.map(t => t.name), names);
+	assert.ok(listed.every(t => t._meta?.['anthropic/alwaysLoad'] === true), 'loaded at the start, beside its own text search');
+	assert.ok(listed.every(t => /Breezell\'s language servers|editor reports/.test(t.description)), 'each says it is the editor\'s language servers');
+	assert.deepEqual(listed[2].inputSchema, schema, 'the parameters Breezell gave');
+	assert.deepEqual(calls, [['breezell_lsp_find_definition', { file_path: '/w/src/a.ts', symbol_name: 'parse' }, 't1']], 'run by Breezell, with the id of its call');
+	const called = answers.find(r => r.request_id === 'r2').response.mcp_response.result;
+	assert.deepEqual(called.content, [{ type: 'text', text: '/w/src/parser.ts:3' }]);
+});
+
 test('the user\'s MCP servers in Breezell: their tools under this plugin\'s server, run by Breezell, not loaded at the start; Claude Code\'s own servers off only when the user says so', async () => {
 	const child = fakeChild();
 	const { reply } = replyLog(async () => true);
@@ -670,6 +703,49 @@ test('Breezell\'s Manual compress is Claude Code\'s /compact in its session, alo
 	full.end(0);
 	await running2;
 	assert.deepEqual(told2, [{ phase: 'started', trigger: 'auto' }, { phase: 'done', trigger: 'auto', preTokens: 180_000, postTokens: 30_000 }, { phase: 'started', trigger: 'auto' }, { phase: 'failed', trigger: 'auto' }]);
+});
+
+test('a server or watcher is never held for a wait Claude Code named; other commands go as they are', () => {
+	const of = input => agent.terminalInputOf(input);
+	assert.deepEqual(of({ command: 'npm run dev', purpose: 'serve', block_until_ms: 60_000 }), { command: 'npm run dev', purpose: 'serve' }, 'started as a server: at once to the background');
+	assert.deepEqual(of({ command: 'node server.js', purpose: 'execute', background: true, block_until_ms: 30_000 }), { command: 'node server.js', purpose: 'execute', background: true });
+	assert.deepEqual(of({ command: 'cd web && pnpm dev', purpose: 'execute', block_until_ms: 300_000 }), { command: 'cd web && pnpm dev', purpose: 'execute' }, 'looks like one: Breezell\'s own wait, which ends once it is up');
+	assert.deepEqual(of({ command: 'uvicorn app:app --reload', purpose: 'execute', block_until_ms: 120_000 }), { command: 'uvicorn app:app --reload', purpose: 'execute' });
+	for (const kept of [
+		{ command: 'npm test', purpose: 'verify', block_until_ms: 300_000 },
+		{ command: 'npm run build', purpose: 'execute', block_until_ms: 200_000 },
+		{ command: 'npm run dev -- --help', purpose: 'verify', block_until_ms: 20_000 },
+		{ command: 'npm run dev', purpose: 'serve' },
+		{ command: 'npm run dev', purpose: 'execute', block_until_ms: 0 },
+	]) assert.deepEqual(of(kept), kept, JSON.stringify(kept));
+});
+
+test('a wait on a server it started holds the turn at most 30 s; a wait for some output, a stop, or a wait on anything else goes as asked', async () => {
+	const servers = new Set(['term-7']);
+	const of = input => agent.awaitInputOf(input, servers);
+	assert.deepEqual(of({ task_id: 'term-7', block_until_ms: 600_000 }), { task_id: 'term-7', block_until_ms: 30_000 });
+	assert.deepEqual(of({ task_id: 'term-7' }), { task_id: 'term-7', block_until_ms: 30_000 }, 'no wait named either');
+	for (const kept of [{ task_id: 'term-7', block_until_ms: 600_000, pattern: 'compiled' }, { task_id: 'term-7', stop: true }, { task_id: 'term-7', block_until_ms: 5_000 }, { task_id: 'term-2', block_until_ms: 600_000 }]) assert.deepEqual(of(kept), kept, JSON.stringify(kept));
+	// In a turn: the task id of a server it started, from Breezell's result, then its wait.
+	const child = fakeChild();
+	const calls = [];
+	const controls = {
+		breezellTools: ['run_terminal_cmd', 'await'].map(name => ({ name, inputSchema: { type: 'object', properties: {}, required: [] } })),
+		callBreezellTool: async (name, input) => { calls.push([name, input]); return { text: name === 'run_terminal_cmd' ? 'VITE ready on http://localhost:5173\n[SYSTEM INSTRUCTION — this process is still running in the background (task_id: term-9). ...]' : 'still running' }; },
+	};
+	const answers = [];
+	child.onSent = message => { if (message.type === 'control_response') answers.push(message.response); };
+	const running = agent.runTurn(target(child), { model: 'haiku', text: 'go', attachments: [], cwd: '/w' }, replyLog().reply, token(), p => p, undefined, controls);
+	await tick();
+	const mcp = (id, message) => child.say({ type: 'control_request', request_id: id, request: { subtype: 'mcp_message', server_name: 'breezell', message } });
+	mcp('c1', { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'run_terminal_cmd', arguments: { command: 'npm run dev', purpose: 'serve', block_until_ms: 90_000 } } });
+	await new Promise(resolve => setTimeout(resolve, 20));
+	mcp('c2', { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'await', arguments: { task_id: 'term-9', block_until_ms: 600_000 } } });
+	await new Promise(resolve => setTimeout(resolve, 20));
+	assert.deepEqual(calls, [['run_terminal_cmd', { command: 'npm run dev', purpose: 'serve' }], ['await', { task_id: 'term-9', block_until_ms: 30_000 }]]);
+	child.say({ type: 'result', subtype: 'success', session_id: 's-1' });
+	child.end(0);
+	await running;
 });
 
 test('a request record a model request, as Breezell\'s own: the lead\'s as each ends, its subagents\' when the turn ends, adding up to Claude Code\'s own count', async () => {
@@ -990,4 +1066,20 @@ test('a subagent\'s first message names the model it runs on: told with its call
 	const told = tools.filter(t => t.id === 'a1' && t.view?.model);
 	assert.deepEqual(told.map(t => t.view.model), ['haiku'], 'once, by the plugin\'s own id for it');
 	assert.deepEqual(agent.modelsOfInitialize([{ value: 'haiku', displayName: 'Haiku 5.5', resolvedModel: 'claude-haiku-5-5' }])[0].resolved, 'claude-haiku-5-5');
+});
+
+test('its subagents on the conversation\'s model when the switch says so: Claude Code\'s own variables for it, its effort too when one is picked', async () => {
+	const forced = { CLAUDE_CODE_SUBAGENT_MODEL_FORCE: '1', CLAUDE_CODE_DISABLE_EXPLORE_INHERIT_CAP: '1' };
+	assert.deepEqual(agent.followingSubagentsEnv({ effort: 'high' }), { ...forced, CLAUDE_CODE_SUBAGENT_EFFORT: 'high', CLAUDE_CODE_EFFORT_LEVEL: 'high' });
+	assert.deepEqual(agent.followingSubagentsEnv({}), forced, 'no effort picked: Claude Code\'s own');
+	assert.deepEqual(agent.followingSubagentsEnv({ effort: 'turbo' }), forced);
+	for (const [follow, expected] of [[true, { ...forced, CLAUDE_CODE_SUBAGENT_EFFORT: 'high', CLAUDE_CODE_EFFORT_LEVEL: 'high' }], [false, undefined], [undefined, undefined]]) {
+		const child = fakeChild();
+		const running = agent.runTurn(target(child), { model: 'opus', effort: 'high', text: 'go', attachments: [], cwd: '/w' }, replyLog().reply, token(), p => p, undefined, follow === undefined ? {} : { subagentsFollowModel: follow });
+		await tick();
+		assert.deepEqual(child.env, expected, `switch ${follow}`);
+		child.say({ type: 'result', subtype: 'success', session_id: 's-1' });
+		child.end(0);
+		await running;
+	}
 });

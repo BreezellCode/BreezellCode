@@ -1,13 +1,13 @@
 # Agent Bridge
 
-把你自己安裝、自己登入的 Claude Code 連接到 Breezell。
+把你自己安裝、自己登入的 Claude Code 和 Antigravity CLI 連接到 Breezell。
 
 因為 Anthropic 的規定，其他應用程式不能替你登入 Claude 帳號，Breezell 也遵守這項規定，所以不會直接替你登入：請你自行安裝 Claude Code，在 Claude Code 中登入帳號，再由 Breezell 連接使用。
 
 ## 需要什麼
 
 - 比 1.4.64 新的 Breezell。較舊的版本無法安裝。
-- 這台電腦上的 Claude Code（Windows 上可以裝在 Windows 或 WSL 裡），用你自己的帳號或 API 金鑰登入。
+- 這台電腦上的 Claude Code（Windows 上可以裝在 Windows 或 WSL 裡），用你自己的帳號或 API 金鑰登入；或是用你的 Google 帳號登入的 Antigravity CLI（見下方 Antigravity CLI）。
 - 登入的 Breezell 帳號，不需要付費方案。
 
 ## 如何連接
@@ -40,7 +40,7 @@ Claude Code 連接後，它的模型會出現在對話的模型選單中，位�
 - Claude Code 改檔和執行指令，和 Breezell 自己的一樣要經過核准：由 Breezell 的核准卡片問你，或由你的設定決定（「自動核准編輯」「自動核准終端機」、命令卡片上的 Always allow）。它的其他工具，Claude Code 自己的設定已允許的，會像在終端機中一樣直接執行，其餘由 Breezell 的核准卡片詢問（「自動核准 MCP 工具」）。
 - 在這些對話中，Claude Code 自己的 Bash、Monitor、Edit 和 Write 會關閉：它只透過 Breezell 執行指令和修改檔案。計畫模式下，它自己的規劃模式只讓 Edit 和 Write 寫它的計畫檔。讀檔、搜尋、上網等其他工具仍是它自己的。
 - Claude Code 的每個動作都以 Breezell 原生的方式顯示：讀檔、修改（含差異）、新檔、命令、搜尋、待辦清單。
-- Claude Code 開的每個子代理，都會像 Breezell 的子代理一樣有自己的頁面：它的任務、做了什麼、它的報告。對話中的子代理列會顯示它目前的步驟，點名稱即可打開那一頁；在那裡按停止，只會停止這個子代理。
+- Claude Code 開的每個子代理，都會像 Breezell 的子代理一樣有自己的頁面：它的任務、做了什麼、它的報告。對話中的子代理列會顯示它目前的步驟，點名稱即可打開那一頁；在那裡按停止，只會停止這個子代理。外掛頁面上的「子代理使用這個對話的模型」（預設開啟）開啟時，每個子代理都使用你為這個對話選的模型和思考強度；關閉時，由 Claude Code 自己為子代理選模型（有時會用較便宜的模型，用掉的方案額度較少），子代理列會顯示它實際使用的模型。
 - 按「停止」會停止 Claude Code。
 - 在其他模型回答過的對話中，或你修改了先前的訊息之後，Claude Code 會收到它還沒看過的內容。
 - 對模型的請求中途失敗時（連線中斷、API 忙碌、被限流，或回覆 4 分鐘都沒有動靜），會照 Breezell 自己的方式處理：顯示重新連線的倒數，Claude Code 會在同一個工作階段從中斷處繼續，重試次數依 Box › 網路與對話 的設定。在錯誤上按「重試」也一樣。
@@ -60,10 +60,28 @@ Breezell 會詢問一次是否允許這個插件回答對話。
 - 每個資料夾會讀取最新的 200 個對話。
 - 對話會同步到它所屬的專案：每個視窗同步的是它所開的專案，在 Agents 頁中也會顯示在該專案底下。沒有開啟專案的視窗不會同步，按「同步對話」時會提示。頁面和同步後的通知都會寫出同步的是哪個專案。
 
+## Antigravity CLI
+
+Google 的 Antigravity CLI（`agy`）也可以連接，它有自己的磚：Box › 模型 › 帳號登入 › Antigravity CLI。
+
+1. 到 antigravity.google 安裝 Antigravity CLI（Windows 上裝在 Windows 或 WSL 中都可以）。
+2. 在終端機執行 `agy`，用你的 Google 帳號登入。
+3. 在 Breezell 中選擇 Antigravity CLI 磚，開啟「連接 Antigravity CLI」，並閱讀開啟時顯示的內容。
+
+它的模型會出現在對話的模型選單「帳號登入 › Antigravity CLI」底下，和 `agy models` 列出的一樣；同一個模型有多個思考強度時（例如 Gemini 4 Hydrogen）只會出現一次，強度在模型選單中選擇。agy 在對話的專案中工作，並會接著上次的進度。在 Breezell 的對話中，它自己修改檔案和執行命令的工具會關閉：它用 Breezell 的編輯工具修改檔案、在 Breezell 的終端機執行命令，所以每個修改和命令都由 Breezell 的自動核准設定（或你）決定，顯示在對話中，並像 Breezell 自己的修改一樣審查、保留或復原。讀取和搜尋檔案用它自己的工具。它向你提問時使用 Breezell 的問題卡片；在「規劃」模式下，它的計畫會顯示為 Breezell 的計畫卡片。你在 Breezell 設定的 MCP 伺服器、Breezell 的記憶和語言工具，它都能像 Claude Code 一樣使用。你附加的圖片和 PDF 會存放在插件的資料夾中，讓 agy 開啟（它的串流只接受文字）。
+
+它的磚頁面會顯示你方案的用量限額，內容和 agy 自己的 `/usage` 一樣（Gemini 模型、Claude 與 GPT 模型，各有 5 小時和每週限額）：已用多少、什麼時候重設。`/usage` 由 agy 自己回答，不會呼叫模型，也不會加進它的紀錄。模型思考時，對話會顯示「Thinking」和經過的時間；它的思考摘要會在寫出的同時出現在這個區塊裡（「Thought」），跟著 agy 寫下的進度（每隔幾秒一段），步驟完成時補齊。agy 的串流只說明思考用了多少，所以摘要是從 agy 自己的對話紀錄（在 `~/.gemini/antigravity-cli` 中）讀取的。顯示思考需要比 1.4.68 新的 Breezell；較舊的版本只會顯示回覆。agy 不會說明模型的上下文有多大，所以上下文圈使用 Breezell 的預設大小。
+
+agy 把工作交給子代理時，子代理會像 Breezell 自己的子代理一樣顯示：它有自己的一列，在背景工作；也有自己的頁面，每個步驟完成後會顯示它的思考、文字和工具呼叫。那一列會寫出它正在做什麼，並在它回傳報告後結束。它修改檔案和執行命令也透過 Breezell 的工具，顯示在它自己的頁面上，和 agy 本身一樣。agy 不會把子代理的步驟放進串流，所以子代理的頁面是跟著 agy 為子代理對話留下的紀錄更新的。除非你要求 agy 用別的模型，子代理都使用這個對話的模型（這是 agy 自己的規則；你自訂、而且在定義中寫明模型的子代理會用那個模型），所以磚上不需要這個開關；子代理列會顯示它實際使用的模型。
+
+Breezell 的工具以 MCP 伺服器的方式交給 agy，設定寫在插件自己的資料夾中（每個對話一個）：不會寫入 agy 的設定，你自己在終端機執行的 agy 也不受影響。這個伺服器只在 127.0.0.1 上回應，每個回合使用各自的金鑰；WSL 中的 agy 由 Breezell 自己的程式轉送訊息。你在 Breezell 設定的 MCP 伺服器一律會提供給 agy，由 Breezell 執行。agy 自己設定的 MCP 伺服器（`agy mcp list`）只在 Breezell 的「MCP 工具」自動核准開啟時才會執行：agy 在 Breezell 中無法詢問你，Breezell 也看不到它們執行前的呼叫。關閉時 agy 會拒絕這些呼叫，並會在對話開始時（以及你更改設定後）告訴它的模型這些伺服器已關閉。
+
+磚上的「刪除對話時，一併刪除 Antigravity CLI 中的對話」（預設關閉）：在 Breezell 刪除對話時，agy 中的這段對話和它的子代理對話也會一併刪除，也就是 agy 資料夾（`~/.gemini/antigravity-cli`）中的紀錄和筆記。agy 的歷史清單可能仍會列出它的標題，但已經打不開。目前還不支援：同步你在 Breezell 以外與 agy 的對話，以及手動壓縮。
+
 ## 插件的頁面
 
 Box › 插件 › Agent Bridge 會顯示和 Claude Code 卡片相同的頁面：連接狀態、帳號、用量、上次同步的結果，以及「同步對話」按鈕。
 
 ## 會讀取哪些資訊
 
-只讀取 Claude Code 執行 `claude --version`、`claude auth status` 和它自己的 `/usage` 指令時印出的內容（以 `claude -p /usage --no-session-persistence` 執行：由 Claude Code 自己回答，不會詢問模型、不會消耗你的用量，也不會加入你的工作階段紀錄），和你在終端機看到的一樣。模型選單是向 Claude Code 詢問它提供哪些模型（和 Anthropic 的 Agent SDK 用的是同一個請求；不會送出訊息，所以不會使用任何模型）。為了同步對話，它會讀取 Breezell 中開啟的資料夾的 Claude Code 對話檔案（位於 `~/.claude/projects`），只讀這些。它不會讀取、儲存或轉交你的登入憑證。帳號與用量資訊不會傳送到任何地方，只留在這台電腦的這一頁上。你用 Claude Code 模型送出的內容會交給你的 Claude Code，由它像在終端機中一樣處理。開關關閉時，插件完全不會執行 Claude Code。
+只讀取 Claude Code 執行 `claude --version`、`claude auth status` 和它自己的 `/usage` 指令時印出的內容（以 `claude -p /usage --no-session-persistence` 執行：由 Claude Code 自己回答，不會詢問模型、不會消耗你的用量，也不會加入你的工作階段紀錄），和你在終端機看到的一樣。模型選單是向 Claude Code 詢問它提供哪些模型（和 Anthropic 的 Agent SDK 用的是同一個請求；不會送出訊息，所以不會使用任何模型）。為了同步對話，它會讀取 Breezell 中開啟的資料夾的 Claude Code 對話檔案（位於 `~/.claude/projects`），只讀這些。它不會讀取、儲存或轉交你的登入憑證。帳號與用量資訊不會傳送到任何地方，只留在這台電腦的這一頁上。你用 Claude Code 模型送出的內容會交給你的 Claude Code，由它像在終端機中一樣處理。開關關閉時，插件完全不會執行 Claude Code。Antigravity CLI 方面，它讀取 `agy --version`、`agy models` 和它自己的 `/usage` 印出的內容，並為了顯示思考和子代理的頁面，讀取 agy 自己為 Breezell 中每個對話及其子代理留下的紀錄；不會讀取它的設定或你的登入資訊。

@@ -1,13 +1,13 @@
 # Agent Bridge
 
-Connects Breezell to the Claude Code you installed and signed in to yourself.
+Connects Breezell to the Claude Code and the Antigravity CLI you installed and signed in to yourself.
 
 Anthropic's rules do not let other apps sign you in to a Claude account, and Breezell follows them. So Breezell does not sign you in: you install Claude Code, sign in to your account in Claude Code itself, and Breezell connects to it.
 
 ## What it needs
 
 - A Breezell newer than 1.4.64. An older Breezell does not install it.
-- Claude Code on this computer (on Windows, in Windows or inside WSL), signed in with your own account or API key.
+- Claude Code on this computer (on Windows, in Windows or inside WSL), signed in with your own account or API key; or Antigravity CLI, signed in with your Google account (see Antigravity CLI below).
 - A signed-in Breezell account. No paid plan is needed.
 
 ## How to connect
@@ -42,12 +42,13 @@ Once Claude Code is connected, its models are in the chat's model picker, under 
 - What Claude Code does shows as Breezell's own steps: files read, edits with their changes, new files, commands, searches, its to-do list.
 - Its file changes go through Breezell's editor: you keep or undo them there, as Breezell's own model's, and they are listed in Code Review and the changed-files bar. Auto-approve edits, Auto-accept code changes and Auto open file on edit apply to them, and the lint and type errors a change leaves go back to Claude Code (Auto-fix lint errors).
 - Its commands run in Breezell's terminal, in the window's default shell: each card shows the output as it runs, with Open terminal, Stop and Move to background, and Breezell's approval rules decide what runs unasked. When a command in the background ends, Claude Code hears of it.
-- Each subagent Claude Code starts gets a page of its own, as Breezell's subagents do: its task, what it does, and its report. Its row in the conversation tells the step it is on and opens that page. Stop there stops that subagent alone.
+- Each subagent Claude Code starts gets a page of its own, as Breezell's subagents do: its task, what it does, and its report. Its row in the conversation tells the step it is on and opens that page. Stop there stops that subagent alone. With "Subagents use this conversation's model" on the plugin's page (on by default), every subagent works on the model and the effort you picked for the conversation; turned off, Claude Code picks a subagent's model itself (a cheaper one at times, so less of your plan is used), and its row shows the model it works on.
 - Stop stops Claude Code.
 - In a conversation another model answered, or after you edited an earlier message, Claude Code is told what was said that it has not seen.
 - A request to the model that fails on the way (a dropped connection, a busy API, a rate limit, or a reply that stays silent for 4 minutes) is handled as Breezell handles its own: you see its reconnecting countdown, and Claude Code goes on in the same session from where it stopped, as often as Box › Network & chat says. Retry on an error does the same.
 - Your Breezell rules for the project (its `.breezell/rules/breezell.md`, else your global rules, and the plugins' rules that apply to Claude) go to Claude Code once, when a conversation starts, as standing instructions beside its CLAUDE.md: they are not sent again with each message. If you change them, Claude Code is told once, with your next message. Each project gets its own.
 - What Breezell remembers goes with your message (the message's memory row shows which), and Breezell learns from finished turns as it does from its own (Super Memory). Claude Code can also look up Breezell's memories itself while it works, with Breezell's own memory lookup; each lookup shows in the chat as Breezell's own does.
+- Claude Code can use Breezell's language servers, as your editor has them: where something is defined, every place it is used, what calls a function and what it calls, a symbol's type and documentation, symbols by name, and a file's problems. These lookups change nothing, so they run without asking and in every chat mode; each one shows in the chat as Breezell's own step. Its own file changes already came back with the problems Breezell finds in the file.
 
 Breezell asks once whether the plugin may answer conversations.
 
@@ -60,10 +61,28 @@ The Claude Code conversations of the folders you open in Breezell show in that p
 - The newest 200 conversations of each folder are read.
 - A conversation goes to the project it belongs to: a window syncs the project open in it, and on the Agents page the conversation shows under that project. A window with no project open has nothing to sync; it says so when you press "Sync conversations". The page and the notice after a sync name the project.
 
+## Antigravity CLI
+
+The same for Google's Antigravity CLI (`agy`), on a tile of its own: Box › Models › Sign in › Antigravity CLI.
+
+1. Install Antigravity CLI from antigravity.google (on Windows, in Windows or inside WSL).
+2. Run `agy` in a terminal and sign in with your Google account.
+3. In Breezell, pick the Antigravity CLI tile, turn on "Connect Antigravity CLI" and read what it asks.
+
+Its models are in the chat's model picker under Sign in › Antigravity CLI, as `agy models` lists them; a model agy offers at several effort levels (Gemini 4 Hydrogen, say) shows once, and its levels are in the model menu. agy works in the conversation's project and goes on where it left off. Its own tools that write files or run commands are turned off for Breezell's turns: it changes files with Breezell's edit tools and runs commands in Breezell's terminal, so each change and command is asked about by Breezell's auto-approve settings (or you), shows in the chat, and is reviewed, kept or undone as Breezell's own. It reads and searches files with its own tools. Its questions use Breezell's question card, and in Plan mode its plan shows as Breezell's plan card. Your MCP servers in Breezell, Breezell's memories and its language tools work for it as for Claude Code. Pictures and PDFs you attach are saved in the plugin's folder for agy to open (its stream takes text only).
+
+Its tile's page shows your plan's limits as agy's own `/usage` reports them (Gemini models, and Claude and GPT models, each with a 5-hour and a weekly limit): how much is used, and when each resets. agy answers `/usage` itself: no model is asked, and nothing is added to its history. While its model thinks, the chat shows "Thinking" with its time; its thought summary fills that block ("Thought") while it is written, as agy writes it down (every few seconds), and is complete once the step is done. agy's stream says only how much its model thought, so the summary is read from agy's own record of the conversation (under `~/.gemini/antigravity-cli`). The thinking needs a Breezell newer than 1.4.68; an older one shows the replies without it. agy does not say how large its models' context is, so the context ring uses Breezell's default size.
+
+When agy hands work to a subagent, the subagent shows as Breezell's own: a row of its own working in the background, and a page of its own with its thinking, its words and its calls as each step is done; its row says the step it is on, and ends with its report, the message it sends back. Its edits and commands go through Breezell's tools on its page, as agy's own do. agy keeps a subagent's steps off its stream, so the page follows agy's record of the subagent's conversation. A subagent works on the conversation's model unless you ask agy for another (agy's own rule; a custom subagent of yours that names a model in its definition works on that one), so its tile needs no switch for it; its row shows the model it works on.
+
+Breezell's tools reach agy as an MCP server named in a folder of the plugin's own (one a conversation): nothing is written to agy's settings, and an agy you run yourself in a terminal is not changed. It answers only on 127.0.0.1, with a key of its own each turn; for an agy inside WSL, Breezell's own program passes the messages on. Your MCP servers in Breezell are always offered to agy, run by Breezell. The MCP servers agy has of its own (`agy mcp list`) run only while Breezell's auto-approve for MCP tools is on: agy cannot ask you in Breezell, and Breezell does not see their calls before they run. While it is off, agy refuses their calls, and its model is told at the start of the conversation (and again when you change it) that they are off.
+
+"Delete in Antigravity CLI too" on its tile (off by default): deleting a conversation in Breezell also deletes it in agy, with its subagents' conversations: their records and notes in agy's own folder (`~/.gemini/antigravity-cli`). agy's history list may still show its title, but it no longer opens. Not yet: bringing in conversations you had with agy outside Breezell, and Manual compress.
+
 ## Its page
 
 Box › Plugins › Agent Bridge shows the same page as the Claude Code tile: the connection, your account, your usage, how the last sync went, and "Sync conversations".
 
 ## What it reads
 
-Only what Claude Code prints for `claude --version`, `claude auth status` and its own `/usage` command (run as `claude -p /usage --no-session-persistence`: Claude Code answers it itself, no model is asked, none of your usage is spent, and nothing is added to your session history), the same as you would see in a terminal. For the model picker it asks Claude Code which models it offers (the same request Anthropic's Agent SDK makes; no message is sent, so no model is used). To bring your conversations in, it reads Claude Code's conversation files of the folders open in Breezell (in `~/.claude/projects`), and only those. It never reads, stores or passes on your sign-in credentials. The account and usage information is not sent anywhere: it stays on this computer, on that page. What you send in a conversation with a Claude Code model goes to your Claude Code, which handles it as it does in a terminal. While the switch is off, the plugin does not run Claude Code at all.
+Only what Claude Code prints for `claude --version`, `claude auth status` and its own `/usage` command (run as `claude -p /usage --no-session-persistence`: Claude Code answers it itself, no model is asked, none of your usage is spent, and nothing is added to your session history), the same as you would see in a terminal. For the model picker it asks Claude Code which models it offers (the same request Anthropic's Agent SDK makes; no message is sent, so no model is used). To bring your conversations in, it reads Claude Code's conversation files of the folders open in Breezell (in `~/.claude/projects`), and only those. It never reads, stores or passes on your sign-in credentials. The account and usage information is not sent anywhere: it stays on this computer, on that page. What you send in a conversation with a Claude Code model goes to your Claude Code, which handles it as it does in a terminal. While the switch is off, the plugin does not run Claude Code at all. Of Antigravity CLI it reads what `agy --version`, `agy models` and its own `/usage` print, and, for the thinking and its subagents' pages, agy's own record of each conversation Breezell has with it and of its subagents'; never its settings or your sign-in.

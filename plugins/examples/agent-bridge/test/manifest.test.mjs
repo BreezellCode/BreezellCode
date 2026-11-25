@@ -1,7 +1,7 @@
-// What package.json promises: one tile on Box › Models › Sign in whose switch is off until the user
-// turns it on, a consent that names what is read and where conversations go, no permission beyond
-// ui.contribute and chat.agent, nothing that passes for Breezell or uses Anthropic's logo, and every
-// text in English, Traditional and Simplified Chinese.
+// What package.json promises: a tile on Box › Models › Sign in for each agent (Claude Code, Antigravity CLI)
+// whose switch is off until the user turns it on, a consent that names what is read and where conversations go,
+// no permission beyond ui.contribute and chat.agent, nothing that passes for Breezell or uses anyone's logo, and
+// every text in English, Traditional and Simplified Chinese.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -9,15 +9,19 @@ import { readFileSync } from 'node:fs';
 const read = path => JSON.parse(readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'));
 const pkg = read('package.json');
 const tile = pkg.contributes.breezell.ui.signIns[0];
+const agy = pkg.contributes.breezell.ui.signIns[1];
 
-test('one tile, turned by the plugin\'s own setting, which is off by default and the user\'s alone', () => {
-	assert.equal(pkg.contributes.breezell.ui.signIns.length, 1);
-	assert.equal(tile.id, 'claudeCode');
-	assert.equal(tile.setting, 'agentBridge.claudeCode.enabled');
-	const setting = pkg.contributes.configuration.properties[tile.setting];
-	assert.equal(setting.type, 'boolean');
-	assert.equal(setting.default, false);
-	assert.equal(setting.scope, 'application');
+test('a tile for each agent, each turned by the plugin\'s own setting, which is off by default and the user\'s alone', () => {
+	assert.deepEqual(pkg.contributes.breezell.ui.signIns.map(t => [t.id, t.setting]), [['claudeCode', 'agentBridge.claudeCode.enabled'], ['antigravity', 'agentBridge.antigravity.enabled']]);
+	for (const each of [tile, agy]) {
+		const setting = pkg.contributes.configuration.properties[each.setting];
+		assert.equal(setting.type, 'boolean');
+		assert.equal(setting.default, false);
+		assert.equal(setting.scope, 'application');
+		assert.equal(each.agent, true);
+		assert.ok(pkg.contributes.commands.some(c => c.command === each.command), each.id);
+	}
+	assert.equal(agy.command, 'agentBridge.antigravity.recheck');
 });
 
 test('only ui.contribute and chat.agent (the tile answers conversations); runs on the user\'s own computer, where their Claude Code is', () => {
@@ -57,6 +61,29 @@ test('a plain codicon, not a brand logo; no name that passes for Breezell; the p
 	}
 	for (const nls of ['package.nls.json', 'i18n/package.nls.zh-tw.json', 'i18n/package.nls.zh-cn.json']) {
 		assert.doesNotMatch(read(nls).displayName, /claude|anthropic/i, nls);
+	}
+});
+
+test('Antigravity CLI\'s tile: a plain codicon, its note and consent say who signs in, what is read, where conversations go and that agy\'s settings are left alone', () => {
+	assert.equal(agy.icon, 'rocket');
+	assert.equal(agy.title, 'Antigravity CLI');
+	for (const field of ['switchL10n', 'descriptionL10n']) {
+		assert.deepEqual(Object.keys(agy[field]).sort(), ['zh-CN', 'zh-TW'], field);
+	}
+	for (const field of ['l10n', 'messageL10n', 'agreeL10n']) {
+		assert.deepEqual(Object.keys(agy.consent[field]).sort(), ['zh-CN', 'zh-TW'], `consent.${field}`);
+	}
+	for (const note of [agy.description, ...Object.values(agy.descriptionL10n)]) {
+		assert.ok(note.length <= 600, 'within Breezell\'s note limit');
+		assert.match(note, /Google/);
+	}
+	for (const consent of [agy.consent.message, agy.consent.messageL10n['zh-TW'], agy.consent.messageL10n['zh-CN']]) {
+		assert.ok(consent.length <= 1200, 'within Breezell\'s consent limit');
+		assert.match(consent, /Google/);
+		assert.match(consent, /(憑證|凭证|credentials)/);
+		assert.match(consent, /(對話的資料夾|对话的文件夹|conversation's folder)/, 'says where what is sent goes');
+		assert.match(consent, /(自動核准|自动批准|auto-approve)/, 'and what decides its calls');
+		assert.match(consent, /(不會寫入 agy 自己的設定|不会写入 agy 自己的设置|writes nothing to agy's own settings)/, 'and that agy\'s settings are left alone');
 	}
 });
 

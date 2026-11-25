@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.1.0
+
+- Antigravity CLI: Google's `agy` in Breezell's chat, on a tile of its own (Box › Models › Sign in › Antigravity CLI). Install it from antigravity.google, sign in with your Google account in agy, and turn the tile on. Its models are in the model picker; a model it offers at several effort levels shows once, with the levels in the model menu. It works in the conversation's project and goes on where it left off. It changes files and runs commands only with Breezell's own edit and terminal tools, so Breezell's auto-approve settings (or you) decide each one, and its changes are reviewed, kept or undone as Breezell's own. Its questions use Breezell's question card, and in Plan mode its plan shows as Breezell's plan card. Your MCP servers in Breezell, Breezell's memories and its language tools work for it. Nothing is written to agy's own settings. Its tile's page shows your plan's limits (5-hour and weekly, for Gemini models and for Claude and GPT models) and when each resets. While its model thinks, the chat shows "Thinking" with its time, and its thought summary as agy writes it down (every few seconds), complete once each step is done (needs a Breezell newer than 1.4.68). Its subagents show as Breezell's own: a row working in the background, and a page of their own with their thinking, words and calls; their edits and commands go through Breezell's tools on that page. Needs Breezell 1.4.66 or newer (the language tools: 1.4.68 or newer).
+- Antigravity CLI's own MCP servers (`agy mcp list`) run in Breezell while Breezell's auto-approve for MCP tools is on (needs a Breezell newer than 1.4.68); otherwise agy refuses them, and its model knows they are off instead of trying them. "Delete in Antigravity CLI too" on its tile (off by default) deletes a conversation in agy, with its subagents' conversations, when you delete it in Breezell.
+- Claude Code's subagents work on the model and the effort you picked for the conversation (before, Claude Code picked their models itself, a cheaper one at times). "Subagents use this conversation's model" on the plugin's page, on by default, gives that choice back to Claude Code when turned off, which uses less of your plan.
+- Claude Code inside WSL working on a folder of this computer: its edits and lookups through Breezell's tools now reach the file (it names it /mnt/c/…, which Breezell knows as C:\…).
+
+## 1.0.6
+
+- Claude Code can use Breezell's language servers, as your editor has them: it can look up where something is defined, every place it is used, what calls a function and what it calls, a symbol's type and documentation, symbols by name, and the problems in a file. These lookups change nothing, so they run without asking and in every chat mode, and each one shows in the chat as Breezell's own step. Needs Breezell 1.4.68 or newer.
+
+## 1.0.5
+
+- Starting a dev server or a watcher no longer holds Claude Code's reply: the command goes to the background, and Claude Code goes on with its address. A wait Claude Code names for a server is not kept, and waiting on a server already running holds the reply for 30 seconds at most.
+
 ## 1.0.4
 
 - Box › Models: Cache hits and Request records list each of Claude Code's model requests on its own row, as for Breezell's own models (before: one row a turn). Its subagents' requests are rows of their own too, and the rows add up to Claude Code's own count. The context ring follows each request while a turn is under way.

@@ -1,12 +1,12 @@
 {
 	"schemaVersion": 1,
-	"updatedAt": "2026-11-23T14:56:01.144Z",
+	"updatedAt": "2026-11-25T15:55:04.180Z",
 	"plugins": [
 		{
 			"id": "breezell.agent-bridge",
 			"displayName": "Agent Bridge",
-			"description": "Connects Breezell to the Claude Code you installed and signed in to yourself, and lets you chat with it in Breezell. Shows on Box › Models › Sign in.",
-			"version": "1.0.4",
+			"description": "Connects Breezell to the Claude Code and the Antigravity CLI you installed and signed in to yourself, and lets you chat with them in Breezell. Shows on Box › Models › Sign in.",
+			"version": "1.1.0",
 			"apiVersion": 1,
 			"categories": [
 				"AI",
@@ -16,7 +16,10 @@
 				"claude code",
 				"agent",
 				"cli",
-				"connect"
+				"connect",
+				"antigravity",
+				"agy",
+				"gemini"
 			],
 			"permissions": [
 				"ui.contribute",
@@ -38,19 +41,19 @@
 			"l10n": {
 				"zh-CN": {
 					"displayName": "Agent Bridge",
-					"description": "把你自己安装、自己登录的 Claude Code 连接到 Breezell，并在 Breezell 中和它对话。显示在 Box › 模型 › 账号登录。"
+					"description": "把你自己安装、自己登录的 Claude Code 和 Antigravity CLI 连接到 Breezell，并在 Breezell 中和它们对话。显示在 Box › 模型 › 账号登录。"
 				},
 				"zh-TW": {
 					"displayName": "Agent Bridge",
-					"description": "把你自己安裝、自己登入的 Claude Code 連接到 Breezell，並在 Breezell 中和它對話。顯示在 Box › 模型 › 帳號登入。"
+					"description": "把你自己安裝、自己登入的 Claude Code 和 Antigravity CLI 連接到 Breezell，並在 Breezell 中和它們對話。顯示在 Box › 模型 › 帳號登入。"
 				}
 			},
 			"package": {
-				"path": "packages/breezell.agent-bridge/1.0.4/breezell.agent-bridge-1.0.4.vsix",
-				"sha256": "0063686c779b007174a7756625aed96a3ddf41723d3f8252828dbe9a0edf26d6",
-				"size": 229754
+				"path": "packages/breezell.agent-bridge/1.1.0/breezell.agent-bridge-1.1.0.vsix",
+				"sha256": "a8300df51765880337644a8eb3d20ce3882020986b4bddc45bc29af512bb98a5",
+				"size": 353533
 			},
-			"updatedAt": "2026-11-23T14:56:01.144Z"
+			"updatedAt": "2026-11-25T15:55:04.180Z"
 		},
 		{
 			"id": "breezell.chat-mirror",

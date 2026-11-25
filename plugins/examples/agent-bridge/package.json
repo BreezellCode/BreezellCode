@@ -3,7 +3,7 @@
 	"publisher": "breezell",
 	"displayName": "%displayName%",
 	"description": "%description%",
-	"version": "1.0.4",
+	"version": "1.1.0",
 	"license": "MIT",
 	"author": {
 		"name": "DreamfallSerena"
@@ -24,7 +24,10 @@
 		"claude code",
 		"agent",
 		"cli",
-		"connect"
+		"connect",
+		"antigravity",
+		"agy",
+		"gemini"
 	],
 	"main": "./dist/extension.js",
 	"activationEvents": [
@@ -139,8 +142,88 @@
 									"zh-TW": "你在 Breezell 設定的 MCP 伺服器一律會提供給 Claude Code，由 Breezell 執行。開啟：Claude Code 自己的 MCP 伺服器（它的設定、它的外掛、你在 claude.ai 的連接器）也一併提供。關閉：只用 Breezell 的。",
 									"zh-CN": "你在 Breezell 配置的 MCP 服务器一律会提供给 Claude Code，由 Breezell 执行。开启：Claude Code 自己的 MCP 服务器（它的配置、它的插件、你在 claude.ai 的连接器）也一并提供。关闭：只用 Breezell 的。"
 								}
+							},
+							{
+								"setting": "agentBridge.claudeCode.subagentsFollowModel",
+								"title": "Subagents use this conversation's model",
+								"l10n": {
+									"zh-TW": "子代理使用這個對話的模型",
+									"zh-CN": "子代理使用这个对话的模型"
+								},
+								"description": "On: every subagent Claude Code starts works on the model and the effort you picked for the conversation. Off: Claude Code picks a subagent's model itself (a cheaper one at times), which uses less of your plan.",
+								"descriptionL10n": {
+									"zh-TW": "開啟：Claude Code 開的每個子代理，都使用你為這個對話選的模型和思考強度。關閉：由 Claude Code 自己為子代理選模型（有時會用較便宜的模型），用掉的方案額度較少。",
+									"zh-CN": "开启：Claude Code 开的每个子代理，都使用你为这个对话选的模型和思考强度。关闭：由 Claude Code 自己为子代理选模型（有时会用较便宜的模型），用掉的方案额度较少。"
+								}
 							}
 						]
+					},
+					{
+						"id": "antigravity",
+						"title": "Antigravity CLI",
+						"icon": "rocket",
+						"setting": "agentBridge.antigravity.enabled",
+						"switchTitle": "Connect Antigravity CLI",
+						"switchL10n": {
+							"zh-TW": "連接 Antigravity CLI",
+							"zh-CN": "连接 Antigravity CLI"
+						},
+						"description": "Breezell does not sign you in to Google itself. Install Antigravity CLI (agy) from antigravity.google, sign in with your Google account in agy itself, and Breezell connects to it. agy changes files and runs commands only through Breezell's own tools, so every change shows and is reviewed as Breezell's own. agy cannot ask you in Breezell, so the MCP servers it has of its own run only while Breezell's auto-approve for MCP tools is on; your MCP servers in Breezell are always offered.",
+						"descriptionL10n": {
+							"zh-TW": "Breezell 不會直接幫你登入 Google 帳號。請到 antigravity.google 安裝 Antigravity CLI（agy），在 agy 中用自己的 Google 帳號登入，Breezell 就會連接它。agy 只透過 Breezell 自己的工具修改檔案和執行命令，所以每個修改都會像 Breezell 自己的一樣顯示和審查。agy 在 Breezell 中無法詢問你，所以它自己設定的 MCP 伺服器只在 Breezell 的「MCP 工具」自動核准開啟時才會執行；你在 Breezell 設定的 MCP 伺服器一律會提供。",
+							"zh-CN": "Breezell 不会直接帮你登录 Google 账号。请到 antigravity.google 安装 Antigravity CLI（agy），在 agy 中用自己的 Google 账号登录，Breezell 就会连接它。agy 只通过 Breezell 自己的工具修改文件和运行命令，所以每个修改都会像 Breezell 自己的一样显示和审查。agy 在 Breezell 中无法询问你，所以它自己配置的 MCP 服务器只在 Breezell 的“MCP 工具”自动批准开启时才会运行；你在 Breezell 配置的 MCP 服务器一律会提供。"
+						},
+						"consent": {
+							"title": "Connect Antigravity CLI?",
+							"l10n": {
+								"zh-TW": "連接 Antigravity CLI",
+								"zh-CN": "连接 Antigravity CLI"
+							},
+							"message": "By agreeing, you confirm that:\n• you follow Google's terms for Antigravity, and use the Antigravity CLI you installed and signed in to yourself;\n• Breezell may read and use what agy reports about its connection, its version, the models it offers and your plan's limits, and, to show its model's thinking and its subagents' work, agy's own record of each conversation Breezell has with it and of its subagents';\n• what you send in Breezell with an Antigravity CLI model goes to your agy, which works on it in that conversation's folder; it changes files and runs commands only through Breezell's tools, which Breezell's auto-approve settings answer, or you do;\n• Breezell keeps what each conversation gives agy (its connection to Breezell's tools, the pictures you attach) in Breezell's own folder, and writes nothing to agy's own settings.\nBreezell never reads, stores or passes on your Google sign-in credentials.",
+							"messageL10n": {
+								"zh-TW": "同意即表示：\n• 你會遵守 Google 對 Antigravity 的相關規定，並使用自己安裝、自己登入的 Antigravity CLI；\n• 你同意 Breezell 讀取並使用 agy 回報的連接狀態、版本、可用模型與方案的用量限額，並為了顯示模型的思考和子代理的工作，讀取 agy 自己為 Breezell 中每個對話及其子代理留下的紀錄；\n• 你在 Breezell 中用 Antigravity CLI 模型送出的內容會交給你的 agy，由它在該對話的資料夾中處理；它只透過 Breezell 的工具修改檔案和執行命令，由 Breezell 的自動核准設定或你來回答；\n• 每個對話交給 agy 的內容（連到 Breezell 工具的設定、你附加的圖片）保存在 Breezell 自己的資料夾，不會寫入 agy 自己的設定。\nBreezell 不會讀取、儲存或轉交你的 Google 登入憑證。",
+								"zh-CN": "同意即表示：\n• 你会遵守 Google 对 Antigravity 的相关规定，并使用自己安装、自己登录的 Antigravity CLI；\n• 你同意 Breezell 读取并使用 agy 报告的连接状态、版本、可用模型与方案的用量限额，并为了显示模型的思考和子代理的工作，读取 agy 自己为 Breezell 中每个对话及其子代理留下的记录；\n• 你在 Breezell 中用 Antigravity CLI 模型发送的内容会交给你的 agy，由它在该对话的文件夹中处理；它只通过 Breezell 的工具修改文件和运行命令，由 Breezell 的自动批准设置或你来回答；\n• 每个对话交给 agy 的内容（连到 Breezell 工具的设置、你附加的图片）保存在 Breezell 自己的文件夹，不会写入 agy 自己的设置。\nBreezell 不会读取、存储或转交你的 Google 登录凭证。"
+							},
+							"agree": "Agree",
+							"agreeL10n": {
+								"zh-TW": "同意",
+								"zh-CN": "同意"
+							}
+						},
+						"options": [
+							{
+								"setting": "agentBridge.antigravity.deleteConversations",
+								"title": "Delete in Antigravity CLI too",
+								"l10n": {
+									"zh-TW": "刪除對話時，一併刪除 Antigravity CLI 中的對話",
+									"zh-CN": "删除对话时，一并删除 Antigravity CLI 中的对话"
+								},
+								"description": "On: deleting a conversation in Breezell also deletes that conversation in agy, with its subagents' conversations (their records and notes in agy's own folder). agy's history list may still show its title, but it no longer opens. Off: only Breezell's copy is deleted, and the conversation stays in agy.",
+								"descriptionL10n": {
+									"zh-TW": "開啟：在 Breezell 刪除對話時，agy 中的這段對話和它的子代理對話也會一併刪除（agy 資料夾中的紀錄和筆記）。agy 的歷史清單可能仍會列出它的標題，但已經打不開。關閉：只刪除 Breezell 這邊的聊天訊息，agy 中的對話會保留。",
+									"zh-CN": "开启：在 Breezell 删除对话时，agy 中的这段对话和它的子代理对话也会一并删除（agy 文件夹中的记录和笔记）。agy 的历史列表可能仍会列出它的标题，但已经打不开。关闭：只删除 Breezell 这边的聊天消息，agy 中的对话会保留。"
+								},
+								"confirm": {
+									"title": "Also delete in Antigravity CLI?",
+									"l10n": {
+										"zh-TW": "也刪除 Antigravity CLI 中的對話？",
+										"zh-CN": "也删除 Antigravity CLI 中的对话？"
+									},
+									"message": "From now on, deleting a conversation in Breezell also deletes that conversation in agy, with its subagents' conversations. A deleted conversation cannot be brought back.",
+									"messageL10n": {
+										"zh-TW": "從現在起，在 Breezell 刪除對話時，agy 中的這段對話和它的子代理對話也會一併刪除。刪除後無法復原。",
+										"zh-CN": "从现在起，在 Breezell 删除对话时，agy 中的这段对话和它的子代理对话也会一并删除。删除后无法恢复。"
+									},
+									"agree": "Turn on",
+									"agreeL10n": {
+										"zh-TW": "開啟",
+										"zh-CN": "开启"
+									}
+								}
+							}
+						],
+						"command": "agentBridge.antigravity.recheck",
+						"agent": true
 					}
 				]
 			}
@@ -154,6 +237,11 @@
 			{
 				"command": "agentBridge.claudeCode.sync",
 				"title": "%command.sync%",
+				"category": "%displayName%"
+			},
+			{
+				"command": "agentBridge.antigravity.recheck",
+				"title": "%command.recheckAntigravity%",
 				"category": "%displayName%"
 			}
 		],
@@ -177,6 +265,24 @@
 					"default": true,
 					"scope": "application",
 					"description": "%config.ownMcpServers%"
+				},
+				"agentBridge.claudeCode.subagentsFollowModel": {
+					"type": "boolean",
+					"default": true,
+					"scope": "application",
+					"description": "%config.subagentsFollowModel%"
+				},
+				"agentBridge.antigravity.enabled": {
+					"type": "boolean",
+					"default": false,
+					"description": "%config.antigravityEnabled%",
+					"scope": "application"
+				},
+				"agentBridge.antigravity.deleteConversations": {
+					"type": "boolean",
+					"default": false,
+					"scope": "application",
+					"description": "%config.antigravityDeleteConversations%"
 				}
 			}
 		}

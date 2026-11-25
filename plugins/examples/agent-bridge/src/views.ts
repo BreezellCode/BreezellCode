@@ -29,13 +29,21 @@ export type ToolView =
 	/** A tool of one of the user's MCP servers in Breezell: Breezell draws it as its MCP row of that server. */
 	| { kind: 'mcp'; server: string; tool: string };
 
-/** Breezell's memory lookup as Claude Code names it: a tool of the "breezell" server the plugin hosts (agent.ts). */
+/** Breezell's memory lookup as Claude Code names it: a tool of the "breezell" server the plugin hosts (breezellTools.ts). */
 export const BREEZELL_MEMORY_TOOL = 'mcp__breezell__memories_recall';
 /** Breezell's terminal tool as Claude Code names it: a command, as its own Bash is. */
 export const BREEZELL_TERMINAL_TOOL = 'mcp__breezell__run_terminal_cmd';
 /** Breezell's edit tools as Claude Code names them: a change and a new file, as its own Edit and Write are. */
 export const BREEZELL_EDIT_TOOL = 'mcp__breezell__edit_file';
 export const BREEZELL_WRITE_TOOL = 'mcp__breezell__write_to_file';
+
+/**
+ * Which of Breezell's tools a tool name is, under the name an agent knows it by: Claude Code's
+ * `mcp__breezell__<tool>`, Antigravity CLI's `mcp_breezell_<tool>`. Undefined for any other tool.
+ */
+export function breezellToolOf(name: string): string | undefined {
+	return /^mcp__breezell__(.+)$/.exec(name)?.[1] ?? /^mcp_breezell_(.+)$/.exec(name)?.[1];
+}
 
 export const VIEW_LIMITS = {
 	/** An edit's old and new text, and a new file's content, all of a call together. */
@@ -110,21 +118,22 @@ const todosOf = (value: unknown): ToolView | undefined => {
 export function viewOfUse(name: string, input: Input): ToolView | undefined {
 	const i = input ?? {};
 	const path = str(i.file_path) ?? str(i.notebook_path);
-	if (name === BREEZELL_MEMORY_TOOL) {
+	const breezell = breezellToolOf(name);
+	if (breezell === 'memories_recall') {
 		const ids = Array.isArray(i.ids) ? i.ids.filter((id): id is string => typeof id === 'string' && !!id).slice(0, 8) : typeof i.ids === 'string' ? i.ids.split(/[\s,]+/).filter(Boolean).slice(0, 8) : [];
 		return { kind: 'memories', ...(str(i.query) ? { query: str(i.query) } : {}), ...(ids.length ? { ids } : {}) };
 	}
-	if (name === BREEZELL_EDIT_TOOL) {
+	if (breezell === 'edit_file') {
 		const file = str(i.uri) ?? path;
 		const edits = editsWithin(editsOf(Array.isArray(i.edits) && i.edits.length ? i.edits : [i]));
 		return file ? { kind: 'edit', path: file, ...(edits ? { edits } : {}) } : undefined;
 	}
-	if (name === BREEZELL_WRITE_TOOL) {
+	if (breezell === 'write_to_file') {
 		const file = str(i.uri) ?? path;
 		const content = typeof i.content === 'string' && i.content.length <= VIEW_LIMITS.editChars ? i.content : undefined;
 		return file ? { kind: 'create', path: file, ...(content !== undefined ? { content } : {}) } : undefined;
 	}
-	if (name === BREEZELL_TERMINAL_TOOL) {
+	if (breezell === 'run_terminal_cmd') {
 		const command = str(i.command);
 		const description = str(i.explanation);
 		return command ? { kind: 'command', command, ...(description ? { description } : {}), ...(i.background === true || i.block_until_ms === 0 || i.purpose === 'serve' ? { background: true } : {}) } : undefined;
@@ -251,6 +260,69 @@ export function viewOfResult(name: string, input: Input, result: unknown): ToolV
 		return { ...used, ...(report ? { report } : {}) };
 	}
 	return used;
+}
+
+/** A value of an Antigravity CLI tool's parameters, under any of these names (it writes them in PascalCase). */
+function agyParam(input: Input, ...names: string[]): unknown {
+	const i = input ?? {};
+	for (const name of names) {
+		const key = Object.keys(i).find(k => k.toLowerCase() === name.toLowerCase());
+		if (key !== undefined && i[key] !== undefined && i[key] !== null && i[key] !== '') {
+			return i[key];
+		}
+	}
+	return undefined;
+}
+
+/**
+ * What one of Antigravity CLI's own tool calls is, as its stream names it (agy 1.5: read_file { Path }, run_command
+ * { CommandLine }, write_file { Path }…): drawn as Breezell's own of that kind. Its calls of Breezell's tools
+ * (mcp_breezell_<tool>) are viewOfUse's.
+ */
+export function agyViewOfUse(name: string, input: Input): ToolView | undefined {
+	if (breezellToolOf(name)) {
+		return viewOfUse(name, input);
+	}
+	const path = str(agyParam(input, 'Path', 'AbsolutePath', 'File', 'FilePath', 'TargetFile'));
+	switch (name) {
+		case 'read_file': case 'view_file': {
+			const startLine = num(agyParam(input, 'StartLine'));
+			const endLine = num(agyParam(input, 'EndLine'));
+			return path ? { kind: 'read', path, ...(startLine ? { startLine } : {}), ...(startLine && endLine ? { endLine } : {}) } : undefined;
+		}
+		case 'write_file': case 'write_to_file': {
+			const content = agyParam(input, 'CodeContent', 'Content');
+			return path ? { kind: 'create', path, ...(typeof content === 'string' && content.length <= VIEW_LIMITS.editChars ? { content } : {}) } : undefined;
+		}
+		case 'replace_file_content': case 'multi_replace_file_content': case 'sed_file':
+			return path ? { kind: 'edit', path } : undefined;
+		case 'run_command': {
+			const command = str(agyParam(input, 'CommandLine', 'Command'));
+			return command ? { kind: 'command', command } : undefined;
+		}
+		case 'list_dir': {
+			const where = str(agyParam(input, 'DirectoryPath', 'Path', 'SearchDirectory'));
+			return where ? { kind: 'list', path: where } : undefined;
+		}
+		case 'grep_search': {
+			const query = str(agyParam(input, 'Query', 'Pattern', 'SearchPattern'));
+			const where = str(agyParam(input, 'SearchPath', 'SearchDirectory', 'Path'));
+			return query ? { kind: 'search', query, ...(where ? { path: where } : {}) } : undefined;
+		}
+		case 'find_by_name': {
+			const pattern = str(agyParam(input, 'Pattern', 'Name', 'Query'));
+			return pattern ? { kind: 'files', pattern } : undefined;
+		}
+		case 'read_url_content': case 'read_url': {
+			const url = str(agyParam(input, 'Url', 'URL'));
+			return url ? { kind: 'fetch', url } : undefined;
+		}
+		case 'search_web': {
+			const query = str(agyParam(input, 'Query', 'query'));
+			return query ? { kind: 'webSearch', query } : undefined;
+		}
+	}
+	return undefined;
 }
 
 /** The view with its file named as Breezell opens it (`uriOf` the path), when it names one. */

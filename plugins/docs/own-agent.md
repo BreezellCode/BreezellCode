@@ -100,6 +100,7 @@ What a turn brings:
 | `mode` | The chat mode the user picked: `agent` (or absent) changes files and runs commands; `plan` reads and plans, and its plan goes to `callBreezellTool('update_plan', …)` (below), whose card's Execute starts an `agent` turn asking for it to be carried out; `analyze` reads and answers; `chat` answers. Breezell's tools for changes and commands are listed and run in `agent` only: turn the agent's own off in the other modes. Breezell newer than 1.4.65 |
 | `compact` | The user chose Manual compress on the context ring (models listed with `compacts` only): compress the agent's context in `session` now, as it compresses its own, and nothing else. `text` is empty. Say how it went with `compaction`, and its size after with `usage` (`context`). Breezell newer than 1.4.65 |
 | `rules` | The user's rules for this project, as Breezell's own model gets them (the project's rules file, else the global ones, and the plugins' rules for this model). Without `session`: give them to the new session once, where it keeps its standing instructions (they are not sent again with each message). With `session`: they changed since the session got them (`''`: removed); tell the agent once. Absent when there is nothing new. Breezell newer than 1.4.65 |
+| `autoApprove` | `{ mcp }`: whether the user auto-approves MCP tools. Breezell never sees the calls an agent makes to MCP servers of its own before they run: an agent that cannot ask the user runs them only while `mcp` is true. Absent (an older Breezell): it does not. Breezell newer than 1.4.68 |
 
 What the plugin writes:
 
@@ -107,7 +108,8 @@ What the plugin writes:
 |---|---|
 | `text(text, parent?)` | More of the reply. `parent`: the subagent call whose words they are |
 | `reasoning(text, parent?)` | More of its reasoning, shown under Thinking |
-| `thinking(tokens)` | A thought whose text the agent keeps hidden: Breezell shows Thinking with how long and about how many tokens. Not for a thought you give with `reasoning` |
+| `thinking(tokens)` | A thought whose text the agent keeps hidden: Breezell shows Thinking with how long and about how many tokens. Not for a thought you give with `reasoning`, except one begun with `thinkingStarted`, whose size may come before its text |
+| `thinkingStarted()` | Its model began a request whose thought the agent tells only after: Breezell shows Thinking from now until its words or a call come. The thought stays, with its time, when its text (`reasoning`) or its size (`thinking`) comes before the next call or the turn's end; otherwise there was none. Breezell newer than 1.4.68 |
 | `tool(event)` | One of the agent's tool calls (below) |
 | `session(id)` | The agent's own session: the next turn gets it as `turn.session`. Say it as soon as you know it |
 | `usage({ context, models })` | What the agent's model requests used, once or more a turn. `context`: `tokens`, how much of its model's context its conversation now takes (its last request's input, cached parts too), and that model's `window`, for the chat's context ring. `models`: per model, the `inputTokens`, `outputTokens`, `cacheReadTokens` and `cacheWriteTokens` used since it last said this, for Box › Token usage and the reply's token count. Breezell newer than 1.4.65 |
