@@ -185,3 +185,51 @@ test('a subagent\'s own file: its records (all sidechain ones) read as a convers
 	const session = sessions.parseSession('s', lines(main), CWD, titleOf);
 	assert.equal(session.messages.find(m => m.id === 't1').agentId, 'a3aba15845776c61c');
 });
+
+// A subagent Claude Code runs in the background: its call returns at once with a note for the model, and its end comes
+// later as Claude Code's own message to the model, written as a user message (Claude Code 2.1.332: origin
+// task-notification, the text <task-notification>…</task-notification>). Owner 2026-11-25: such a message showed
+// in Breezell as one the user had sent.
+const launched = (uuid, id, agentId) => user(uuid, [{ type: 'tool_result', tool_use_id: id, content: [{ type: 'text', text: `Async agent launched successfully.\nagentId: ${agentId} (internal metadata - not for display)` }] }], { toolUseResult: { isAsync: true, status: 'async_launched', agentId, description: 'Step 10b', outputFile: `/tmp/claude-1000/p/s/tasks/${agentId}.output` } });
+const notification = (id, agentId, status, summary, rest = '') => `<task-notification>\n<task-id>${agentId}</task-id>\n<tool-use-id>${id}</tool-use-id>\n<output-file>/tmp/claude-1000/p/s/tasks/${agentId}.output</output-file>\n<status>${status}</status>\n<summary>${summary}</summary>${rest}\n</task-notification>`;
+const FROM_TASK = { origin: { kind: 'task-notification', producer: 'session-task' } };
+
+test('a background subagent\'s end, Claude Code\'s message to its model: never the user\'s words; it ends that subagent\'s call', () => {
+	const records = [
+		user('u1', 'Do step 10b in the background', { origin: { kind: 'human' } }),
+		assistant('a1', [{ type: 'tool_use', id: 't1', name: 'Agent', input: { description: 'Step 10b', prompt: 'Switch the other windows', run_in_background: true } }]),
+		launched('u2', 't1', 'aa4d'),
+		assistant('a2', [{ type: 'text', text: 'It runs in the background.' }]),
+		user('u3', notification('t1', 'aa4d', 'failed', 'Agent "Step 10b" failed: API Error: Connection dropped (ECONNRESET).', '\n<note>The same task-id may notify more than once.</note>\n<result>SECURITY WARNING: This subagent\'s work is UNREVIEWED.</result>'), FROM_TASK),
+		assistant('a3', [{ type: 'tool_use', id: 't2', name: 'Agent', input: { description: 'Step 10b again', prompt: 'Switch the other windows' } }]),
+		launched('u4', 't2', 'bb5e'),
+		user('u5', notification('t2', 'bb5e', 'completed', 'Agent "Step 10b again" completed', '\n<result>All other windows use Ver5.</result>'), FROM_TASK),
+		assistant('a4', [{ type: 'text', text: 'Step 10b is done.' }]),
+	];
+	const read = sessions.parseSession('s', lines(records), CWD, titleOf);
+	assert.deepEqual(read.messages.filter(m => m.role === 'user').map(m => m.text), ['Do step 10b in the background'], 'the notifications are not the user\'s');
+	const [failed, done] = read.messages.filter(m => m.role === 'tool');
+	assert.equal(failed.status, 'error', 'the subagent failed');
+	assert.equal(failed.output, 'Agent "Step 10b" failed: API Error: Connection dropped (ECONNRESET).');
+	assert.equal(failed.view.background, true);
+	assert.equal(failed.view.report, undefined, 'a failed one has no report');
+	assert.equal(failed.agentId, 'aa4d', 'its own file is still read');
+	assert.equal(done.status, 'done');
+	assert.equal(done.output, 'All other windows use Ver5.', 'the report, not the note of its launch');
+	assert.equal(done.view.report, 'All other windows use Ver5.');
+	assert.ok(read.messages.every(m => !/Async agent launched|<task-notification>|<task-id>/.test(m.text ?? m.output ?? '')), 'nothing of Claude Code\'s notes to its model shows');
+});
+
+test('a task notification without its origin (older Claude Code) or with Claude Code\'s system label is still not the user\'s; the user\'s own words that quote one are', () => {
+	const records = [
+		user('u1', 'Start the watcher'),
+		assistant('a1', [{ type: 'text', text: 'Started.' }]),
+		user('u2', notification('t9', 'b1', 'completed', 'Background command "npm run watch" completed')),
+		user('u3', `[SYSTEM NOTIFICATION - NOT USER INPUT]\n${notification('t9', 'b1', 'completed', 'Background command completed')}`),
+		user('u4', `${notification('t9', 'b1', 'failed', 'pasted')}\nWhy did this fail?`, { origin: { kind: 'human' } }),
+		assistant('a2', [{ type: 'text', text: 'It lost its connection.' }]),
+	];
+	const read = sessions.parseSession('s', lines(records), CWD, titleOf);
+	assert.deepEqual(read.messages.filter(m => m.role === 'user').map(m => m.entry), ['u1', 'u4'], 'what the user sent stays, even when it quotes a notification');
+	assert.equal(read.title, 'Start the watcher');
+});

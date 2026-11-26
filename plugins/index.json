@@ -1,12 +1,12 @@
 {
 	"schemaVersion": 1,
-	"updatedAt": "2026-11-25T15:55:04.180Z",
+	"updatedAt": "2026-11-26T08:40:47.739Z",
 	"plugins": [
 		{
 			"id": "breezell.agent-bridge",
 			"displayName": "Agent Bridge",
 			"description": "Connects Breezell to the Claude Code and the Antigravity CLI you installed and signed in to yourself, and lets you chat with them in Breezell. Shows on Box › Models › Sign in.",
-			"version": "1.1.0",
+			"version": "1.1.1",
 			"apiVersion": 1,
 			"categories": [
 				"AI",
@@ -49,11 +49,11 @@
 				}
 			},
 			"package": {
-				"path": "packages/breezell.agent-bridge/1.1.0/breezell.agent-bridge-1.1.0.vsix",
-				"sha256": "a8300df51765880337644a8eb3d20ce3882020986b4bddc45bc29af512bb98a5",
-				"size": 353533
+				"path": "packages/breezell.agent-bridge/1.1.1/breezell.agent-bridge-1.1.1.vsix",
+				"sha256": "f1ad14757bbe1b7b301b8b5751bd0f5623462e1a6c0d5b62dc4130ac50b46a8c",
+				"size": 355952
 			},
-			"updatedAt": "2026-11-25T15:55:04.180Z"
+			"updatedAt": "2026-11-26T08:40:47.739Z"
 		},
 		{
 			"id": "breezell.chat-mirror",

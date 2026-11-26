@@ -8,7 +8,7 @@
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { UNSHOWN_TOOLS, viewOfResult, viewOfUse, withUri, type ToolView } from './views';
+import { isSubagentTool, UNSHOWN_TOOLS, viewOfResult, viewOfUse, withUri, type ToolView } from './views';
 
 /** One message of a session, with the id of the record it comes from (vscode.breezell.AgentConversationMessage). */
 export type SessionMessage =
@@ -67,6 +67,15 @@ export function sameFolder(a: string, b: string): boolean {
 /** What Claude Code shows in its own terminal for local commands (/model, !ls): not the conversation. */
 const LOCAL = /^\s*<(command-name|command-message|command-args|local-command-stdout|local-command-stderr|local-command-caveat|bash-input|bash-stdout|bash-stderr)>/;
 const INTERRUPTED = /^\s*\[Request interrupted by user/;
+/**
+ * Claude Code telling its model that a task it ran in the background ended (a subagent, a command): it writes that as a
+ * user message, marked by its origin (2.1.332), or known by its text alone (an older version, or its system label first).
+ * Not the user's words.
+ */
+const TASK_NOTIFICATION = /^\s*(?:\[SYSTEM NOTIFICATION - NOT USER INPUT\]\s*)?<task-notification>/;
+const isTaskNotification = (record: Record<string, any>, said: string): boolean =>
+	record.origin?.kind === 'task-notification' || (record.origin === undefined && TASK_NOTIFICATION.test(said));
+const tagOf = (text: string, tag: string): string | undefined => new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`).exec(text)?.[1]?.trim() || undefined;
 
 const cut = (text: string, max: number) => text.length > max ? `${text.slice(0, max)}\n… (${text.length - max} more characters)` : text;
 
@@ -119,7 +128,27 @@ export function parseSubagent(text: string, cwd: string, titleOf: TitleOf, uriOf
 function readMessages(text: string, cwd: string, titleOf: TitleOf, uriOf: ((path: string) => string | undefined) | undefined, sidechain: boolean): { messages: SessionMessage[]; summary?: string; model?: string } {
 	const messages: SessionMessage[] = [];
 	const pending = new Map<string, Extract<SessionMessage, { role: 'tool' }>>();
+	/** Subagent calls that returned at once, their subagent in the background: each ends with Claude Code's notification. */
+	const background = new Map<string, Extract<SessionMessage, { role: 'tool' }>>();
 	const hidden = new Set<string>();
+	/** A background subagent's end, as Claude Code's notification tells it: done with its report, failed, or stopped. */
+	const endInBackground = (notification: string) => {
+		const id = tagOf(notification, 'tool-use-id');
+		const call = id ? background.get(id) : undefined;
+		if (!call || call.view?.kind !== 'subagent') {
+			return;
+		}
+		const status = tagOf(notification, 'status');
+		const done = status === 'completed';
+		const summary = tagOf(notification, 'summary');
+		const report = done ? tagOf(notification, 'result') ?? summary : undefined;
+		call.status = done ? 'done' : 'error';
+		const output = done ? report : summary;
+		if (output) {
+			call.output = cut(output, SESSION_LIMITS.toolOutputChars);
+		}
+		call.view = { ...call.view, ...(report ? { report } : {}), ...(status === 'stopped' || status === 'killed' ? { stopped: true } : {}) };
+	};
 	let summary: string | undefined;
 	let model: string | undefined;
 	for (const line of text.split('\n')) {
@@ -154,10 +183,15 @@ function readMessages(text: string, cwd: string, titleOf: TitleOf, uriOf: ((path
 					tool.status = part.is_error ? 'error' : 'done';
 					// What it was, from Claude Code's own record of the result (that of the record's one result).
 					const view = withUri(part.is_error ? viewOfUse(tool.name, tool.input) : viewOfResult(tool.name, tool.input, results.length === 1 ? r.toolUseResult : undefined), path => uriOf?.(path));
-					if (view) {
+					// A subagent sent to the background: its call returns at once with a note for the model (never shown).
+					const launched = !part.is_error && isSubagentTool(tool.name) && results.length === 1 && (r.toolUseResult?.status === 'async_launched' || r.toolUseResult?.isAsync === true);
+					if (view?.kind === 'subagent' && launched) {
+						tool.view = { ...view, background: true };
+						background.set(part.tool_use_id, tool);
+					} else if (view) {
 						tool.view = view;
 					}
-					const output = view?.kind === 'subagent' && view.report ? view.report : textOf(part.content);
+					const output = launched ? undefined : view?.kind === 'subagent' && view.report ? view.report : textOf(part.content);
 					if (output) {
 						tool.output = cut(output, SESSION_LIMITS.toolOutputChars);
 					}
@@ -170,7 +204,9 @@ function readMessages(text: string, cwd: string, titleOf: TitleOf, uriOf: ((path
 				}
 			}
 			const said = textOf(Array.isArray(content) ? content.filter((p: { type?: string }) => p?.type !== 'tool_result') : content);
-			if (said.trim() && !LOCAL.test(said) && !INTERRUPTED.test(said)) {
+			if (said.trim() && isTaskNotification(r, said)) {
+				endInBackground(said);
+			} else if (said.trim() && !LOCAL.test(said) && !INTERRUPTED.test(said)) {
 				messages.push({ entry, role: 'user', text: cut(said, SESSION_LIMITS.textChars), ...at });
 			}
 			continue;
