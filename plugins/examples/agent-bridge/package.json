@@ -3,7 +3,7 @@
 	"publisher": "breezell",
 	"displayName": "%displayName%",
 	"description": "%description%",
-	"version": "1.1.1",
+	"version": "1.2.0",
 	"license": "MIT",
 	"author": {
 		"name": "DreamfallSerena"
@@ -96,6 +96,19 @@
 								"descriptionL10n": {
 									"zh-TW": "把這個視窗所開專案的 Claude Code 對話，同步到該專案的對話清單；在 Agents 頁中，它們會顯示在所屬的專案底下。沒有開啟專案的視窗不會同步。專案開啟時和之後每隔幾分鐘也會自動同步。",
 									"zh-CN": "把这个窗口所开项目的 Claude Code 对话，同步到该项目的对话列表；在 Agents 页中，它们会显示在所属的项目下。没有打开项目的窗口不会同步。项目打开时和之后每隔几分钟也会自动同步。"
+								}
+							},
+							{
+								"command": "agentBridge.keepAlive.configure",
+								"title": "Keep running between messages…",
+								"l10n": {
+									"zh-TW": "訊息之間保持執行…",
+									"zh-CN": "消息之间保持运行…"
+								},
+								"description": "For Claude Code and Antigravity CLI alike. On: after a reply, the conversation's agent keeps running, and your next message goes straight to it instead of starting it again and reading the conversation back: replies start sooner (Claude Code: about 1 s each). Cost: each conversation kept holds about 200–300 MB of memory until it has been idle for the time you choose; the more conversations, the more memory. Changing the model, the effort or the mode starts it once more. Off by default.",
+								"descriptionL10n": {
+									"zh-TW": "Claude Code 和 Antigravity CLI 共用這個設定。開啟後，回覆完的對話的代理程式會留著執行，下一則訊息直接交給它，不必重新啟動、重新載入對話，回覆開始得比較快（Claude Code 每則約快 1 秒）。代價：每個保持中的對話會一直佔用約 200–300 MB 記憶體，直到閒置你選的時間才關閉；保持的對話越多，佔用越多。換模型、思考強度或模式時會重新啟動一次。預設關閉。",
+									"zh-CN": "Claude Code 和 Antigravity CLI 共用这个设置。开启后，回复完的对话的代理程序会留着运行，下一条消息直接交给它，不必重新启动、重新加载对话，回复开始得更快（Claude Code 每条约快 1 秒）。代价：每个保持中的对话会一直占用约 200–300 MB 内存，直到闲置你选的时间才关闭；保持的对话越多，占用越多。换模型、思考强度或模式时会重新启动一次。默认关闭。"
 								}
 							}
 						],
@@ -190,6 +203,21 @@
 								"zh-CN": "同意"
 							}
 						},
+						"actions": [
+							{
+								"command": "agentBridge.keepAlive.configure",
+								"title": "Keep running between messages…",
+								"l10n": {
+									"zh-TW": "訊息之間保持執行…",
+									"zh-CN": "消息之间保持运行…"
+								},
+								"description": "For Claude Code and Antigravity CLI alike. On: after a reply, the conversation's agent keeps running, and your next message goes straight to it instead of starting it again and reading the conversation back: replies start sooner (Claude Code: about 1 s each). Cost: each conversation kept holds about 200–300 MB of memory until it has been idle for the time you choose; the more conversations, the more memory. Changing the model, the effort or the mode starts it once more. Off by default.",
+								"descriptionL10n": {
+									"zh-TW": "Claude Code 和 Antigravity CLI 共用這個設定。開啟後，回覆完的對話的代理程式會留著執行，下一則訊息直接交給它，不必重新啟動、重新載入對話，回覆開始得比較快（Claude Code 每則約快 1 秒）。代價：每個保持中的對話會一直佔用約 200–300 MB 記憶體，直到閒置你選的時間才關閉；保持的對話越多，佔用越多。換模型、思考強度或模式時會重新啟動一次。預設關閉。",
+									"zh-CN": "Claude Code 和 Antigravity CLI 共用这个设置。开启后，回复完的对话的代理程序会留着运行，下一条消息直接交给它，不必重新启动、重新加载对话，回复开始得更快（Claude Code 每条约快 1 秒）。代价：每个保持中的对话会一直占用约 200–300 MB 内存，直到闲置你选的时间才关闭；保持的对话越多，占用越多。换模型、思考强度或模式时会重新启动一次。默认关闭。"
+								}
+							}
+						],
 						"options": [
 							{
 								"setting": "agentBridge.antigravity.deleteConversations",
@@ -243,6 +271,11 @@
 				"command": "agentBridge.antigravity.recheck",
 				"title": "%command.recheckAntigravity%",
 				"category": "%displayName%"
+			},
+			{
+				"command": "agentBridge.keepAlive.configure",
+				"title": "%command.keepAlive%",
+				"category": "%displayName%"
 			}
 		],
 		"configuration": {
@@ -283,6 +316,14 @@
 					"default": false,
 					"scope": "application",
 					"description": "%config.antigravityDeleteConversations%"
+				},
+				"agentBridge.keepAlive.minutes": {
+					"type": "number",
+					"default": 0,
+					"minimum": 0,
+					"maximum": 240,
+					"scope": "application",
+					"description": "%config.keepAlive%"
 				}
 			}
 		}

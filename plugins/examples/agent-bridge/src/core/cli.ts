@@ -1,11 +1,13 @@
 /*
  * Finding a command-line agent the user installed (Claude Code, Antigravity CLI) and running it: on this
  * computer, or on Windows inside WSL through wsl.exe. What each agent is called and where its installers put
- * it is the agent's own (claudeCode.ts, antigravity.ts); how a program is looked for and run is the same.
+ * it is the agent's own (agents/<agent>/program.ts); how a program is looked for, run and asked its version is
+ * the same.
  */
 import { ChildProcess, execFile, spawn } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { firstLine } from './turn';
 
 /** A program's output. `code` is null when it was stopped (a timeout). */
 export interface RunResult {
@@ -222,10 +224,9 @@ export function wslPathOf(folder: string): string {
 
 /** The program inside WSL, as a target; undefined when WSL or the program in it is not there. */
 export async function findProgramInWsl(spec: ProgramSpec, run: Runner, env: Env, distro?: string, start?: Starter): Promise<Target | undefined> {
-	const exe = wslExe(env);
 	let result: RunResult;
 	try {
-		result = await run(exe, wslArgs(distro, wslFindScript(spec), true), { timeoutMs: WSL_TIMEOUT_MS });
+		result = await run(wslExe(env), wslArgs(distro, wslFindScript(spec), true), { timeoutMs: WSL_TIMEOUT_MS });
 	} catch {
 		return undefined;
 	}
@@ -238,23 +239,29 @@ export async function findProgramInWsl(spec: ProgramSpec, run: Runner, env: Env,
 		return undefined;
 	}
 	const named = lines.at(-2);
-	const name = named && !named.startsWith('/') ? named : distro;
+	return wslTarget(spec, file, named && !named.startsWith('/') ? named : distro, run, env, start, distro);
+}
+
+/** The program at `file` inside a WSL distribution (`distro`; `runIn`: the one to run it in, when asked for by name). */
+export function wslTarget(spec: Pick<ProgramSpec, 'wslConfigDir'>, file: string, distro: string | undefined, run: Runner, env: Env, start?: Starter, runIn: string | undefined = distro): Target {
+	const exe = wslExe(env);
 	const starter = start ?? createStarter(env as NodeJS.ProcessEnv);
+	const where = runIn ?? distro;
 	return {
 		where: 'wsl',
 		path: file,
-		distro: name,
-		ask: args => run(exe, wslArgs(distro ?? name, wslRunScript(file, args), false), { timeoutMs: WSL_TIMEOUT_MS }),
-		start: (args, cwd, env) => starter(exe, wslArgs(distro ?? name, wslRunScript(file, args, env), false, cwd ? wslPathOf(cwd) : '~'), {}),
+		distro,
+		ask: args => run(exe, wslArgs(where, wslRunScript(file, args), false), { timeoutMs: WSL_TIMEOUT_MS }),
+		start: (args, cwd, vars) => starter(exe, wslArgs(where, wslRunScript(file, args, vars), false, cwd ? wslPathOf(cwd) : '~'), {}),
 		// Asked of the distribution itself (no double quotes: see wslRunScript), then reached through \\wsl$.
 		configDir: async () => {
 			if (!spec.wslConfigDir) {
 				return undefined;
 			}
 			try {
-				const found = await run(exe, wslArgs(distro ?? name, `echo ${spec.wslConfigDir}`, false), { timeoutMs: WSL_TIMEOUT_MS });
+				const found = await run(exe, wslArgs(where, `echo ${spec.wslConfigDir}`, false), { timeoutMs: WSL_TIMEOUT_MS });
 				const dir = found.stdout.trim().split(/\r?\n/).pop()?.trim();
-				return found.code === 0 && name && dir?.startsWith('/') ? wslUncPath(name, dir) : undefined;
+				return found.code === 0 && distro && dir?.startsWith('/') ? wslUncPath(distro, dir) : undefined;
 			} catch {
 				return undefined;
 			}
@@ -372,6 +379,37 @@ export function versionAtLeast(version: string, least: string): boolean {
 	return true;
 }
 
-export const firstLine = (text: string): string | undefined => text.split(/\r?\n/).map(line => line.trim()).find(Boolean)?.slice(0, 200);
-
 export const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error)).split(/\r?\n/)[0].slice(0, 200);
+
+/** Where an install is: its program, and inside WSL its distribution (what a check found, as the page names it). */
+export type Install = { readonly where: 'native' | 'wsl'; readonly location: string; readonly distro?: string };
+export const installOf = (target: Pick<Target, 'where' | 'path' | 'distro'>): Install => ({ where: target.where, location: target.path, ...(target.distro ? { distro: target.distro } : {}) });
+
+/** Its version (`--version`), or what it said instead. */
+export async function askVersion(target: Target): Promise<{ readonly version: string } | { readonly message: string }> {
+	try {
+		const result = await target.ask(['--version']);
+		const version = parseVersion(result.stdout);
+		return version ? { version } : { message: firstLine(result.stderr, 200) ?? firstLine(result.stdout, 200) ?? `exit code ${result.code}` };
+	} catch (error) {
+		return { message: messageOf(error) };
+	}
+}
+
+/**
+ * The program file as it is now (its size and time), where this computer sees it (an install in WSL through
+ * \\wsl$): the same stamp is the same program, whose version is known. Undefined when it cannot be seen so (a link
+ * Windows cannot follow into WSL): then the program is asked.
+ */
+export async function programStamp(target: Pick<Target, 'where' | 'path' | 'distro'>): Promise<string | undefined> {
+	const file = target.where === 'wsl' ? target.distro && target.path.startsWith('/') ? wslUncPath(target.distro, target.path) : undefined : target.path;
+	if (!file) {
+		return undefined;
+	}
+	try {
+		const stat = await fs.promises.stat(file);
+		return stat.isFile() ? `${stat.size}:${stat.mtimeMs}` : undefined;
+	} catch {
+		return undefined;
+	}
+}

@@ -5,13 +5,13 @@
  * them (`agy models` answers only when signed in).
  *
  * Where it is looked for: Google's installer puts the program in ~/.local/bin on macOS, Linux and WSL
- * (antigravity.google/cli/install.sh); PATH first, then the usual folders (cli.ts). On Windows, the agy inside WSL
- * is asked through wsl.exe, and comes first in a window that is itself in WSL.
+ * (antigravity.google/cli/install.sh); PATH first, then the usual folders (core/cli.ts). On Windows, the agy inside
+ * WSL is asked through wsl.exe, and comes first in a window that is itself in WSL.
  */
 import * as path from 'node:path';
-import { firstLine, locateProgram, messageOf, parseVersion, versionAtLeast, type LocateOptions, type ProgramSpec, type Target } from './cli';
-import type { UsageLine } from './limits';
-import { EFFORTS, type Effort } from './turn';
+import { askVersion, installOf, locateProgram, messageOf, versionAtLeast, type Install, type LocateOptions, type ProgramSpec, type Target } from '../../core/cli';
+import type { UsageLine } from '../../core/limits';
+import { EFFORTS, type Effort } from '../../core/turn';
 
 /** Antigravity CLI's program: agy (agy.exe on Windows); its own folder (its conversations) is ~/.gemini/antigravity-cli. */
 export const AGY_PROGRAM: ProgramSpec = { windowsNames: ['agy.exe', 'agy.cmd'], names: ['agy'], wslConfigDir: '$HOME/.gemini/antigravity-cli' };
@@ -19,14 +19,12 @@ export const AGY_PROGRAM: ProgramSpec = { windowsNames: ['agy.exe', 'agy.cmd'], 
 /** agy's own folder on this computer (it names no variable that moves it). */
 export const agyConfigDir = (home: string, platform: string): string => (platform === 'win32' ? path.win32 : path.posix).join(home, '.gemini', 'antigravity-cli');
 
-type Found = { readonly where: 'native' | 'wsl'; readonly location: string; readonly distro?: string };
-
 /** What was found out, before it is put into words. */
 export type AgyCheck =
 	| { readonly kind: 'notInstalled'; readonly lookedInWsl: boolean }
-	| (Found & { readonly kind: 'notSignedIn'; readonly version?: string; readonly message?: string })
-	| (Found & { readonly kind: 'signedIn'; readonly version?: string; readonly models: readonly AgyModelLine[] })
-	| ({ readonly kind: 'failed'; readonly message: string } & Partial<Found>);
+	| (Install & { readonly kind: 'notSignedIn'; readonly version?: string; readonly message?: string })
+	| (Install & { readonly kind: 'signedIn'; readonly version?: string; readonly models: readonly AgyModelLine[] })
+	| ({ readonly kind: 'failed'; readonly message: string } & Partial<Install>);
 
 /** One line of `agy models`: the id `--model` takes, and its name (`gemini-4-hydrogen-high	Gemini 4 Hydrogen (High)`). */
 export type AgyModelLine = { readonly id: string; readonly title: string };
@@ -138,19 +136,17 @@ export async function fetchAgyUsage(target: Target, version: string | undefined)
 	}
 }
 
-/** Asks one agy: its version, and (`agy models`, which needs the account) whether it is signed in. */
-export async function inspectAgy(target: Target): Promise<AgyCheck> {
-	const found: Found = { where: target.where, location: target.path, ...(target.distro ? { distro: target.distro } : {}) };
-	let version: string | undefined;
-	try {
-		const result = await target.ask(['--version']);
-		version = parseVersion(result.stdout);
-		if (!version) {
-			return { kind: 'failed', ...found, message: firstLine(result.stderr) ?? firstLine(result.stdout) ?? `exit code ${result.code}` };
-		}
-	} catch (error) {
-		return { kind: 'failed', ...found, message: messageOf(error) };
+/**
+ * Asks one agy: its version, and (`agy models`, which needs the account) whether it is signed in. `version`: its
+ * version when it is known already (its program unchanged since it was asked), so that it is not asked again.
+ */
+export async function inspectAgy(target: Target, known?: { readonly version?: string }): Promise<AgyCheck> {
+	const found = installOf(target);
+	const asked = known?.version ? { version: known.version } : await askVersion(target);
+	if (!('version' in asked)) {
+		return { kind: 'failed', ...found, message: asked.message };
 	}
+	const { version } = asked;
 	try {
 		const listed = await target.ask(['models']);
 		const models = parseAgyModels(listed.stdout);
@@ -168,5 +164,8 @@ export async function inspectAgy(target: Target): Promise<AgyCheck> {
 /** Finds agy and asks it. On Windows, both this computer and WSL are looked at. */
 export async function detectAgy(options: LocateOptions): Promise<{ check: AgyCheck; target?: Target }> {
 	const target = await locateProgram(AGY_PROGRAM, options, agyConfigDir(options.home, options.platform));
-	return target ? { check: await inspectAgy(target), target } : { check: { kind: 'notInstalled', lookedInWsl: options.platform === 'win32' } };
+	return target ? { check: await inspectAgy(target), target } : { check: agyNotInstalled(options.platform) };
 }
+
+/** What a check says when no agy was found (on Windows, WSL was looked in too). */
+export const agyNotInstalled = (platform: string): AgyCheck => ({ kind: 'notInstalled', lookedInWsl: platform === 'win32' });

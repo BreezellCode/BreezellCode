@@ -1,34 +1,37 @@
 /*
  * Antigravity CLI's tile: its switch is the setting `agentBridge.antigravity.enabled`, which Breezell turns on only
  * after the user agreed to its consent. While it is on, the bridge asks the user's own agy whether it is signed in
- * (`agy models` answers only then) and answers conversations on its models (antigravityAgent.ts). Breezell's tools
- * reach agy as its MCP server, hosted here on the loopback (mcpHttp.ts), through the relay for an agy in WSL.
+ * (`agy models` answers only then) and answers conversations on its models (turn.ts). Breezell's tools reach agy as
+ * its MCP server, hosted here on the loopback (core/mcpHttp.ts), through the relay for an agy in WSL.
  * Everything agy is given lives in this plugin's own folder: nothing is written to agy's settings.
  */
 import * as vscode from 'vscode';
 import { createHash } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { agyModelId, detectAgy, fetchAgyUsage, groupAgyModels, type AgyCheck, type AgyModel } from './antigravity';
-import { deleteAgyConversations } from './agyConversations';
-import { agyDatabasePath, agyLiveSteps } from './agyLiveSteps';
-import { agyTranscriptPath, runAgyTurn, type AgyFolders, type AgyRun } from './antigravityAgent';
-import { AgentBridge, asReply, SECTION, type BridgeDeps } from './bridge';
-import { wslPathOf, type Target } from './cli';
-import type { UsageLine } from './limits';
-import { MCP_RELAY_SCRIPT, McpHttpServer, type McpAnswer } from './mcpHttp';
-import { AGY_TEXTS, agyStatusOf, languageKey } from './texts';
-import type { Turn, TurnControls, TurnFiles, TurnResult } from './turn';
+import { AgentBridge, asReply, SECTION, type BridgeDeps } from '../../core/bridge';
+import { wslPathOf, type Target } from '../../core/cli';
+import type { UsageLine } from '../../core/limits';
+import { MCP_RELAY_SCRIPT, McpHttpServer, type McpAnswer } from '../../core/mcpHttp';
+import { languageKey } from '../../core/texts';
+import type { Turn, TurnControls, TurnFiles, TurnResult } from '../../core/turn';
+import { deleteAgyConversations } from './conversations';
+import { agyDatabasePath, agyLiveSteps } from './liveSteps';
+import { AGY_PROGRAM, agyConfigDir, agyModelId, agyNotInstalled, fetchAgyUsage, groupAgyModels, inspectAgy, type AgyCheck, type AgyModel } from './program';
+import { AGY_TEXTS, agyStatusOf } from './texts';
+import { agyTranscriptPath } from './transcript';
+import { runAgyTurn, type AgyFolders, type AgyRun } from './turn';
 
 export const AGY_TILE = 'antigravity';
 export const AGY_ENABLED_KEY = 'antigravity.enabled';
 export const AGY_RECHECK_COMMAND = 'agentBridge.antigravity.recheck';
-/** On: a conversation deleted in Breezell is deleted in agy too (agyConversations.ts). */
+/** On: a conversation deleted in Breezell is deleted in agy too (conversations.ts). */
 export const AGY_DELETE_KEY = 'antigravity.deleteConversations';
-/** What an agy session was last told of its own MCP servers, kept with the plugin (antigravityAgent.ts AgyRun.ownMcpTold). */
+/** What an agy session was last told of its own MCP servers, kept with the plugin (turn.ts AgyRun.ownMcpTold). */
 const OWN_MCP_TOLD_PREFIX = 'antigravity.ownMcpTold.';
 
 export class AntigravityBridge extends AgentBridge<AgyCheck> {
+	protected readonly program = AGY_PROGRAM;
 	/** The models offered last, with the agy id of each effort level (agyModelId). */
 	private models: AgyModel[] = [];
 	private readonly mcp = new McpHttpServer();
@@ -68,8 +71,16 @@ export class AntigravityBridge extends AgentBridge<AgyCheck> {
 		await deleteAgyConversations(configDir, e.conversations.map(c => c.session)).catch(error => console.warn(`[Agent Bridge] an Antigravity CLI conversation was not deleted: ${error?.message ?? error}`));
 	}
 
-	protected detect(wslWindow: { distro?: string } | undefined): Promise<{ check: AgyCheck; target?: Target }> {
-		return detectAgy({ env: this.deps.env, platform: this.deps.platform, home: this.deps.home, run: this.deps.run, isFile: this.deps.isFile, listDir: this.deps.listDir, start: this.deps.start, wslWindow });
+	protected nativeConfigDir(): string {
+		return agyConfigDir(this.deps.home, this.deps.platform);
+	}
+
+	protected inspect(target: Target, known: { readonly version?: string }): Promise<AgyCheck> {
+		return inspectAgy(target, known);
+	}
+
+	protected notInstalled(): AgyCheck {
+		return agyNotInstalled(this.deps.platform);
 	}
 
 	protected isSignedIn(check: AgyCheck): boolean {
@@ -130,6 +141,12 @@ export class AntigravityBridge extends AgentBridge<AgyCheck> {
 			modelIdOf: agyModel => this.models.find(m => m.id === agyModel || Object.values(m.variants ?? {}).includes(agyModel))?.id,
 		};
 		return runAgyTurn(target, turn, asReply(reply), token, pathFor, run, files, controls);
+	}
+
+	/** A conversation's transcript, in agy's own folder (agy writes it as its steps are done). */
+	protected async recordOf(target: Target): Promise<((session: string) => string | undefined) | undefined> {
+		const configDir = await this.configDirOf(target);
+		return configDir ? session => agyTranscriptPath(configDir, session) : undefined;
 	}
 
 	private configDirOf(target: Target): Promise<string | undefined> {

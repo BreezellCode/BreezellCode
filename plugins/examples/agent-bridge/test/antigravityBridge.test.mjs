@@ -113,7 +113,7 @@ test('switched on: what agy says, on its page; its models in the picker; a turn 
 	assert.deepEqual(calls.map(c => c[1]), ['--version', 'models', '-p /usage'], 'its limits through its own /usage, after the check');
 	const shown = shownOf();
 	assert.deepEqual(shown[0], { connected: false, busy: true });
-	const account = [{ label: '登入方式', value: 'Google 帳號' }, { label: 'Antigravity CLI 版本', value: '1.5.17' }, { label: '程式位置', value: '/home/u/.local/bin/agy' }, { label: '模型', value: '可用 3 個' }];
+	const account = [{ label: '登入方式', value: 'Google 帳號' }, { label: 'Antigravity CLI 版本', value: '1.5.17' }, { label: '程式位置', value: '/home/u/.local/bin/agy' }, { label: '模型', value: '可用 3 個' }, { label: '常駐程序', value: '關閉' }];
 	assert.deepEqual(shown.at(-2), { connected: true, account }, 'connected at once, its limits a moment later');
 	const { usage, ...rest } = shown.at(-1);
 	assert.deepEqual(rest, { connected: true, account });

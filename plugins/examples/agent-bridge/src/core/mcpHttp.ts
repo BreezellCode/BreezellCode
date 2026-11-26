@@ -15,7 +15,7 @@ export interface McpEndpoint {
 	dispose(): void;
 }
 
-/** The answer to one MCP message (breezellTools.ts BreezellToolHost.answer). */
+/** The answer to one MCP message (tools.ts BreezellToolHost.answer). */
 export type McpAnswer = (rpc: { id?: unknown; method?: unknown; params?: Record<string, unknown> }) => Promise<unknown>;
 
 /** The most a request may hold: a new file's whole content goes in one. */

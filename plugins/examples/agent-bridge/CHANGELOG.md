@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0
+
+- Less CPU and memory while Claude Code or Antigravity CLI is connected:
+  - Coming back to Breezell starts fewer of their programs: it asks only whether you are still signed in, and takes the program, its version and your plan as found before while they are unchanged.
+  - Breezell's windows, the ones the Agents page opens in the background included, take what one of them checked moments ago (the connection, the models, the usage bars) instead of each starting Claude Code and agy again.
+  - A project's window opening again reads only the Claude Code conversations that changed since it was last open, not all of them.
+  - Antigravity CLI's thinking as it is written is read with far less work: nothing while agy writes nothing, and only the steps that grew.
+  - The usage bars on the tiles' pages refresh by themselves at most every 5 minutes (before: every minute); "Check again" refreshes them at once.
+- Antigravity CLI in WSL: in a long conversation, its thinking could stop showing as it was written after a while; it now keeps showing to the end.
+- "Keep running between messages…" on the Claude Code and Antigravity CLI tiles (off by default, one setting for both): after a reply, the conversation's agent keeps running for the time you choose, and your next message goes straight to it, so replies start sooner (Claude Code: about 1 s each). Each conversation kept holds about 200–300 MB of memory until it has been idle that long. The tiles' pages show the setting and how many are kept.
+
 ## 1.1.1
 
 - Claude Code conversations brought in from outside Breezell: when a subagent or a command that Claude Code ran in the background ended, Claude Code's notice of it (`<task-notification>…`) showed as a message of yours. It no longer does: a subagent's call that went to the background now ends with its report, or as failed or stopped, and while it works it shows as working in the background instead of the note Claude Code gives its model when it starts. Conversations brought in earlier keep what they show.

@@ -9,5 +9,7 @@
 	"config.subagentsFollowModel": "Every subagent Claude Code starts works on the model and the effort picked for the conversation. Off: Claude Code picks a subagent's model itself.",
 	"command.recheckAntigravity": "Check Antigravity CLI Again",
 	"config.antigravityEnabled": "Connect the Antigravity CLI (agy) installed on this computer. Turn it on from Box › Models › Sign in, after agreeing to what it asks.",
-	"config.antigravityDeleteConversations": "Deleting a conversation in Breezell also deletes it in Antigravity CLI, with its subagents' conversations. Off: only Breezell's copy is deleted."
+	"config.antigravityDeleteConversations": "Deleting a conversation in Breezell also deletes it in Antigravity CLI, with its subagents' conversations. Off: only Breezell's copy is deleted.",
+	"command.keepAlive": "Keep Agents Running Between Messages",
+	"config.keepAlive": "How many minutes a conversation's agent (Claude Code, Antigravity CLI) keeps running after a reply, for the next message to go straight to it: replies start sooner, but each kept conversation holds about 200–300 MB of memory until then. 0: off (the default), the agent is started for each message."
 }

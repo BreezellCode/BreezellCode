@@ -12,7 +12,7 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const require = createRequire(import.meta.url);
 const esbuild = require('esbuild');
 const out = mkdtempSync(join(tmpdir(), 'agent-bridge-views-'));
-await esbuild.build({ entryPoints: [join(root, 'src/views.ts')], bundle: true, platform: 'node', format: 'cjs', outfile: join(out, 'views.cjs'), logLevel: 'silent' });
+await esbuild.build({ entryPoints: [join(root, 'src/agents/claudeCode/views.ts')], bundle: true, platform: 'node', format: 'cjs', outfile: join(out, 'views.cjs'), logLevel: 'silent' });
 const views = require(join(out, 'views.cjs'));
 rmSync(out, { recursive: true, force: true });
 

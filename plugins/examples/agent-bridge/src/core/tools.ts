@@ -5,6 +5,7 @@
  * Antigravity CLI's own MCP connection to this plugin (mcpHttp.ts).
  */
 import type { BreezellTool, BreezellToolResult, TurnControls } from './turn';
+import type { ToolView } from './views';
 
 /** The MCP server this plugin hosts for an agent in a turn (its tools are Breezell's). */
 export const BREEZELL_MCP_SERVER = 'breezell';
@@ -64,6 +65,15 @@ export function mcpToolNameOf(server: string, tool: string): string {
 	}
 	const tag = (hash >>> 0).toString(36);
 	return `${name.slice(0, room - tag.length - 1)}_${tag}`;
+}
+
+/**
+ * The tools of the user's MCP servers in Breezell offered in a turn, by the name the agent knows each by under this
+ * plugin's server (`nameOf` the name mcpToolNameOf gives it): each is drawn as Breezell's MCP row of its server.
+ */
+export function mcpToolViews(controls: TurnControls | undefined, nameOf: (name: string) => string): ReadonlyMap<string, Extract<ToolView, { kind: 'mcp' }>> {
+	const listed = controls?.callBreezellTool ? controls.breezellTools ?? [] : [];
+	return new Map(listed.filter(tool => tool.mcpServer && tool.mcpTool).map(tool => [nameOf(mcpToolNameOf(tool.mcpServer!, tool.mcpTool!)), { kind: 'mcp' as const, server: tool.mcpServer!, tool: tool.mcpTool! }]));
 }
 
 /**
@@ -137,6 +147,8 @@ export interface BreezellToolHost {
 	readonly mcpOffered: ReadonlyMap<string, BreezellTool>;
 	/** Every name it lists, Breezell's, the MCP servers' and its own. */
 	readonly names: readonly string[];
+	/** What tools/list answers: every tool it offers, as the agent is told of it (an agent kept between turns keeps the list it got). */
+	listTools(): unknown[];
 	/** The JSON-RPC answer to one MCP message (a notification's is an empty result). */
 	answer(rpc: Rpc): Promise<unknown>;
 	/** What a memory lookup with this input came to (its row's kind and count). */
@@ -183,7 +195,10 @@ export function createBreezellToolHost(controls: TurnControls | undefined, optio
 		const named = placed ? { ...input, uri: placed } : input;
 		const sent = name === 'run_terminal_cmd' ? terminalInputOf(named) : name === 'await' ? awaitInputOf(named, servers) : named;
 		const ran = await Promise.resolve(controls.callBreezellTool(name, sent, callId)).then(r => r, failed);
-		recalled.set(JSON.stringify(input), { resultType: (ran as BreezellToolResult).resultType, count: (ran as BreezellToolResult).count });
+		// A memory lookup's row says what it came to; no other call's input is kept (an edit's or a new file's is large).
+		if (name === 'memories_recall') {
+			recalled.set(JSON.stringify(input), { resultType: (ran as BreezellToolResult).resultType, count: (ran as BreezellToolResult).count });
+		}
 		// A server it started, now in the background: its task id, for its waits (awaitInputOf).
 		const backgroundTask = name === 'run_terminal_cmd' && (sent.purpose === 'serve' || sent.background === true || (typeof sent.command === 'string' && SERVER_COMMAND.test(sent.command))) ? /task_id:\s*([\w.-]+)/.exec(ran.text ?? '')?.[1] : undefined;
 		if (backgroundTask) {
@@ -191,10 +206,16 @@ export function createBreezellToolHost(controls: TurnControls | undefined, optio
 		}
 		return result(ran);
 	};
+	const listTools = () => [
+		...offered.map(tool => ({ name: tool.name, description: descriptionOf(tool), inputSchema: tool.inputSchema, ...options.listed?.(tool.name, EAGER_BREEZELL_TOOLS.has(tool.name)) })),
+		...[...mcpOffered].map(([name, tool]) => ({ name, description: `${tool.description?.trim() || tool.mcpTool}\n\n(Tool "${tool.mcpTool}" of the user's MCP server "${tool.mcpServer}" in Breezell.)`, inputSchema: tool.inputSchema })),
+		...own.map(tool => ({ name: tool.name, description: tool.description, inputSchema: tool.inputSchema, ...options.listed?.(tool.name, true) })),
+	];
 	return {
 		offered,
 		mcpOffered,
 		names: [...offered.map(tool => tool.name), ...mcpOffered.keys(), ...own.map(tool => tool.name)],
+		listTools,
 		recalled: input => recalled.get(JSON.stringify(input ?? {})),
 		answer: async rpc => {
 			const reply = (value: unknown) => ({ jsonrpc: '2.0', id: rpc.id ?? null, result: value });
@@ -202,11 +223,7 @@ export function createBreezellToolHost(controls: TurnControls | undefined, optio
 				case 'initialize':
 					return reply({ protocolVersion: typeof rpc.params?.protocolVersion === 'string' ? rpc.params.protocolVersion : '2025-06-18', capabilities: { tools: {} }, serverInfo: { name: BREEZELL_MCP_SERVER, version: '1.0.0' } });
 				case 'tools/list':
-					return reply({ tools: [
-						...offered.map(tool => ({ name: tool.name, description: descriptionOf(tool), inputSchema: tool.inputSchema, ...options.listed?.(tool.name, EAGER_BREEZELL_TOOLS.has(tool.name)) })),
-						...[...mcpOffered].map(([name, tool]) => ({ name, description: `${tool.description?.trim() || tool.mcpTool}\n\n(Tool "${tool.mcpTool}" of the user's MCP server "${tool.mcpServer}" in Breezell.)`, inputSchema: tool.inputSchema })),
-						...own.map(tool => ({ name: tool.name, description: tool.description, inputSchema: tool.inputSchema, ...options.listed?.(tool.name, true) })),
-					] });
+					return reply({ tools: listTools() });
 				case 'tools/call': {
 					const name = typeof rpc.params?.name === 'string' ? rpc.params.name : '';
 					const input = rpc.params?.arguments && typeof rpc.params.arguments === 'object' ? rpc.params.arguments as Record<string, unknown> : {};

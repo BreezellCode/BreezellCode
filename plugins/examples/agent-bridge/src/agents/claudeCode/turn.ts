@@ -5,107 +5,18 @@
  * to Breezell's approval card and its answer goes back as a `control_response`. The conversation's
  * session goes on with `--resume`. Nothing here reads Claude Code's files or its credentials.
  */
-import type { ChildProcess } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import type { Target } from './claudeCode';
-import { BREEZELL_MCP_SERVER, UNASKED_BREEZELL_TOOLS, createBreezellToolHost, mcpToolNameOf } from './breezellTools';
-import { attachedOutside, EFFORTS, firstLine, onJsonLines, planCardOf, PLAN_SHOWN, promptOf, rulesTextOf, sentWithMessage, STOP_GRACE_MS, type Cancel, type ModelUsage, type Reply, type Turn, type TurnControls, type TurnFiles, type TurnResult } from './turn';
-import { BREEZELL_EDIT_TOOL, BREEZELL_TERMINAL_TOOL, BREEZELL_WRITE_TOOL, isSubagentTool, partialInput, UNSHOWN_TOOLS, viewOfResult, viewOfUse as ownViewOfUse, viewOfWrite, withUri, type ToolView } from './views';
-
-// What the rest of the plugin (and its tests) know from here: what every agent shares is in turn.ts and breezellTools.ts.
-export { BREEZELL_MCP_SERVER, SERVER_AWAIT_MAX_MS, awaitInputOf, mcpToolNameOf, terminalInputOf } from './breezellTools';
-export { EFFORTS, STOP_GRACE_MS, onJsonLines, planCardOf, PLAN_SHOWN, promptOf } from './turn';
-export type { Attachment, Cancel, Effort, ModelUsage, Reply, Turn, TurnControls, TurnFiles, Usage } from './turn';
-
-/**
- * What Claude Code's result says it used, per model, less what was told before in the same run (`told`, kept up to
- * date): its totals grow when it goes on after a background subagent and ends again.
- */
-/**
- * The context size Claude Code's /context reports ("**Tokens:** 30.1k / 1m (3%)"): what the conversation takes of its
- * model's window, without a model request. Undefined when the report does not say it so.
- */
-export function contextOfReport(report: unknown): { tokens: number; window: number } | undefined {
-	const found = typeof report === 'string' ? /\*\*Tokens:\*\*\s*([\d.,]+)\s*([km]?)\s*\/\s*([\d.,]+)\s*([km]?)/i.exec(report) : null;
-	if (!found) {
-		return undefined;
-	}
-	const count = (digits: string, unit: string) => Math.round(Number(digits.replace(/,/g, '')) * (/m/i.test(unit) ? 1_000_000 : /k/i.test(unit) ? 1_000 : 1));
-	const tokens = count(found[1], found[2]);
-	const window = count(found[3], found[4]);
-	return Number.isFinite(tokens) && Number.isFinite(window) && window > 0 ? { tokens, window } : undefined;
-}
-
-/** Each model's context window, as Claude Code's results said it: the context ring's size while a turn is under way. */
-const contextWindows = new Map<string, number>();
-
-/** One model request's tokens as an Anthropic usage object says them (input, output, cache read, cache write). */
-export function requestUsageOf(model: string, usage: unknown): ModelUsage | undefined {
-	const u = usage && typeof usage === 'object' ? usage as Record<string, unknown> : undefined;
-	if (!u) {
-		return undefined;
-	}
-	const count = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
-	return { model, inputTokens: count(u.input_tokens), outputTokens: count(u.output_tokens), cacheReadTokens: count(u.cache_read_input_tokens), cacheWriteTokens: count(u.cache_creation_input_tokens) };
-}
-
-/**
- * The request records a result settles, Breezell's own way (a row a model request). The lead's requests were told as
- * they ended (`told`); its subagents' are told now (`subagents`: their input and cache exact, their output in part);
- * what the result counts beyond all of them (the subagents' output, a compression, Claude Code's own small requests)
- * goes onto that model's last subagent request, or a row of its own, so that the rows add up to Claude Code's count.
- */
-export function requestRows(counted: readonly ModelUsage[], told: ReadonlyMap<string, ModelUsage>, subagents: readonly ModelUsage[]): ModelUsage[] {
-	const keys = ['inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens'] as const;
-	const out: ModelUsage[] = [];
-	for (const model of [...new Set([...counted.map(c => c.model), ...subagents.map(s => s.model)])]) {
-		const rows = subagents.filter(s => s.model === model).map(s => ({ ...s }));
-		const total = counted.find(c => c.model === model);
-		if (total) {
-			const before = told.get(model);
-			const rest = { model } as ModelUsage;
-			for (const key of keys) {
-				rest[key] = Math.max(0, total[key] - (before?.[key] ?? 0) - rows.reduce((sum, row) => sum + row[key], 0));
-			}
-			if (rows.length) {
-				for (const key of keys) {
-					rows[rows.length - 1][key] += rest[key];
-				}
-			} else if (keys.some(key => rest[key] > 0)) {
-				rows.push(rest);
-			}
-		}
-		out.push(...rows.filter(row => keys.some(key => row[key] > 0)));
-	}
-	return out;
-}
-
-/** What a result says this turn used (its `usage`: the lead's requests), as the tokens of one model. */
-export function turnUsageOf(usage: unknown, model: string): ModelUsage[] {
-	const u = usage && typeof usage === 'object' ? usage as Record<string, unknown> : {};
-	const count = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
-	const used = { model, inputTokens: count(u.input_tokens), outputTokens: count(u.output_tokens), cacheReadTokens: count(u.cache_read_input_tokens), cacheWriteTokens: count(u.cache_creation_input_tokens) };
-	return used.inputTokens || used.outputTokens || used.cacheReadTokens || used.cacheWriteTokens ? [used] : [];
-}
-
-export function usageSince(modelUsage: unknown, told: Map<string, ModelUsage>): ModelUsage[] {
-	const out: ModelUsage[] = [];
-	const count = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
-	for (const [model, raw] of Object.entries(modelUsage && typeof modelUsage === 'object' ? modelUsage as Record<string, Record<string, unknown>> : {})) {
-		const total: ModelUsage = { model, inputTokens: count(raw?.inputTokens), outputTokens: count(raw?.outputTokens), cacheReadTokens: count(raw?.cacheReadInputTokens), cacheWriteTokens: count(raw?.cacheCreationInputTokens) };
-		const before = told.get(model);
-		told.set(model, total);
-		const since: ModelUsage = before
-			? { model, inputTokens: Math.max(0, total.inputTokens - before.inputTokens), outputTokens: Math.max(0, total.outputTokens - before.outputTokens), cacheReadTokens: Math.max(0, total.cacheReadTokens - before.cacheReadTokens), cacheWriteTokens: Math.max(0, total.cacheWriteTokens - before.cacheWriteTokens) }
-			: total;
-		if (since.inputTokens || since.outputTokens || since.cacheReadTokens || since.cacheWriteTokens) {
-			out.push(since);
-		}
-	}
-	return out;
-}
+import type { Target } from '../../core/cli';
+import { withoutArg, type KeptProcess } from '../../core/keepAlive';
+import { AgentChild, AgentProcess, type ChildListener } from '../../core/process';
+import { BREEZELL_MCP_SERVER, UNASKED_BREEZELL_TOOLS, createBreezellToolHost, mcpToolViews } from '../../core/tools';
+import { attachedOutside, EFFORTS, firstLine, planCardOf, PLAN_SHOWN, promptOf, rulesTextOf, sentWithMessage, type Cancel, type ModelUsage, type Reply, type Turn, type TurnControls, type TurnFiles, type TurnResult } from '../../core/turn';
+import { addUsage, hasTokens, tokenCount } from '../../core/usage';
+import { memoriesViewOf, withUri, type ToolView } from '../../core/views';
+import { contextOfReport, contextWindowOf, rememberContextWindows, requestRows, requestUsageOf, turnUsageOf, usageSince } from './tokens';
+import { BREEZELL_EDIT_TOOL, BREEZELL_TERMINAL_TOOL, BREEZELL_WRITE_TOOL, isSubagentTool, partialInput, UNSHOWN_TOOLS, viewOfResult, viewOfUse as ownViewOfUse, viewOfWrite } from './views';
 
 /**
  * Claude Code's own tools that Breezell's take over when offered: its shell (Bash, and Monitor, which runs commands
@@ -177,7 +88,7 @@ function resultText(content: unknown): string {
 const THINKING_DISPLAY = ['--thinking-display', 'summarized'];
 /** The Claude Code installs (by where and path) that refused THINKING_DISPLAY. */
 const refusedThinkingDisplay = new Set<string>();
-const installOf = (target: Target) => `${target.where}\0${target.path}`;
+const installKey = (target: Target) => `${target.where}\0${target.path}`;
 
 /** The user message Claude Code gets: the prompt, and the pictures and PDFs attached in Breezell as blocks of their own. */
 export function contentOf(turn: Turn, pathFor: (path: string) => string): string | unknown[] {
@@ -301,10 +212,26 @@ export function followingSubagentsEnv(turn: Pick<Turn, 'effort'>): Record<string
 }
 
 /**
- * Runs one turn. Resolves with the session to go on with, and the error Claude Code ended with; rejects
- * only when it could not be run at all.
+ * What Claude Code says that is work: its model's output, a question to the user, a tool's result, a task of its own.
+ * Said between turns by a kept program, it has no turn to go to (keepAlive.ts).
  */
-export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel, pathFor: (path: string) => string = p => p, files?: TurnFiles, controls?: TurnControls): Promise<TurnResult> {
+export function claudeIsWork(message: Record<string, unknown>): boolean {
+	switch (message.type) {
+		case 'assistant': case 'user': case 'stream_event': case 'control_request': case 'result':
+			return true;
+		case 'system':
+			return typeof message.subtype === 'string' && /^(init|task_|api_retry|compact_boundary|thinking_tokens)/.test(message.subtype);
+		default:
+			return false;
+	}
+}
+
+/**
+ * Runs one turn. Resolves with the session to go on with, and the error Claude Code ended with; rejects
+ * only when it could not be run at all. With its program kept between turns (controls.keepAlive), the turn goes on in
+ * the conversation's kept program when it is fit for it, and a turn that ended well leaves its program kept.
+ */
+export async function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel, pathFor: (path: string) => string = p => p, files?: TurnFiles, controls?: TurnControls): Promise<TurnResult> {
 	const named = (view: ToolView | undefined) => files ? withUri(view, path => files.uriOf(path)) : view;
 	// Breezell's tools, as the MCP server this plugin hosts: Claude Code names each call (its tool_use id), and has
 	// asked for it already (can_use_tool) when it is one Breezell asks about. Loaded at the start: see EAGER_BREEZELL_TOOLS.
@@ -314,36 +241,51 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 		listed: (_name, eager) => eager ? { _meta: { 'anthropic/alwaysLoad': true } } : undefined,
 	});
 	// A tool of one of the user's MCP servers in Breezell (under this plugin's server): its server and tool, for Breezell's MCP row.
-	const mcpViews = new Map((controls?.callBreezellTool ? controls.breezellTools ?? [] : []).filter(tool => tool.mcpServer && tool.mcpTool)
-		.map(tool => [`mcp__${BREEZELL_MCP_SERVER}__${mcpToolNameOf(tool.mcpServer!, tool.mcpTool!)}`, { kind: 'mcp' as const, server: tool.mcpServer!, tool: tool.mcpTool! }]));
+	const mcpViews = mcpToolViews(controls, name => `mcp__${BREEZELL_MCP_SERVER}__${name}`);
 	const viewOfUse = (name: string, input: Parameters<typeof ownViewOfUse>[1]): ToolView | undefined => mcpViews.get(name) ?? ownViewOfUse(name, input);
-	return new Promise((resolve, reject) => {
-		let child: ChildProcess;
-		// A new session's rules from Breezell, in its system prompt: through a file (a command line has a length limit), gone with the process.
-		const rulesFile = !turn.session && turn.rules?.trim() ? path.join(os.tmpdir(), `breezell-rules-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.md`) : undefined;
-		const dropRulesFile = () => { if (rulesFile) { try { fs.rmSync(rulesFile, { force: true }); } catch { /* already gone */ } } };
+	// Breezell's tools it is offered: a lookup or a wait runs without asking; a command or a change is asked about
+	// as Breezell's own are, and Claude Code's own tools for those are off, so every command and change goes there.
+	const offered = host.offered;
+	const allowed = [...offered.filter(tool => UNASKED_BREEZELL_TOOLS.has(tool.name)).map(tool => `mcp__${BREEZELL_MCP_SERVER}__${tool.name}`), ...attachedReadRules(turn, pathFor)];
+	const replaced = [...new Set([...offered.flatMap(tool => OWN_TOOLS_REPLACED[tool.name] ?? []), ...toolsOffIn(turn.mode)])];
+	const args = [
+		...turnArgs(turn, !refusedThinkingDisplay.has(installKey(target))),
+		...(allowed.length ? ['--allowedTools', allowed.join(',')] : []),
+		...(replaced.length ? ['--disallowedTools', replaced.join(',')] : []),
+	];
+	// Only Breezell's MCP servers (and this plugin's): Claude Code's own are left out when the user said so.
+	const strict = controls?.ownMcpServers === false ? ['--strict-mcp-config'] : [];
+	const env = controls?.subagentsFollowModel ? followingSubagentsEnv(turn) : undefined;
+	// Its program kept between this conversation's turns: the kept one, when it was started just so (its session aside).
+	const keep = controls?.keepAlive?.pool.enabled ? controls.keepAlive : undefined;
+	const key = JSON.stringify({ args: [...withoutArg(args, '--resume'), ...strict], cwd: turn.cwd ?? '', env: env ?? {}, tools: host.listTools() });
+	const taken = keep ? await keep.pool.take(keep.conversation, key, turn.session, turn.session ? keep.recordOf?.(turn.session) : undefined) : undefined;
+	let agent: AgentChild;
+	let kept: KeptProcess | undefined;
+	// A new session's rules from Breezell, in its system prompt: through a file (a command line has a length limit), gone once read.
+	const rulesFile = !taken?.kept && !turn.session && turn.rules?.trim() ? path.join(os.tmpdir(), `breezell-rules-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.md`) : undefined;
+	const dropRulesFile = () => { if (rulesFile) { try { fs.rmSync(rulesFile, { force: true }); } catch { /* already gone */ } } };
+	if (taken?.kept) {
+		kept = taken.kept;
+		agent = kept.agent;
+	} else {
 		try {
 			if (rulesFile) {
 				fs.writeFileSync(rulesFile, rulesPromptOf(turn.rules!), 'utf8');
 			}
-			// Breezell's tools it is offered: a lookup or a wait runs without asking; a command or a change is asked about
-			// as Breezell's own are, and Claude Code's own tools for those are off, so every command and change goes there.
-			const tools = host.offered;
-			const allowed = [...tools.filter(tool => UNASKED_BREEZELL_TOOLS.has(tool.name)).map(tool => `mcp__${BREEZELL_MCP_SERVER}__${tool.name}`), ...attachedReadRules(turn, pathFor)];
-			const replaced = [...new Set([...tools.flatMap(tool => OWN_TOOLS_REPLACED[tool.name] ?? []), ...toolsOffIn(turn.mode)])];
-			child = target.start([
-				...turnArgs(turn, !refusedThinkingDisplay.has(installOf(target))),
-				...(allowed.length ? ['--allowedTools', allowed.join(',')] : []),
-				...(replaced.length ? ['--disallowedTools', replaced.join(',')] : []),
-				...(rulesFile ? ['--append-system-prompt-file', pathFor(rulesFile)] : []),
-				// Only Breezell's MCP servers (and this plugin's): Claude Code's own are left out when the user said so.
-				...(controls?.ownMcpServers === false ? ['--strict-mcp-config'] : []),
-			], turn.cwd, controls?.subagentsFollowModel ? followingSubagentsEnv(turn) : undefined);
+			agent = new AgentChild(target.start([...args, ...(rulesFile ? ['--append-system-prompt-file', pathFor(rulesFile)] : []), ...strict], turn.cwd, env));
 		} catch (error) {
 			dropRulesFile();
-			reject(error);
-			return;
+			throw error;
 		}
+		// Kept from here, unless a turn of this conversation is under way in the kept one (this one is then its own).
+		if (keep && !taken?.busy) {
+			const candidate: KeptProcess = { agent, key, session: undefined, isWork: claudeIsWork };
+			kept = keep.pool.adopt(keep.conversation, candidate) ? candidate : undefined;
+		}
+	}
+	const started = !taken?.kept;
+	return new Promise((resolve, reject) => {
 		// Only a session Claude Code itself names: one it could not go on with (removed, say) is not echoed back.
 		let session: string | undefined;
 		/** The last record of the session this turn made (a message's uuid, as its session file keeps it). */
@@ -372,12 +314,20 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 		 */
 		const before = turn.session ? controls?.usageTotals?.of(turn.session) : {};
 		let usageTold: Map<string, ModelUsage> | undefined = before ? new Map(Object.entries(before)) : undefined;
-		let stderr = '';
-		let killTimer: ReturnType<typeof setTimeout> | undefined;
-		/** A model response is coming (message_start to message_stop), and when Claude Code last said anything. */
+		/** A model response is coming (message_start to message_stop): silence then is a stalled model (MODEL_STALL_MS). */
 		let streaming = false;
-		let lastHeardAt = Date.now();
-		let stalled = false;
+		let nextRequest = 1;
+		const stallMs = controls?.stallMs ?? MODEL_STALL_MS;
+		// Asked to stop as the SDK asks it (an interrupt), its input closed; ended if it does not within the grace period.
+		const proc = new AgentProcess(agent, {
+			token,
+			askToStop: why => {
+				proc.write({ type: 'control_request', request_id: `breezell-${why}-${nextRequest++}`, request: { subtype: 'interrupt' } });
+				proc.endInput();
+			},
+			// A response that went silent (MODEL_STALL_MS): taken for a dead connection, it stops as a model error Breezell sends on.
+			stall: { ms: stallMs, counts: () => streaming, onStall: () => { error = `No answer from the model for ${Math.round(stallMs / 1000)} s.`; apiError = 'stalled'; } },
+		});
 		/** Tool calls by id, for the results and progress that name only the id: hidden ones are not told at all. */
 		const tools = new Map<string, { name: string; input?: Record<string, unknown>; parent?: string; hidden: boolean; async?: boolean }>();
 		const told = (id: string, name: string, input: Record<string, unknown> | undefined, parent: string | undefined) => ({ id, name, ...(toolTitle(name, input) ? { title: toolTitle(name, input) } : {}), ...(input ? { input } : {}), ...(parent ? { parent } : {}) });
@@ -430,12 +380,7 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 				before.called = true;
 			}
 		};
-		let nextRequest = 1;
-		const write = (message: unknown) => {
-			if (child.stdin && !child.stdin.destroyed && child.stdin.writable) {
-				child.stdin.write(`${JSON.stringify(message)}\n`);
-			}
-		};
+		const write = (message: unknown) => proc.write(message);
 		if (controls) {
 			controls.stopSubagent = toolId => {
 				const task = tasks.get(toolId);
@@ -451,7 +396,7 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 			response: { subtype: 'success', request_id: requestId, response: allowed ? { behavior: 'allow', updatedInput: input ?? {} } : { behavior: 'deny', message: 'The user did not allow this in Breezell.' } },
 		});
 		const handle = (message: Record<string, unknown>) => {
-			lastHeardAt = Date.now();
+			proc.heard();
 			// A subagent's messages carry the call that started it (Agent): its words and calls show under that call.
 			const parent = typeof message.parent_tool_use_id === 'string' && message.parent_tool_use_id ? message.parent_tool_use_id : undefined;
 			const subagent = parent !== undefined;
@@ -513,9 +458,9 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 							}
 						}
 						// Its turn told its end while this one still worked: Claude Code goes on with what it reported, and the
-						// input closes with that turn's end; if nothing comes, after a while.
+						// turn ends with that turn's end; if nothing comes, after a while.
 						if (resultWhileBusy && !tasksRunning() && !quietClose) {
-							quietClose = setTimeout(() => child.stdin?.end(), AFTER_BACKGROUND_QUIET_MS);
+							quietClose = setTimeout(endTurn, AFTER_BACKGROUND_QUIET_MS);
 						}
 					}
 					// A thought whose text the model keeps hidden: how far it has gone.
@@ -553,11 +498,11 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 						leadModel = event.message.model;
 					} else if (event.type === 'message_delta' && leadModel && reply.usage) {
 						const row = requestUsageOf(leadModel, event.usage);
-						if (row && (row.inputTokens || row.outputTokens || row.cacheReadTokens || row.cacheWriteTokens)) {
-							const sum = toldSince.get(leadModel) ?? { model: leadModel, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
-							toldSince.set(leadModel, { model: leadModel, inputTokens: sum.inputTokens + row.inputTokens, outputTokens: sum.outputTokens + row.outputTokens, cacheReadTokens: sum.cacheReadTokens + row.cacheReadTokens, cacheWriteTokens: sum.cacheWriteTokens + row.cacheWriteTokens });
+						if (row && hasTokens(row)) {
+							const sum = toldSince.get(leadModel);
+							toldSince.set(leadModel, sum ? addUsage(sum, row) : row);
 							const tokens = row.inputTokens + row.cacheReadTokens + row.cacheWriteTokens;
-							const window = contextWindows.get(leadModel);
+							const window = contextWindowOf(leadModel);
 							reply.usage({ ...(window && tokens ? { context: { tokens, window } } : {}), models: [row] });
 						}
 					}
@@ -615,8 +560,7 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 					}
 					// How much of its context the conversation takes: its last request's input, cached parts too (not a subagent's).
 					if (!subagent && m.usage && typeof m.usage === 'object') {
-						const n = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
-						const tokens = n(m.usage.input_tokens) + n(m.usage.cache_read_input_tokens) + n(m.usage.cache_creation_input_tokens);
+						const tokens = tokenCount(m.usage.input_tokens) + tokenCount(m.usage.cache_read_input_tokens) + tokenCount(m.usage.cache_creation_input_tokens);
 						if (tokens > 0) {
 							context = { tokens, ...(typeof m.model === 'string' ? { model: m.model } : {}) };
 						}
@@ -683,8 +627,7 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 						// Claude Code's structured result is of the message's one result.
 						const seen = named(b.is_error ? viewOfUse(name, call?.input) : viewOfResult(name, call?.input, results.length === 1 ? message.tool_use_result : undefined));
 						// A lookup in Breezell's memories: its row says what kind of result and how many, as the call returned them.
-						const lookedUp = seen?.kind === 'memories' ? host.recalled(call?.input) : undefined;
-						const found: ToolView | undefined = seen?.kind === 'memories' && lookedUp ? { ...seen, ...(lookedUp.resultType === 'search' || lookedUp.resultType === 'list' || lookedUp.resultType === 'open' || lookedUp.resultType === 'l0_index' ? { resultType: lookedUp.resultType } : {}), ...(typeof lookedUp.count === 'number' ? { count: lookedUp.count } : {}) } : seen;
+						const found = seen?.kind === 'memories' ? memoriesViewOf(seen, host.recalled(call?.input)) : seen;
 						// A subagent the user stopped ends as an error of its call: it was stopped, not failed.
 						const view = found?.kind === 'subagent' && b.is_error && tasks.get(b.tool_use_id)?.stopped ? { ...found, stopped: true } : found;
 						const output = view?.kind === 'subagent' && view.report ? view.report : resultText(b.content);
@@ -762,7 +705,7 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 						if (size) {
 							reply.usage?.({ context: size, models: [] });
 						}
-						child.stdin?.end();
+						endTurn();
 						return;
 					}
 					const resultSession = typeof message.session_id === 'string' ? message.session_id : undefined;
@@ -778,12 +721,8 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 					if (resultSession) {
 						controls?.usageTotals?.keep(resultSession, Object.fromEntries(usageTold));
 					}
+					rememberContextWindows(message.modelUsage);
 					const usage = message.modelUsage as Record<string, { contextWindow?: unknown }> | undefined;
-					for (const [model, used] of Object.entries(usage && typeof usage === 'object' ? usage : {})) {
-						if (typeof used?.contextWindow === 'number' && used.contextWindow > 0) {
-							contextWindows.set(model, used.contextWindow);
-						}
-					}
 					// The request records not told yet (its subagents', and what no request said), adding up to its count.
 					const rows = requestRows(models, toldSince, [...subagentRequests.values()]);
 					toldSince = new Map();
@@ -796,7 +735,7 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 						session = message.session_id;
 					}
 					// Stopped as stalled: what the interruption ends with is not the error.
-					if (!stalled && (message.is_error || (typeof message.subtype === 'string' && message.subtype !== 'success'))) {
+					if (!proc.stalled && (message.is_error || (typeof message.subtype === 'string' && message.subtype !== 'success'))) {
 						error = firstLine(message.result, 600) ?? `Claude Code ended with ${String(message.subtype ?? 'an error')}.`;
 					}
 					// The context compressed: its size now, asked before the run ends.
@@ -805,175 +744,88 @@ export function runTurn(target: Target, turn: Turn, reply: Reply, token: Cancel,
 						write({ type: 'user', message: { role: 'user', content: '/context' }, parent_tool_use_id: null });
 						return;
 					}
-					// The turn is told: its input closes, and Claude Code ends. Not while a subagent still works in the
-					// background: Claude Code goes on once it ends (and may ask approvals for it meanwhile).
+					// The turn is told. Not while a subagent still works in the background: Claude Code goes on once it
+					// ends (and may ask approvals for it meanwhile).
 					if (tasksRunning()) {
 						resultWhileBusy = true;
 					} else {
-						if (quietClose) {
-							clearTimeout(quietClose);
-							quietClose = undefined;
-						}
-						child.stdin?.end();
+						endTurn();
 					}
 					return;
 				}
 			}
 		};
-		onJsonLines(child.stdout, handle);
-		// A response that went silent (MODEL_STALL_MS): taken for a dead connection, it stops as a model error Breezell sends on.
-		const stallMs = controls?.stallMs ?? MODEL_STALL_MS;
-		const watchdog = setInterval(() => {
-			if (!streaming || stalled || token.isCancellationRequested || Date.now() - lastHeardAt < stallMs) {
-				return;
-			}
-			stalled = true;
-			error = `No answer from the model for ${Math.round(stallMs / 1000)} s.`;
-			apiError = 'stalled';
-			write({ type: 'control_request', request_id: `breezell-stall-${nextRequest++}`, request: { subtype: 'interrupt' } });
-			child.stdin?.end();
-			killTimer = setTimeout(() => child.kill(), STOP_GRACE_MS);
-		}, Math.max(10, Math.min(5_000, Math.floor(stallMs / 4))));
-		child.stderr?.setEncoding('utf8');
-		child.stderr?.on('data', (data: string) => { stderr = (stderr + data).slice(-4000); });
-		const stopping = token.onCancellationRequested(() => {
-			// Asked to stop as the SDK asks it; ended if it does not within the grace period.
-			write({ type: 'control_request', request_id: `breezell-stop-${nextRequest++}`, request: { subtype: 'interrupt' } });
-			child.stdin?.end();
-			killTimer = setTimeout(() => child.kill(), STOP_GRACE_MS);
-		});
-		child.on('error', err => {
-			clearInterval(watchdog);
-			stopping.dispose();
-			dropRulesFile();
-			if (killTimer) { clearTimeout(killTimer); }
-			reject(err);
-		});
-		child.on('close', code => {
-			dropRulesFile();
-			clearInterval(watchdog);
-			stopping.dispose();
-			if (killTimer) { clearTimeout(killTimer); }
-			if (quietClose) { clearTimeout(quietClose); }
-			// An install without the thinking display flag: it refused the arguments before doing anything; once more without it.
-			if (!gotResult && !session && code !== 0 && !token.isCancellationRequested && !refusedThinkingDisplay.has(installOf(target)) && /unknown option '--thinking-display'/.test(stderr)) {
-				refusedThinkingDisplay.add(installOf(target));
-				runTurn(target, turn, reply, token, pathFor, files, controls).then(resolve, reject);
-				return;
-			}
-			if (!gotResult && !token.isCancellationRequested && code !== 0) {
-				const last = stderr.split(/\r?\n/).map(l => l.trim()).filter(Boolean).pop();
-				error = error ?? `Claude Code exited with code ${code}${last ? `: ${last}` : ''}`;
-			}
-			// Stopped by the user, what Claude Code ends with (error_during_execution) is no error.
+		let settled = false;
+		/** What the turn ends with: its session, its last record, the error Claude Code ended with (none when the user stopped it). */
+		const outcome = (): TurnResult => {
 			const failure = error && !token.isCancellationRequested ? error : undefined;
-			resolve({ ...(session ? { session } : {}), ...(failure ? { error: failure } : {}), ...(entry ? { entry } : {}), ...(failure && apiError ? { apiError } : {}) });
-		});
-		// Breezell's tools, through the MCP server this plugin hosts here (named before the message, as the SDK does).
-		if (host.names.length) {
+			return { ...(session ? { session } : {}), ...(failure ? { error: failure } : {}), ...(entry ? { entry } : {}), ...(failure && apiError ? { apiError } : {}) };
+		};
+		const listener: ChildListener = {
+			message: handle,
+			error: err => {
+				if (settled) {
+					return;
+				}
+				settled = true;
+				agent.unlisten(listener);
+				proc.dispose();
+				dropRulesFile();
+				reject(err);
+			},
+			close: code => {
+				if (settled) {
+					return;
+				}
+				settled = true;
+				agent.unlisten(listener);
+				dropRulesFile();
+				proc.dispose();
+				if (quietClose) { clearTimeout(quietClose); }
+				// An install without the thinking display flag: it refused the arguments before doing anything; once more without it.
+				if (!gotResult && !session && code !== 0 && !token.isCancellationRequested && !refusedThinkingDisplay.has(installKey(target)) && /unknown option '--thinking-display'/.test(proc.stderr)) {
+					refusedThinkingDisplay.add(installKey(target));
+					runTurn(target, turn, reply, token, pathFor, files, controls).then(resolve, reject);
+					return;
+				}
+				if (!gotResult && !token.isCancellationRequested && code !== 0) {
+					error = error ?? proc.exitError('Claude Code', code);
+				}
+				// Stopped by the user, what Claude Code ends with (error_during_execution) is no error.
+				resolve(outcome());
+			},
+		};
+		/**
+		 * The turn is over. Its program kept (keepAlive): at rest for the conversation's next turn, when the turn ended
+		 * well; otherwise its input closes and Claude Code ends, and the turn with it (its close above).
+		 */
+		function endTurn(): void {
+			if (quietClose) {
+				clearTimeout(quietClose);
+				quietClose = undefined;
+			}
+			if (settled) {
+				return;
+			}
+			const keepIt = !!kept && !!keep && keep.pool.holds(keep.conversation, kept) && gotResult && !error && !proc.stopAsked && !token.isCancellationRequested && agent.alive;
+			if (!keepIt) {
+				proc.endInput();
+				return;
+			}
+			settled = true;
+			agent.unlisten(listener);
+			proc.dispose();
+			dropRulesFile();
+			kept!.session = session ?? kept!.session;
+			const record = kept!.session ? keep!.recordOf?.(kept!.session) : undefined;
+			void keep!.pool.release(keep!.conversation, kept!, record).then(() => resolve(outcome()), () => resolve(outcome()));
+		}
+		agent.listen(listener);
+		// Breezell's tools, through the MCP server this plugin hosts here (named before the first message, as the SDK
+		// does): once a program, which keeps them.
+		if (started && host.names.length) {
 			write({ type: 'control_request', request_id: `breezell-init-${nextRequest++}`, request: { subtype: 'initialize', sdkMcpServers: [BREEZELL_MCP_SERVER] } });
 		}
 		write({ type: 'user', message: { role: 'user', content: contentOf(turn, pathFor) }, parent_tool_use_id: null });
 	});
-}
-
-/**
- * A model of Claude Code's: always one of Claude's, which Breezell's model picker shows with its Claude
- * icon; `efforts`: the levels it takes, which Breezell's model menu offers.
- */
-export type ClaudeModel = { id: string; title: string; description?: string; family: 'claude'; efforts?: Effort[]; /** The model it stands for (`resolvedModel`): what a message it wrote names. */ resolved?: string };
-type Effort = typeof EFFORTS[number];
-
-/**
- * The models Claude Code's own model picker offers, from its answer to `initialize` (each `value` is what
- * `--model` takes: an alias such as `opus`, or a full id such as `claude-opus-4-8`). "Default" is named
- * after the model it stands for: Default (Opus 5.5).
- */
-export function modelsOfInitialize(raw: unknown): ClaudeModel[] {
-	type Listed = { value: string; displayName?: unknown; description?: unknown; resolvedModel?: unknown; supportsEffort?: unknown; supportedEffortLevels?: unknown };
-	const listed = (Array.isArray(raw) ? raw : []).filter((m): m is Listed => !!m && typeof m === 'object' && typeof (m as Listed).value === 'string' && !!(m as Listed).value);
-	const nameOf = (m: Listed) => typeof m.displayName === 'string' && m.displayName.trim() ? m.displayName.trim() : m.value;
-	const named = new Map<unknown, string>(listed.filter(m => m.value !== 'default').map(m => [m.resolvedModel, nameOf(m)]));
-	return listed.map(m => {
-		const description = typeof m.description === 'string' && m.description.trim() ? m.description.trim() : undefined;
-		const title = m.value === 'default' && named.has(m.resolvedModel) ? `Default (${named.get(m.resolvedModel)})` : nameOf(m);
-		const levels = m.supportsEffort === true && Array.isArray(m.supportedEffortLevels) ? m.supportedEffortLevels : [];
-		const efforts = EFFORTS.filter(level => levels.includes(level));
-		const resolved = typeof m.resolvedModel === 'string' && m.resolvedModel ? m.resolvedModel : undefined;
-		return { id: m.value, title, ...(description ? { description } : {}), family: 'claude' as const, ...(efforts.length ? { efforts } : {}), ...(resolved ? { resolved } : {}) };
-	});
-}
-
-/** Asking Claude Code what it offers takes no turn: no message is sent, so no model is asked. */
-const INITIALIZE = 'breezell-initialize';
-
-/** Claude Code's answer to `initialize`, as the Agent SDK asks it: its models; undefined when it gave none in time. */
-export function initializeModels(target: Target, timeoutMs = 45_000): Promise<ClaudeModel[] | undefined> {
-	return new Promise(resolve => {
-		let child: ChildProcess;
-		try {
-			child = target.start(['-p', '--output-format', 'stream-json', '--verbose', '--input-format', 'stream-json', '--no-session-persistence'], undefined);
-		} catch {
-			resolve(undefined);
-			return;
-		}
-		let done = false;
-		const finish = (models: ClaudeModel[] | undefined) => {
-			if (done) {
-				return;
-			}
-			done = true;
-			clearTimeout(timer);
-			// Its input closed, it ends; ended if it does not.
-			child.stdin?.end();
-			setTimeout(() => { if (child.exitCode === null) { child.kill(); } }, STOP_GRACE_MS).unref?.();
-			resolve(models);
-		};
-		const timer = setTimeout(() => finish(undefined), timeoutMs);
-		onJsonLines(child.stdout, message => {
-			const response = message.type === 'control_response' ? message.response as { request_id?: unknown; response?: { models?: unknown } } | undefined : undefined;
-			if (response?.request_id === INITIALIZE) {
-				finish(modelsOfInitialize(response.response?.models));
-			}
-		});
-		child.on('error', () => finish(undefined));
-		child.on('close', () => finish(undefined));
-		child.stdin?.write(`${JSON.stringify({ type: 'control_request', request_id: INITIALIZE, request: { subtype: 'initialize' } })}\n`);
-	});
-}
-
-/** The models `/model` lists: `Current model: `Opus 5.5`` and `Available: sonnet, opus, …, or a full model ID.` */
-export function parseModels(stdout: string): ClaudeModel[] {
-	const current = /Current model:\s*`?([^`(\n]+?)`?\s*(?:\(|$)/m.exec(stdout)?.[1]?.trim();
-	const listed = /Available:\s*([^\n]+)/.exec(stdout)?.[1] ?? '';
-	const ids = listed.replace(/,?\s*or a full model ID\.?\s*$/i, '').split(',').map(s => s.trim()).filter(id => /^[A-Za-z0-9][A-Za-z0-9._:@+\-[\]]*$/.test(id));
-	const titleOf = (id: string) => {
-		if (id === 'default') {
-			return current ? `Default (${current})` : 'Default';
-		}
-		const long = /\[1m\]$/i.test(id);
-		const base = id.replace(/\[1m\]$/i, '');
-		const word = base === 'opusplan' ? 'Opus Plan' : base.charAt(0).toUpperCase() + base.slice(1);
-		return long ? `${word} 1M` : word;
-	};
-	const ordered = ['default', ...ids.filter(id => id !== 'default')];
-	return ordered.filter((id, i) => ordered.indexOf(id) === i).map(id => ({ id, title: titleOf(id), family: 'claude' }));
-}
-
-/**
- * The models of a Claude Code: those its model picker offers (initialize); from an older one that does not
- * say, the aliases its `/model` lists. Answered by Claude Code itself, nothing used.
- */
-export async function fetchModels(target: Target): Promise<ClaudeModel[]> {
-	const offered = await initializeModels(target);
-	if (offered?.length) {
-		return offered;
-	}
-	try {
-		const result = await target.ask(['-p', '/model', '--no-session-persistence']);
-		const models = result.code === 0 ? parseModels(result.stdout) : [];
-		return models.length > 1 ? models : [{ id: 'default', title: 'Default', family: 'claude' }];
-	} catch {
-		return [{ id: 'default', title: 'Default', family: 'claude' }];
-	}
 }

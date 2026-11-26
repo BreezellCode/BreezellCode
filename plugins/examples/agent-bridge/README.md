@@ -79,6 +79,14 @@ Breezell's tools reach agy as an MCP server named in a folder of the plugin's ow
 
 "Delete in Antigravity CLI too" on its tile (off by default): deleting a conversation in Breezell also deletes it in agy, with its subagents' conversations: their records and notes in agy's own folder (`~/.gemini/antigravity-cli`). agy's history list may still show its title, but it no longer opens. Not yet: bringing in conversations you had with agy outside Breezell, and Manual compress.
 
+## Keeping the agents running between messages
+
+Off by default. Each message normally starts Claude Code or agy anew, which then reads its conversation back before it answers. "Keep running between messages…" on either tile's page (one setting for both, `agentBridge.keepAlive.minutes`) keeps a conversation's agent running after its reply, for 5, 15 or 30 minutes, an hour, or a time of your own (up to 4 hours):
+
+- Good: your next message in that conversation goes straight to the running agent, so its reply starts sooner (Claude Code: about 1 s each). agy's replies depend mostly on Google's servers, so the gain there is small.
+- Cost: each conversation kept holds about 200–300 MB of memory until it has been idle that long; the more conversations you keep going, the more memory. It does not use fewer tokens.
+- A conversation keeps at most one. It is closed once idle for the time you chose, when you stop a reply or a reply fails, when you change its model or effort, or to a mode that lets it do other things (the next message starts it anew, in the same conversation), when you turn the setting off or disconnect the tile, and when Breezell closes. The tile's page shows the setting and how many are kept now.
+
 ## Its page
 
 Box › Plugins › Agent Bridge shows the same page as the Claude Code tile: the connection, your account, your usage, how the last sync went, and "Sync conversations".

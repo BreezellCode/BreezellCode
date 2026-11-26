@@ -25,8 +25,8 @@ async function load(entry) {
 	return m;
 }
 
-const cc = await load('src/claudeCode.ts');
-const tx = await load('src/texts.ts');
+const cc = await load('src/agents/claudeCode/index.ts');
+const tx = await load('src/agents/claudeCode/texts.ts');
 
 const SIGNED_IN = JSON.stringify({ loggedIn: true, authMethod: 'claude.ai', apiProvider: 'firstParty', email: 'dev@example.com', orgId: 'x', orgName: 'Example Org', subscriptionType: 'max' }, null, 2);
 const SIGNED_OUT = JSON.stringify({ loggedIn: false, authMethod: 'none', apiProvider: 'firstParty' }, null, 2);

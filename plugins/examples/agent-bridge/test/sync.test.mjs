@@ -12,13 +12,13 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const require = createRequire(import.meta.url);
 const esbuild = require('esbuild');
 const out = mkdtempSync(join(tmpdir(), 'agent-bridge-sync-'));
-await esbuild.build({ entryPoints: [join(root, 'src/sync.ts')], bundle: true, platform: 'node', format: 'cjs', outfile: join(out, 'sync.cjs'), logLevel: 'silent' });
+await esbuild.build({ entryPoints: [join(root, 'src/agents/claudeCode/sync.ts')], bundle: true, platform: 'node', format: 'cjs', outfile: join(out, 'sync.cjs'), logLevel: 'silent' });
 const { SessionSync } = require(join(out, 'sync.cjs'));
 rmSync(out, { recursive: true, force: true });
 /** texts.ts, which says what a sync came to. */
 const texts = async () => {
 	const dir = mkdtempSync(join(tmpdir(), 'agent-bridge-texts-'));
-	await esbuild.build({ entryPoints: [join(root, 'src/texts.ts')], bundle: true, platform: 'node', format: 'cjs', outfile: join(dir, 'texts.cjs'), logLevel: 'silent' });
+	await esbuild.build({ entryPoints: [join(root, 'src/agents/claudeCode/texts.ts')], bundle: true, platform: 'node', format: 'cjs', outfile: join(dir, 'texts.cjs'), logLevel: 'silent' });
 	const tx = require(join(dir, 'texts.cjs'));
 	rmSync(dir, { recursive: true, force: true });
 	return tx;
@@ -28,8 +28,8 @@ const CWD = '/home/u/proj';
 const record = (type, uuid, content) => JSON.stringify({ type, uuid, cwd: CWD, timestamp: '2026-11-21T10:00:00.000Z', message: { role: type, model: 'claude-sonnet-5-5', content } });
 const SESSION = [record('user', 'u1', 'hello'), record('assistant', 'a1', [{ type: 'text', text: 'hi' }])].join('\n');
 
-function setup({ folders = ['vscode-remote://wsl%2BUbuntu/home/u/proj'], configDir = '\\\\wsl$\\Ubuntu\\home\\u\\.claude', statuses = {}, nameOf } = {}) {
-	const target = { where: 'wsl', distro: 'Ubuntu', configDir: async () => configDir ?? undefined };
+function setup({ folders = ['vscode-remote://wsl%2BUbuntu/home/u/proj'], configDir = '\\\\wsl$\\Ubuntu\\home\\u\\.claude', statuses = {}, nameOf, kept } = {}) {
+	const target = { where: 'wsl', distro: 'Ubuntu', path: '/home/u/.local/bin/claude', configDir: async () => configDir ?? undefined };
 	const states = [];
 	const sent = [];
 	const reads = [];
@@ -48,6 +48,7 @@ function setup({ folders = ['vscode-remote://wsl%2BUbuntu/home/u/proj'], configD
 		changed: state => states.push(state),
 		list: async (dir, joinPath) => { listed.push([dir, joinPath === win32.join ? 'win32' : joinPath === posix.join ? 'posix' : '?']); return files; },
 		read: async file => { reads.push(file); return texts[file]; },
+		...(kept ? { kept } : {}),
 	});
 	return { sync, states, sent, reads, listed, files, texts, target, tick: ms => { clock += ms; } };
 }
@@ -145,4 +146,33 @@ test('what the page and the notice say: the projects synced, by the names the wi
 	assert.equal(tx.syncNotice({ kind: 'running' }, tw), undefined, 'none while it runs');
 	assert.deepEqual(tx.syncNotice({ kind: 'failed', message: 'boom' }, tw), { text: 'Claude Code 對話同步失敗：boom', warning: true });
 	assert.equal(tx.syncNotice({ kind: 'noFolder' }, tx.TEXTS['zh-cn']).text, tx.TEXTS['zh-cn'].syncNoFolderNotice);
+});
+
+test('what a sync settled is kept with the project: a window opening again reads only the files that changed since', async () => {
+	let stored;
+	const kept = { get: () => stored, set: value => { stored = JSON.parse(JSON.stringify(value)); } };
+	const first = setup({ kept, statuses: { 's-1': 'unchanged' } });
+	await first.sync.run(false);
+	assert.deepEqual(first.reads, ['F1', 'F2']);
+	// The window opened again: a new run of the plugin, the same files.
+	const again = setup({ kept, statuses: { 's-1': 'unchanged' } });
+	await again.sync.run(false);
+	assert.deepEqual(again.reads, [], 'nothing read again');
+	assert.equal(again.states.at(-1).found, 1, 'its conversation still counted');
+	again.files[0] = { ...again.files[0], size: 99 };
+	await again.sync.run(false);
+	assert.deepEqual(again.reads, ['F1'], 'the one that changed');
+	// A conversation shown in another window, or one running a turn: asked again next run.
+	const shown = setup({ kept, statuses: { 's-1': 'elsewhere' } });
+	shown.files[0] = { ...shown.files[0], size: 100 };
+	await shown.sync.run(false);
+	const next = setup({ kept, statuses: { 's-1': 'unchanged' } });
+	next.files[0] = { ...next.files[0], size: 100 };
+	await next.sync.run(false);
+	assert.deepEqual(next.reads, ['F1']);
+	// Another Claude Code: what was kept is not its own.
+	const other = setup({ kept });
+	other.target.path = '/usr/bin/claude';
+	await other.sync.run(false);
+	assert.deepEqual(other.reads, ['F1', 'F2']);
 });

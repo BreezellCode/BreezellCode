@@ -63,6 +63,10 @@ function fakeVscode({ enabled = false, language = 'zh-TW', breezellUi = true, ag
 	const foldersChanged = emitter();
 	const commands = new Map();
 	const reported = [];
+	/** Settings the plugin wrote, and what its pickers showed and were answered. */
+	const updates = [];
+	const picks = [];
+	const picker = { pick: undefined, type: undefined };
 	/** Notices the plugin showed: [kind, text]. */
 	const notices = [];
 	/** The agent registered for each tile, the models each was given, and how many registrations ended. */
@@ -85,8 +89,12 @@ function fakeVscode({ enabled = false, language = 'zh-TW', breezellUi = true, ag
 			} : {}),
 		},
 		commands: { registerCommand: (id, run) => { commands.set(id, run); return { dispose() { commands.delete(id); } }; } },
+		ConfigurationTarget: { Global: 1 },
 		workspace: {
-			getConfiguration: section => ({ get: (key, fallback) => (section !== 'agentBridge' ? fallback : key === 'claudeCode.enabled' ? config.enabled : key === 'claudeCode.deleteSessions' ? config.deleteSessions : fallback) }),
+			getConfiguration: section => ({
+				get: (key, fallback) => (section !== 'agentBridge' ? fallback : key === 'claudeCode.enabled' ? config.enabled : key === 'claudeCode.deleteSessions' ? config.deleteSessions : key === 'keepAlive.minutes' ? config.keepAliveMinutes ?? fallback : fallback),
+				update: async (key, value, target) => { updates.push([key, value, target]); if (key === 'keepAlive.minutes') { config.keepAliveMinutes = value; configChanged.fire({ affectsConfiguration: name => name === `agentBridge.${key}` }); } },
+			}),
 			onDidChangeConfiguration: configChanged,
 			onDidChangeWorkspaceFolders: foldersChanged,
 			workspaceFolders: undefined,
@@ -95,10 +103,13 @@ function fakeVscode({ enabled = false, language = 'zh-TW', breezellUi = true, ag
 			onDidChangeWindowState: windowState,
 			showInformationMessage: async text => { notices.push(['info', text]); },
 			showWarningMessage: async text => { notices.push(['warning', text]); },
+			// What the user picks in a quick pick or types in an input box (the test says; none: dismissed).
+			showQuickPick: async (items, options) => { picks.push({ items, options }); return picker.pick?.(items); },
+			showInputBox: async options => { picks.push({ input: options }); return picker.type; },
 		},
 	};
 	const setEnabled = value => { config.enabled = value; configChanged.fire({ affectsConfiguration: name => name === 'agentBridge.claudeCode.enabled' }); };
-	return { api, config, commands, reported, agentLog, setEnabled, languageChanged, windowState, configChanged, foldersChanged, conversationsDeleted, notices, turnStarted };
+	return { api, config, commands, reported, agentLog, setEnabled, languageChanged, windowState, configChanged, foldersChanged, conversationsDeleted, notices, turnStarted, updates, picks, picker };
 }
 
 const SIGNED_IN = JSON.stringify({ loggedIn: true, authMethod: 'claude.ai', email: 'dev@example.com', orgName: 'Example Org' });
@@ -170,6 +181,8 @@ async function start(options = {}, nowRef = { t: 0 }) {
 const ACCOUNT_TW = [
 	{ label: '電子郵件', value: 'dev@example.com' }, { label: '組織', value: 'Example Org' }, { label: '訂閱等級', value: 'Max' }, { label: '登入方式', value: 'Claude 帳號' },
 	{ label: 'Claude Code 版本', value: '2.1.330' }, { label: '程式位置', value: '/bin/claude' },
+	// Keeping its programs between messages: off by default.
+	{ label: '常駐程序', value: '關閉' },
 ];
 const CONNECTED_TW = ['claudeCode', { connected: true, account: ACCOUNT_TW }];
 /** The connection at once, then the same with the usage bars once /usage answered. */
@@ -295,7 +308,7 @@ test('a WSL window names its distribution in its folders\' address; other window
 	bridge.dispose();
 });
 
-test('usage: "Check again" always asks again; a quiet check asks at most once a minute and keeps the bars meanwhile', async () => {
+test('usage: "Check again" always asks again; a quiet check asks at most every 5 minutes and keeps the bars meanwhile', async () => {
 	const nowRef = { t: 0 };
 	const { vs, claude, bridge } = await start({ enabled: true }, nowRef);
 	const usageCalls = () => claude.calls.filter(c => c.startsWith('-p /usage')).length;
@@ -303,9 +316,13 @@ test('usage: "Check again" always asks again; a quiet check asks at most once a 
 	nowRef.t = 31_000;
 	vs.windowState.fire({ focused: true });
 	await settle();
-	assert.equal(usageCalls(), 1, 'within a minute of the last /usage');
+	assert.equal(usageCalls(), 1, 'within 5 minutes of the last /usage');
 	assert.deepEqual(usageOf(vs.reported.at(-1)), [['目前工作階段', 12], ['本週（所有模型）', 57]], 'the bars stay while not asked again');
-	nowRef.t = 62_000;
+	nowRef.t = 240_000;
+	vs.windowState.fire({ focused: true });
+	await settle();
+	assert.equal(usageCalls(), 1, 'still within 5 minutes');
+	nowRef.t = 301_000;
 	vs.windowState.fire({ focused: true });
 	await settle();
 	assert.equal(usageCalls(), 2);
@@ -412,7 +429,10 @@ test('a window without a folder: Claude Code works in a folder of the plugin\'s 
 	const agent = vs.agentLog.agents.get('claudeCode');
 	const turn = { conversationId: 'c', model: 'opus', text: 'hi', attachments: [] };
 	const running = agent.runTurn({ ...turn, folders: [] }, replySink().reply, noToken);
-	await settle();
+	// Its folder is made first (a real one): the turn starts once it is there.
+	for (let i = 0; i < 200 && !turnsStarted().length; i++) {
+		await new Promise(resolve => setTimeout(resolve, 5));
+	}
 	const [own] = turnsStarted();
 	assert.equal(own?.cwd, join(STORAGE, 'claude-code'));
 	assert.ok(existsSync(own.cwd), 'made for it');
@@ -539,4 +559,159 @@ test('a conversation deleted in Breezell: deleted in Claude Code too only while 
 	await bridge.deleteSessions(deleted);
 	assert.ok(!existsSync(join(project, `${session}.jsonl`)), 'on: gone from Claude Code too');
 	bridge.dispose();
+});
+
+test('kept between messages: off by default; its button sets the time, a conversation\'s turns then go on in one Claude Code, the page says how many are kept, and set off they close', async () => {
+	started.length = 0;
+	const { vs, bridge } = await start({ enabled: true, agents: true });
+	await settle();
+	const agent = vs.agentLog.agents.get('claudeCode');
+	const waitFor = async what => { for (let i = 0; i < 400 && !what(); i++) { await new Promise(resolve => setTimeout(resolve, 2)); } assert.ok(what()); };
+	/** Claude Code answering its n-th message as 2.1.332 does; it ends once its input closes. */
+	const answers = async (child, n) => {
+		if (!child.wired) {
+			child.wired = true;
+			child.stdin.on('finish', () => setImmediate(() => child.end(0)));
+		}
+		await waitFor(() => child.sent.filter(m => m.type === 'user').length >= n);
+		child.say({ type: 'system', subtype: 'init', session_id: 's-1' });
+		child.say({ type: 'assistant', uuid: `a${n}`, message: { id: `m${n}`, content: [{ type: 'text', text: 'ok' }] } });
+		child.say({ type: 'result', subtype: 'success', session_id: 's-1' });
+	};
+	const turn = n => agent.runTurn({ conversationId: 'conv', model: 'opus', text: `msg ${n}`, attachments: [], folders: [], ...(n > 1 ? { session: 's-1' } : {}) }, replySink().reply, noToken);
+	const keptRow = () => vs.reported.filter(([tile]) => tile === 'claudeCode').at(-1)[1].account.at(-1);
+	// Off by default: a program a turn.
+	const r0 = turn(1);
+	await waitFor(() => turnsStarted().length === 1);
+	await answers(turnsStarted()[0].child, 1);
+	await r0;
+	await settle();
+	assert.equal(turnsStarted()[0].child.stdinEnded, true, 'off: its input closes at the end of the turn');
+	// The button: 15 minutes.
+	vs.picker.pick = items => items.find(item => item.minutes === 15);
+	await vs.commands.get('agentBridge.keepAlive.configure')();
+	assert.deepEqual(vs.updates, [['keepAlive.minutes', 15, 1]], 'kept for every window');
+	assert.match(vs.picks[0].options.placeHolder, /200–300 MB/, 'the picker says what it costs');
+	assert.deepEqual(vs.picks[0].items.map(item => item.label), ['關閉', '5 分鐘', '15 分鐘', '30 分鐘', '1 小時', '自訂…']);
+	assert.equal(vs.picks[0].items[0].description, '目前');
+	assert.deepEqual(keptRow(), { label: '常駐程序', value: '閒置 15 分鐘後關閉' });
+	const r1 = turn(1);
+	await waitFor(() => turnsStarted().length === 2);
+	await answers(turnsStarted()[1].child, 1);
+	assert.deepEqual(await r1, { session: 's-1', entry: 'a1' });
+	assert.equal(turnsStarted()[1].child.stdinEnded, undefined, 'kept');
+	assert.deepEqual(keptRow(), { label: '常駐程序', value: '閒置 15 分鐘後關閉 · 目前保持 1 個' });
+	const r2 = turn(2);
+	await answers(turnsStarted()[1].child, 2);
+	assert.deepEqual(await r2, { session: 's-1', entry: 'a2' });
+	assert.equal(turnsStarted().length, 2, 'its next turn in the same Claude Code');
+	// A time of the user's own, then off: closed at once.
+	vs.picker.pick = items => items.at(-1);
+	vs.picker.type = '45';
+	await vs.commands.get('agentBridge.keepAlive.configure')();
+	assert.deepEqual(vs.updates.at(-1), ['keepAlive.minutes', 45, 1]);
+	assert.equal(vs.picks.at(-1).input.validateInput('0'), '請輸入 1 到 240 的整數分鐘');
+	assert.equal(vs.picks.at(-1).input.validateInput('45'), undefined);
+	vs.picker.pick = items => items[0];
+	await vs.commands.get('agentBridge.keepAlive.configure')();
+	await settle();
+	assert.equal(turnsStarted()[1].child.stdinEnded, true, 'off: closed at once');
+	assert.deepEqual(keptRow(), { label: '常駐程序', value: '關閉' });
+	// Dismissed: nothing written.
+	const writes = vs.updates.length;
+	vs.picker.pick = () => undefined;
+	await vs.commands.get('agentBridge.keepAlive.configure')();
+	assert.equal(vs.updates.length, writes);
+	bridge.dispose();
+});
+
+/** A Claude Code program that is a real file (its stamp can be read), in a folder of its own on PATH. */
+function realProgram() {
+	const dir = mkdtempSync(join(tmpdir(), 'agent-bridge-program-'));
+	const file = join(dir, 'claude');
+	writeFileSync(file, '#!/bin/sh\n');
+	process.on('exit', () => rmSync(dir, { recursive: true, force: true }));
+	return { dir, file };
+}
+
+/** The bridge of a window of its own: its own fake Claude Code, its own clock, and what windows share (`pid`: which window). */
+async function startWindow({ program, nowRef, pid, sharedFile, clock, agents = true }) {
+	const vs = fakeVscode({ enabled: true, agents });
+	globalThis.__vscode = vs.api;
+	const ext = await load();
+	const claude = fakeClaude();
+	const caches = [];
+	const context = { subscriptions: [] };
+	const bridge = ext.activate(context, {
+		...deps(claude, () => nowRef.t),
+		env: { PATH: program.dir, CLAUDE_CONFIG_DIR: CONFIG },
+		isFile: f => f === program.file,
+		shared: tile => { const cache = new ext.CheckCache(`${sharedFile}.${tile}.json`, pid, clock); caches.push(cache); return cache; },
+	});
+	await settle();
+	const flushed = () => Promise.all(caches.map(cache => cache.flushed()));
+	return { vs, claude, bridge, context, flushed };
+}
+
+test('coming back to Breezell asks only what may have changed: the program found before, its version while its file is unchanged, its plan while its account says the same', async () => {
+	const program = realProgram();
+	const nowRef = { t: 0 };
+	const { vs, claude, bridge } = await startWindow({ program, nowRef, pid: 1, sharedFile: join(STORAGE, 'quiet') });
+	await settle();
+	assert.deepEqual(claude.calls, ['--version', 'auth status --json', 'auth status --text', '-p /usage --no-session-persistence'], 'switched on: everything');
+	claude.calls.length = 0;
+	nowRef.t = 40_000;
+	vs.windowState.fire({ focused: true });
+	await settle();
+	assert.deepEqual(claude.calls, ['auth status --json'], 'coming back: whether it is still signed in, and nothing else');
+	assert.deepEqual(vs.reported.at(-1)[1].account.find(row => row.label === '訂閱等級'), { label: '訂閱等級', value: 'Max' }, 'its plan as before');
+	// Updated (its program file changed): its version is asked again.
+	claude.calls.length = 0;
+	writeFileSync(program.file, '#!/bin/sh\n# 2.1.331\n');
+	nowRef.t = 80_000;
+	vs.windowState.fire({ focused: true });
+	await settle();
+	assert.deepEqual(claude.calls, ['--version', 'auth status --json'], 'its usage not again within 5 minutes');
+	// Signed out: looked for and asked again, as a check that keeps nothing.
+	claude.calls.length = 0;
+	claude.signOut();
+	nowRef.t = 120_000;
+	vs.windowState.fire({ focused: true });
+	await settle();
+	assert.deepEqual(claude.calls, ['auth status --json', '--version', 'auth status --json']);
+	assert.equal(vs.reported.at(-1)[1].connected, false);
+	// "Check again": everything, whatever was found before.
+	claude.calls.length = 0;
+	await vs.commands.get('agentBridge.claudeCode.recheck')();
+	assert.deepEqual(claude.calls, ['--version', 'auth status --json']);
+	bridge.dispose();
+});
+
+test('another window\'s check of moments ago is taken as it is: a window opening (or opened by the Agents page) starts no Claude Code of its own', async () => {
+	const program = realProgram();
+	const sharedFile = join(STORAGE, 'windows');
+	let wall = 1_000_000;
+	const clock = () => wall;
+	started.length = 0;
+	const a = await startWindow({ program, nowRef: { t: 0 }, pid: 101, sharedFile, clock });
+	await settle();
+	await a.flushed();
+	assert.equal(a.claude.calls.length, 4, 'the first window asks');
+	assert.equal(listsAsked(), 1, 'and lists the models');
+	const b = await startWindow({ program, nowRef: { t: 0 }, pid: 102, sharedFile, clock });
+	await settle();
+	assert.deepEqual(b.claude.calls, [], 'the second window asks nothing');
+	assert.equal(listsAsked(), 1, 'nor lists the models again');
+	assert.deepEqual(b.vs.agentLog.models, [['claudeCode', ['default', 'opus', 'claude-opus-4-8'], 'Default (Opus 5.5)']], 'its picker has the same models');
+	assert.deepEqual(usageOf(b.vs.reported.at(-1)), [['目前工作階段', 12], ['本週（所有模型）', 57]], 'and its page the same usage');
+	// Once what was found is older than a check holds, a window asks itself; "Check again" always does.
+	wall += 31_000;
+	const c = await startWindow({ program, nowRef: { t: 0 }, pid: 103, sharedFile, clock });
+	await settle();
+	assert.deepEqual(c.claude.calls.slice(0, 3), ['--version', 'auth status --json', 'auth status --text']);
+	await b.vs.commands.get('agentBridge.claudeCode.recheck')();
+	assert.ok(b.claude.calls.includes('--version'));
+	for (const w of [a, b, c]) {
+		w.bridge.dispose();
+	}
 });

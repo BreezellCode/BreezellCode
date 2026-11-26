@@ -14,7 +14,7 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const require = createRequire(import.meta.url);
 const esbuild = require('esbuild');
 const out = mkdtempSync(join(tmpdir(), 'agent-bridge-agyconvs-'));
-await esbuild.build({ entryPoints: [join(root, 'src/agyConversations.ts')], bundle: true, platform: 'node', format: 'cjs', outfile: join(out, 'agyconvs.cjs'), logLevel: 'silent' });
+await esbuild.build({ entryPoints: [join(root, 'src/agents/antigravity/conversations.ts')], bundle: true, platform: 'node', format: 'cjs', outfile: join(out, 'agyconvs.cjs'), logLevel: 'silent' });
 const convs = require(join(out, 'agyconvs.cjs'));
 test.after(() => rmSync(out, { recursive: true, force: true }));
 

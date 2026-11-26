@@ -12,7 +12,7 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const require = createRequire(import.meta.url);
 const esbuild = require('esbuild');
 const out = mkdtempSync(join(tmpdir(), 'agent-bridge-sessions-'));
-await esbuild.build({ entryPoints: [join(root, 'src/sessions.ts')], bundle: true, platform: 'node', format: 'cjs', outfile: join(out, 'sessions.cjs'), logLevel: 'silent' });
+await esbuild.build({ entryPoints: [join(root, 'src/agents/claudeCode/sessions.ts')], bundle: true, platform: 'node', format: 'cjs', outfile: join(out, 'sessions.cjs'), logLevel: 'silent' });
 const sessions = require(join(out, 'sessions.cjs'));
 rmSync(out, { recursive: true, force: true });
 

@@ -11,20 +11,24 @@
  * reviews and keeps as its own.
  *
  * Its stream says how much its model thought, not what: the text comes from agy's own record of the conversation while
- * it is written (agyLiveSteps.ts), and from its transcript of the conversation, a line a step once the step is done
- * (AgyTranscript). Its subagents work off its stream, each in a conversation of its own: their pages follow their
+ * it is written (liveSteps.ts), and from its transcript of the conversation, a line a step once the step is done
+ * (transcript.ts). Its subagents work off its stream, each in a conversation of its own: their pages follow their
  * transcripts. Those records and transcripts are the one kind of agy's files read here; never its settings or its
  * credentials.
  */
-import type { ChildProcess } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { AgyLiveSteps } from './agyLiveSteps';
-import { BREEZELL_MCP_SERVER, EAGER_BREEZELL_TOOLS, createBreezellToolHost, mcpToolNameOf, type OwnTool } from './breezellTools';
-import type { Target } from './cli';
-import type { McpAnswer } from './mcpHttp';
-import { attachedOutside, firstLine, onJsonLines, planCardOf, PLAN_SHOWN, promptOf, rulesTextOf, STOP_GRACE_MS, type Attachment, type Cancel, type Reply, type Turn, type TurnControls, type TurnFiles, type TurnResult } from './turn';
-import { agyViewOfUse, withUri, type ToolView } from './views';
+import type { Target } from '../../core/cli';
+import { withoutArg, type KeptProcess } from '../../core/keepAlive';
+import type { McpAnswer } from '../../core/mcpHttp';
+import { AgentChild, AgentProcess, type ChildListener } from '../../core/process';
+import { BREEZELL_MCP_SERVER, EAGER_BREEZELL_TOOLS, createBreezellToolHost, mcpToolViews, type OwnTool } from '../../core/tools';
+import { attachedOutside, firstLine, planCardOf, PLAN_SHOWN, promptOf, rulesTextOf, type Attachment, type Cancel, type Reply, type Turn, type TurnControls, type TurnFiles, type TurnResult } from '../../core/turn';
+import { hasTokens, tokenCount, usageRow } from '../../core/usage';
+import { memoriesViewOf, withUri, type ToolView } from '../../core/views';
+import type { AgyLiveSteps } from './liveSteps';
+import { AGY_THOUGHT_WAIT_MS, AgyTranscript, agyThoughtOf, agyTranscriptOutput, type AgyTranscriptStep } from './transcript';
+import { agyCallOf, agyStepOf, agyViewOfUse, viewTitleOf } from './views';
 
 /** A conversation's folders of its own for agy, each as this computer reaches it and as agy names it. */
 export interface AgyFolders {
@@ -43,11 +47,11 @@ export interface AgyRun {
 	readonly folders: AgyFolders;
 	/** Opens this turn's MCP server for these answers, and says how agy reaches it. */
 	readonly serve: (answer: McpAnswer) => Promise<{ readonly entry: AgyServerEntry; dispose(): void }>;
-	/** The id agy's `--model` takes (antigravity.ts agyModelId); none: agy's own. */
+	/** The id agy's `--model` takes (program.ts agyModelId); none: agy's own. */
 	readonly model?: string;
 	/** Where agy writes down a conversation's steps, as this computer reaches it (agyTranscriptPath); none: not known. */
 	readonly transcriptOf?: (conversation: string) => string | undefined;
-	/** agy's record of a conversation, its model steps as they are written (agyLiveSteps.ts); none: not read. */
+	/** agy's record of a conversation, its model steps as they are written (liveSteps.ts); none: not read. */
 	readonly liveStepsOf?: (conversation: string) => AgyLiveSteps | undefined;
 	/** How often that record is read while its model works (AGY_LIVE_MS); tests give their own. */
 	readonly liveMs?: number;
@@ -61,185 +65,37 @@ export interface AgyRun {
 	readonly modelIdOf?: (agyModel: string) => string | undefined;
 }
 
-/** Where agy writes down a conversation's steps, in its own folder (antigravity.ts agyConfigDir); none for an id it would not give. */
-export function agyTranscriptPath(configDir: string, conversation: string): string | undefined {
-	if (!/^[A-Za-z0-9][A-Za-z0-9_-]{7,80}$/.test(conversation)) {
-		return undefined;
-	}
-	const join = /^[A-Za-z]:[\\/]|^\\\\/.test(configDir) ? path.win32.join : path.posix.join;
-	return join(configDir, 'brain', conversation, '.system_generated', 'logs', 'transcript_full.jsonl');
+/**
+ * Breezell's MCP server for one agy program: the turn under way answers its calls; between turns (a kept program) a
+ * call has none, and `idle` is told of it (the program went on by itself: it is closed).
+ */
+type AgyRoute = { answer: McpAnswer | undefined; idle?: McpAnswer };
+/** What a kept agy program keeps with it: its MCP route. */
+type AgyKept = { readonly route: AgyRoute };
+
+/** A call of Breezell's tools with no turn under way to answer it. */
+function noTurnAnswer(rpc: { id?: unknown }): unknown {
+	return { jsonrpc: '2.0', id: rpc.id ?? null, error: { code: -32000, message: 'No turn of this conversation is under way in Breezell.' } };
 }
 
-/** How long a model step's thought is waited for once agy said the step is done (it writes the step down right after). */
-export const AGY_THOUGHT_WAIT_MS = 2_000;
-const THOUGHT_POLL_MS = 40;
-/** A line of the transcript longer than this (a huge tool output) is passed over unread. */
-const TRANSCRIPT_LINE_MAX = 32 * 1024 * 1024;
+/**
+ * What agy says that is work: a step of its model or of a tool, its end. Said between turns by a kept program, it has
+ * no turn to go to (keepAlive.ts).
+ */
+export function agyIsWork(message: Record<string, unknown>): boolean {
+	return message.event === 'step_update' || message.event === 'result' || message.event === 'init';
+}
+
 /** How often agy's record of the conversation is read while its model works: its thought as it is written. */
 export const AGY_LIVE_MS = 300;
 /** How often a working subagent's transcript is read (its steps are written down as each is done). */
 export const AGY_FOLLOW_MS = 400;
 
-/** A step as agy writes it down: its model's (`PLANNER_RESPONSE`), a call's result (`GENERIC`), a message to it (`SYSTEM_MESSAGE`). */
-export type AgyTranscriptStep = {
-	readonly step_index: number;
-	readonly type: string;
-	readonly status?: string;
-	readonly content?: string;
-	readonly thinking?: string;
-	readonly model?: string;
-	readonly input_tokens?: number;
-	readonly output_tokens?: number;
-	readonly cache_read_tokens?: number;
-	readonly tool_calls?: readonly { readonly name?: unknown; readonly args?: unknown }[];
-};
-
-/**
- * agy's transcript of one conversation, read as it grows: a JSON line a step, written once the step is done. Its model's
- * steps (`PLANNER_RESPONSE`) carry their thought (`thinking`) and their words (`content`).
- */
-export class AgyTranscript {
-	private offset = 0;
-	private rest: Buffer = Buffer.alloc(0);
-	private skipping = false;
-	private readonly steps = new Map<number, { readonly thinking?: string; readonly content?: string }>();
-
-	/** `everyStep`: every step is read (a subagent's, whose page shows them); otherwise only its model's. */
-	constructor(private readonly file: string, private readonly everyStep = false) { }
-
-	/** What it holds now is of the conversation's earlier turns: only what is written from here on is read. */
-	async skipToEnd(): Promise<void> {
-		this.offset = await fs.promises.stat(this.file).then(stat => stat.size, () => 0);
-	}
-
-	/** Reads what was written since it was last read: those steps, in order. */
-	async read(): Promise<AgyTranscriptStep[]> {
-		let handle: fs.promises.FileHandle | undefined;
-		try {
-			handle = await fs.promises.open(this.file, 'r');
-			const { size } = await handle.stat();
-			if (size < this.offset) {
-				// Written anew: from its start.
-				this.offset = 0;
-				this.rest = Buffer.alloc(0);
-				this.skipping = false;
-			}
-			if (size === this.offset) {
-				return [];
-			}
-			const chunk = Buffer.alloc(size - this.offset);
-			let got = 0;
-			while (got < chunk.length) {
-				const { bytesRead } = await handle.read(chunk, got, chunk.length - got, this.offset + got);
-				if (!bytesRead) {
-					break;
-				}
-				got += bytesRead;
-			}
-			this.offset += got;
-			return this.take(chunk.subarray(0, got));
-		} catch {
-			// Not there (yet), or not readable: nothing of it.
-			return [];
-		} finally {
-			await handle?.close().catch(() => undefined);
-		}
-	}
-
-	/** A step's line, once it is there. */
-	stepOf(index: number): { readonly thinking?: string; readonly content?: string } | undefined {
-		return this.steps.get(index);
-	}
-
-	/** Reads until a step's line is there, for at most `waitMs` (or until the turn is stopped). */
-	async waitFor(index: number, waitMs: number, token: Cancel): Promise<{ readonly thinking?: string; readonly content?: string } | undefined> {
-		const until = Date.now() + waitMs;
-		for (; ;) {
-			await this.read();
-			const found = this.steps.get(index);
-			if (found || token.isCancellationRequested || Date.now() >= until) {
-				return found;
-			}
-			await new Promise(resolve => setTimeout(resolve, THOUGHT_POLL_MS));
-		}
-	}
-
-	/** Whole lines only (a newline is never inside a character's bytes); the rest waits for its end. */
-	private take(chunk: Buffer): AgyTranscriptStep[] {
-		const data = this.rest.length ? Buffer.concat([this.rest, chunk]) : chunk;
-		const end = data.lastIndexOf(0x0a);
-		if (end < 0) {
-			this.skipping = this.skipping || data.length > TRANSCRIPT_LINE_MAX;
-			this.rest = this.skipping ? Buffer.alloc(0) : Buffer.from(data);
-			return [];
-		}
-		this.rest = Buffer.from(data.subarray(end + 1));
-		const out: AgyTranscriptStep[] = [];
-		for (const line of data.subarray(0, end).toString('utf8').split('\n')) {
-			if (this.skipping) {
-				this.skipping = false;
-				continue;
-			}
-			if (!this.everyStep && !line.includes('PLANNER_RESPONSE')) {
-				continue;
-			}
-			try {
-				const step = JSON.parse(line) as Record<string, unknown>;
-				if (typeof step.step_index !== 'number' || typeof step.type !== 'string') {
-					continue;
-				}
-				if (step.type === 'PLANNER_RESPONSE') {
-					this.steps.set(step.step_index, { ...(typeof step.thinking === 'string' ? { thinking: step.thinking } : {}), ...(typeof step.content === 'string' ? { content: step.content } : {}) });
-				}
-				out.push(step as AgyTranscriptStep);
-			} catch {
-				// A line that is not one: passed over.
-			}
-		}
-		return out;
-	}
-}
-
-/** A call as Breezell shows it: one through agy's generic MCP tool (a server's tool not loaded at the start) as that tool. */
-function agyCallOf(name: string, input: Record<string, unknown> | undefined): { name: string; input: Record<string, unknown> | undefined } {
-	if (name === 'call_mcp_tool' && typeof input?.ServerName === 'string' && typeof input.ToolName === 'string') {
-		return { name: `mcp_${input.ServerName}_${input.ToolName}`, input: input.Arguments && typeof input.Arguments === 'object' ? input.Arguments as Record<string, unknown> : {} };
-	}
-	return { name, input };
-}
-
-/** A call's output as agy writes it down: without the times it puts first. */
-export function agyTranscriptOutput(content: string | undefined): string {
-	return (content ?? '').replace(/^(?:(?:Created|Completed) At: [^\n]*\n)+/, '');
-}
-
-/** What a subagent is on, from its call: its row under the lead says it, as Claude Code's subagents' rows say theirs. */
-export function agyStepOf(view: ToolView | undefined, name: string): string {
-	const base = (file: string) => file.split(/[\\/]/).filter(Boolean).pop() ?? file;
-	switch (view?.kind) {
-		case 'read': return `Reading ${base(view.path)}`;
-		case 'edit': case 'create': return `Editing ${base(view.path)}`;
-		case 'list': return `Listing ${base(view.path)}`;
-		case 'command': return `Running ${firstLine(view.command, 120) ?? ''}`.trim();
-		case 'search': return `Searching for ${firstLine(view.query, 120) ?? ''}`.trim();
-		case 'files': return `Finding ${firstLine(view.pattern, 120) ?? ''}`.trim();
-		case 'webSearch': return `Searching the web for ${firstLine(view.query, 120) ?? ''}`.trim();
-		case 'fetch': return `Fetching ${firstLine(view.url, 120) ?? ''}`.trim();
-		default: return name.replace(/^mcp_[^_]+_/, '').replace(/_/g, ' ');
-	}
-}
-
-/** A step's thought as Breezell shows it: its text, when it thought (its stream counted tokens of it) and wrote one apart from its words. */
-export function agyThoughtOf(step: { readonly thinking?: string; readonly content?: string } | undefined, thinkingTokens: number): string | undefined {
-	const thought = step?.thinking?.trim();
-	// With no thought, agy writes its words there again.
-	return thinkingTokens > 0 && thought && thought !== step?.content?.trim() ? thought : undefined;
-}
-
 /**
  * A model response that went silent (no event of agy's) for this long is taken for a dead connection: the turn stops
  * with a "stalled" model error, which Breezell sends on in the session. agy tells nothing while its model thinks, so
- * this is wider than Claude Code's (agent.ts MODEL_STALL_MS); a call waiting on Breezell (an approval, a command) never counts.
+ * this is wider than Claude Code's (claudeCode/turn.ts MODEL_STALL_MS); a call waiting on Breezell (an approval, a
+ * command) never counts.
  */
 export const AGY_STALL_MS = 600_000;
 
@@ -320,22 +176,6 @@ export function agyApiErrorOf(error: string | undefined): string | undefined {
 					: undefined;
 }
 
-/** One line saying what a call does, from what it is: its command, its file, its query, its page. */
-function titleOf(view: ToolView | undefined): string | undefined {
-	switch (view?.kind) {
-		case 'command': return firstLine(view.command);
-		case 'read': case 'edit': case 'create': case 'list': return firstLine(view.path);
-		case 'search': case 'webSearch': return firstLine(view.query);
-		case 'files': return firstLine(view.pattern);
-		case 'fetch': return firstLine(view.url);
-		case 'subagent': return firstLine(view.description);
-		default: return undefined;
-	}
-}
-
-/** A count agy says (tokens): a whole number of them, or none. */
-const countOf = (value: unknown): number => typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
-
 /** The text of a tool's output as agy writes it. */
 function outputOf(output: unknown): string {
 	return typeof output === 'string' ? output : output === undefined ? '' : JSON.stringify(output);
@@ -382,17 +222,17 @@ export async function runAgyTurn(target: Target, turn: Turn, reply: Reply, token
 	const subagentCalls = new Map<string, string>();
 	const tell = (id: string, name: string, input: Record<string, unknown> | undefined, status: 'running' | 'done' | 'error', view: ToolView | undefined, parent: string | undefined, output?: string) => {
 		told.set(id, { name, ...(input ? { input } : {}), ...(parent ? { parent } : {}), ...(view ? { view } : {}) });
-		const title = titleOf(view);
+		const title = viewTitleOf(view);
 		reply.tool({ id, name, ...(title ? { title } : {}), ...(input ? { input } : {}), status, ...(output !== undefined ? { output } : {}), ...(view ? { view } : {}), ...(parent ? { parent } : {}) });
 	};
 	// The tools of the user's MCP servers in Breezell, as agy names them: drawn as Breezell's MCP row of that server.
-	const mcpViews = new Map(listed.filter(tool => tool.mcpServer && tool.mcpTool).map(tool => [`mcp_${BREEZELL_MCP_SERVER}_${mcpToolNameOf(tool.mcpServer!, tool.mcpTool!)}`, { kind: 'mcp' as const, server: tool.mcpServer!, tool: tool.mcpTool! }]));
+	const mcpViews = mcpToolViews(controls, name => `mcp_${BREEZELL_MCP_SERVER}_${name}`);
 	const viewOf = (name: string, input: Record<string, unknown> | undefined): ToolView | undefined => mcpViews.get(name) ?? named(agyViewOfUse(name, input));
 	let approvals = 0;
 	/** Calls of Breezell's tools under way: an approval or a command waiting is no silence of the model's. */
 	let inFlight = 0;
-	/** When agy last said anything (or a call of Breezell's tools ended). */
-	let lastHeardAt = Date.now();
+	/** agy's process, once started: a call of Breezell's tools that ends is word from it. */
+	let proc: AgentProcess | undefined;
 	const host = createBreezellToolHost(controls, {
 		own,
 		toolPathOf: files?.toolPathOf,
@@ -408,7 +248,7 @@ export async function runAgyTurn(target: Target, turn: Turn, reply: Reply, token
 			if (!known) {
 				tell(toolId, name, request.input, 'running', view, parent);
 			}
-			const title = titleOf(view);
+			const title = viewTitleOf(view);
 			const allowed = await reply.approve({ toolId, name, kind: request.kind, input: request.input, ...(title ? { title } : {}), ...(view ? { view } : {}) });
 			return allowed && !token.isCancellationRequested;
 		},
@@ -419,19 +259,38 @@ export async function runAgyTurn(target: Target, turn: Turn, reply: Reply, token
 			return await host.answer(rpc);
 		} finally {
 			inFlight--;
-			lastHeardAt = Date.now();
+			proc?.heard();
 		}
 	};
 
-	// What it is given: its MCP server in the conversation's own folder (an empty one when it is offered nothing, so an
-	// old address is never left there), attachments saved where it may read them.
-	const served = host.names.length ? await run.serve(answer) : undefined;
-	const config = path.join(run.folders.tools.local, '.agents', 'mcp_config.json');
+	// Its own MCP servers (not Breezell's): Breezell never sees their calls, so they run only while the user auto-approves
+	// MCP tools, and agy refuses them otherwise. Its model is told they are off when its session starts, and told again
+	// when that changed since it was last told (a session told nothing had them as on).
+	const ownMcp = turn.autoApprove?.mcp === true;
+	const settings = agySettings(run.folders, attachedOutside(turn, pathFor).map(a => a.folder ? `${a.path.replace(/[\\/]+$/, '')}/` : a.path), { ownMcp });
+	const args = agyTurnArgs(turn, run, settings);
 	const eager = Object.fromEntries(host.names.filter(name => EAGER_BREEZELL_TOOLS.has(name) || own.some(tool => tool.name === name)).map(name => [name, { eager: true }]));
+	// Its program kept between this conversation's turns: the kept one, when it was started just so (its session aside).
+	const keep = controls?.keepAlive?.pool.enabled ? controls.keepAlive : undefined;
+	const key = JSON.stringify({ args: withoutArg(args, '--conversation'), cwd: turn.cwd ?? '', tools: host.listTools(), eager });
+	const taken = keep ? await keep.pool.take(keep.conversation, key, turn.session, turn.session ? keep.recordOf?.(turn.session) : undefined) : undefined;
+	const started = !taken?.kept;
+	// Breezell's MCP server for it, for as long as its program runs (agy connects to it once): answered by the turn under
+	// way. A call between turns has no turn to answer it.
+	const route: AgyRoute = taken?.kept ? (taken.kept.extra as AgyKept).route : { answer: undefined };
+	route.answer = answer;
+	let served: Awaited<ReturnType<AgyRun['serve']>> | undefined;
 	const saved: Attachment[] = [];
 	try {
-		await fs.promises.mkdir(path.dirname(config), { recursive: true });
-		await fs.promises.writeFile(config, JSON.stringify({ mcpServers: served ? { [BREEZELL_MCP_SERVER]: { ...served.entry, timeoutSeconds: -1, tools: eager } } : {} }, null, 1), 'utf8');
+		// What it is given when it starts: its MCP server in the conversation's own folder (an empty one when it is offered
+		// nothing, so an old address is never left there).
+		if (started) {
+			served = host.names.length ? await run.serve(rpc => route.answer ? route.answer(rpc) : route.idle?.(rpc) ?? Promise.resolve(noTurnAnswer(rpc))) : undefined;
+			const config = path.join(run.folders.tools.local, '.agents', 'mcp_config.json');
+			await fs.promises.mkdir(path.dirname(config), { recursive: true });
+			await fs.promises.writeFile(config, JSON.stringify({ mcpServers: served ? { [BREEZELL_MCP_SERVER]: { ...served.entry, timeoutSeconds: -1, tools: eager } } : {} }, null, 1), 'utf8');
+		}
+		// Attachments saved where it may read them.
 		const media = turn.continuing ? [] : turn.attachments.filter(a => a.data);
 		if (media.length) {
 			await fs.promises.mkdir(run.folders.attachments.local, { recursive: true });
@@ -442,21 +301,19 @@ export async function runAgyTurn(target: Target, turn: Turn, reply: Reply, token
 			saved.push({ name: attachment.name, kind: 'file', path: file });
 		}
 	} catch (error) {
+		route.answer = undefined;
+		if (taken?.kept) {
+			await keep!.pool.retire(keep!.conversation, taken.kept, 'its turn could not be set up');
+		}
 		served?.dispose();
 		throw error;
 	}
-	// Its own MCP servers (not Breezell's): Breezell never sees their calls, so they run only while the user auto-approves
-	// MCP tools, and agy refuses them otherwise. Its model is told they are off when its session starts, and told again
-	// when that changed since it was last told (a session told nothing had them as on).
-	const ownMcp = turn.autoApprove?.mcp === true;
 	const toldOwnMcp = turn.session ? run.ownMcpTold?.get(turn.session) ?? true : undefined;
 	const mcpNotice = turn.session && !turn.compact && run.ownMcpTold && toldOwnMcp !== ownMcp ? ownMcp ? OWN_MCP_ON_NOTE : OWN_MCP_OFF_NOTE : undefined;
 	const noticed: Turn = mcpNotice ? { ...turn, notices: [...turn.notices ?? [], mcpNotice] } : turn;
 	// Pictures and PDFs as files it opens; everything else as every agent gets it.
 	const given: Turn = saved.length ? { ...noticed, attachments: [...turn.attachments.filter(a => !a.data), ...saved] } : noticed;
 	const content = promptOf(given, pathFor, { media: false, newSession: agySessionNote(turn, pathFor, run.folders.tools.agent, { ownMcp }), modeNotes: { plan: PLAN_NOTE } });
-	lastHeardAt = Date.now();
-	const settings = agySettings(run.folders, attachedOutside(turn, pathFor).map(a => a.folder ? `${a.path.replace(/[\\/]+$/, '')}/` : a.path), { ownMcp });
 
 	// Its model's thoughts: Breezell's "Thinking" from each request of the lead's on (agy tells nothing meanwhile), their
 	// text from its transcript once each step is done. A Breezell that has no "Thinking" told after gets none of this.
@@ -549,8 +406,8 @@ export async function runAgyTurn(target: Target, turn: Turn, reply: Reply, token
 		if (step.type !== 'PLANNER_RESPONSE') {
 			return;
 		}
-		const row = { model: typeof step.model === 'string' && step.model ? step.model : run.model ?? turn.model, inputTokens: countOf(step.input_tokens), outputTokens: countOf(step.output_tokens), cacheReadTokens: countOf(step.cache_read_tokens), cacheWriteTokens: 0 };
-		if (reply.usage && (row.inputTokens || row.outputTokens || row.cacheReadTokens)) {
+		const row = usageRow(typeof step.model === 'string' && step.model ? step.model : run.model ?? turn.model, { input: step.input_tokens, output: step.output_tokens, cacheRead: step.cache_read_tokens });
+		if (reply.usage && hasTokens(row)) {
 			reply.usage({ models: [row] });
 		}
 		// The model it works on (the lead's, unless it was started on another): its row and page say it.
@@ -627,29 +484,65 @@ export async function runAgyTurn(target: Target, turn: Turn, reply: Reply, token
 			endFollowed(f, f.report || wentWell ? 'done' : 'stopped');
 		}
 	};
+	/** The files it kept open for this turn (its transcripts and its subagents'). */
+	const closeTranscripts = () => {
+		for (const transcript of transcripts.values()) {
+			transcript?.dispose();
+		}
+		for (const f of followed.values()) {
+			f.transcript?.dispose();
+		}
+	};
+
+	// Its program: the conversation's kept one, or one started now (kept from here, unless a turn of this conversation
+	// is under way in the kept one: this one is then its own).
+	let agent: AgentChild;
+	let kept: KeptProcess | undefined = taken?.kept;
+	if (kept) {
+		agent = kept.agent;
+	} else {
+		try {
+			agent = new AgentChild(target.start(args, turn.cwd));
+		} catch (error) {
+			route.answer = undefined;
+			served?.dispose();
+			throw error;
+		}
+		const ownServer = served;
+		agent.onExit(() => ownServer?.dispose());
+		if (keep && !taken?.busy) {
+			const extra: AgyKept = { route };
+			const candidate: KeptProcess = { agent, key, session: undefined, isWork: agyIsWork, extra };
+			kept = keep.pool.adopt(keep.conversation, candidate) ? candidate : undefined;
+		}
+	}
+	// A call of Breezell's tools between turns: the program went on by itself, with no turn to show it (it is closed).
+	const keptHere = kept;
+	route.idle = keptHere && keep ? async rpc => { void keep.pool.retire(keep.conversation, keptHere, 'it called a tool between turns'); return noTurnAnswer(rpc); } : undefined;
 
 	return new Promise<TurnResult>((resolve, reject) => {
-		let child: ChildProcess;
-		try {
-			child = target.start(agyTurnArgs(turn, run, settings), turn.cwd);
-		} catch (error) {
-			served?.dispose();
-			reject(error);
-			return;
-		}
 		let session: string | undefined;
 		let error: string | undefined;
 		let apiError: string | undefined;
 		let gotResult = false;
-		let stalled = false;
-		let stderr = '';
-		let killTimer: ReturnType<typeof setTimeout> | undefined;
-		const stop = () => {
-			child.stdin?.end();
-			// An agy here ends at its interrupt, as at Ctrl+C; one in WSL ends with wsl.exe. Ended if it does not.
-			child.kill(target.where === 'native' ? 'SIGINT' : undefined);
-			killTimer = setTimeout(() => child.kill('SIGKILL'), STOP_GRACE_MS);
-		};
+		const stallMs = controls?.stallMs ?? AGY_STALL_MS;
+		// An agy here ends at its interrupt, as at Ctrl+C; one in WSL ends with wsl.exe. Ended if it does not.
+		const running = proc = new AgentProcess(agent, {
+			token,
+			askToStop: () => {
+				running.endInput();
+				agent.kill(target.where === 'native' ? 'SIGINT' : undefined);
+			},
+			killSignal: 'SIGKILL',
+			stall: {
+				ms: stallMs,
+				counts: () => !gotResult && inFlight === 0,
+				onStall: () => {
+					error = `No answer from the model for ${Math.round(stallMs / 1000)} s.`;
+					apiError = 'stalled';
+				},
+			},
+		});
 		const step = async (s: Record<string, unknown>) => {
 			const conversation = typeof s.conversation_id === 'string' ? s.conversation_id : root;
 			const id = `${conversation}:${String(s.step_index)}`;
@@ -677,13 +570,13 @@ export async function runAgyTurn(target: Target, turn: Turn, reply: Reply, token
 				// A model request done: its tokens, a record of its own in Breezell's usage; the lead's input is the context it takes.
 				const used = s.state === 'DONE' && s.usage && typeof s.usage === 'object' ? s.usage as Record<string, unknown> : undefined;
 				if (used && reply.usage) {
-					const row = { model: run.model ?? turn.model, inputTokens: countOf(used.input_tokens), outputTokens: countOf(used.output_tokens), cacheReadTokens: countOf(used.cache_read_tokens), cacheWriteTokens: 0 };
-					if (row.inputTokens || row.outputTokens || row.cacheReadTokens) {
+					const row = usageRow(run.model ?? turn.model, { input: used.input_tokens, output: used.output_tokens, cacheRead: used.cache_read_tokens });
+					if (hasTokens(row)) {
 						reply.usage({ ...(!parent && row.inputTokens + row.cacheReadTokens ? { context: { tokens: row.inputTokens + row.cacheReadTokens } } : {}), models: [row] });
 					}
 				}
 				// Its thought: its size while no word of the step came (its calls come next), then its text, as written down.
-				const thought = countOf(used?.thinking_tokens);
+				const thought = tokenCount(used?.thinking_tokens);
 				if (thinkingStarted && thought && conversation && (lead || parent) && typeof s.step_index === 'number') {
 					if (lead && wordsOf !== id) {
 						reply.thinking?.(thought);
@@ -773,8 +666,7 @@ export async function runAgyTurn(target: Target, turn: Turn, reply: Reply, token
 			}
 			const failure = info.error && typeof info.error.message === 'string' ? info.error.message : undefined;
 			// A lookup in Breezell's memories: its row says what kind of result and how many, as the call returned them.
-			const lookedUp = view?.kind === 'memories' ? host.recalled(input) : undefined;
-			const shown: ToolView | undefined = view?.kind === 'memories' && lookedUp ? { ...view, ...(lookedUp.resultType === 'search' || lookedUp.resultType === 'list' || lookedUp.resultType === 'open' || lookedUp.resultType === 'l0_index' ? { resultType: lookedUp.resultType } : {}), ...(typeof lookedUp.count === 'number' ? { count: lookedUp.count } : {}) } : view;
+			const shown = view?.kind === 'memories' ? memoriesViewOf(view, host.recalled(input)) : view;
 			tell(id, name, input, failure ? 'error' : 'done', shown, parent, failure ?? outputOf(info.output));
 			// Its calls are over: its model is asked again, with what they returned.
 			if (lead) {
@@ -790,93 +682,131 @@ export async function runAgyTurn(target: Target, turn: Turn, reply: Reply, token
 				session = r.conversation_id;
 			}
 			const stoppedByUser = token.isCancellationRequested && (r.status === 'INTERRUPTED' || r.status === 'CANCELED');
-			if (r.status !== 'SUCCESS' && !stoppedByUser && !stalled) {
+			if (r.status !== 'SUCCESS' && !stoppedByUser && !running.stalled) {
 				error = firstLine(r.error, 600) ?? `Antigravity CLI ended with ${String(r.status ?? 'an error')}.`;
 				apiError = agyApiErrorOf(typeof r.error === 'string' ? r.error : undefined);
 			}
-			// The turn is told: its input closes, and agy ends.
-			child.stdin?.end();
+			// The turn is told. Its program kept (keepAlive): at rest for the conversation's next turn when the turn went
+			// well, once what agy said is told (below); otherwise its input closes, and agy ends.
+			keeping = !!kept && !!keep && keep.pool.holds(keep.conversation, kept) && r.status === 'SUCCESS' && !error && !running.stopAsked && !token.isCancellationRequested && agent.alive;
+			if (!keeping) {
+				running.endInput();
+			}
+		};
+		/** The turn ended well in a kept program: it is left at rest, not ended. */
+		let keeping = false;
+		let settled = false;
+		/** The start of the turn's conversation (agy says it once a program; a kept program's later turns are in it already). */
+		const begin = async (conversation: string) => {
+			root = conversation;
+			session = root;
+			reply.session(root);
+			// What its session was told of its own MCP servers: kept only when it changed (each write is the plugin's whole state).
+			if (!turn.compact && run.ownMcpTold && run.ownMcpTold.get(root) !== ownMcp) {
+				run.ownMcpTold.set(root, ownMcp);
+			}
+			// What its transcript holds already is of the conversation's earlier turns.
+			if (thinkingStarted) {
+				await transcriptOf(root)?.skipToEnd();
+				live ??= run.liveStepsOf?.(root);
+				// Read while its model works: not while its calls run, nor once its answer is over.
+				liveTimer ??= live && setInterval(() => {
+					if (!readingLive && !gotResult && !leadCalls.size && liveFrom !== undefined) {
+						readingLive = true;
+						queue = queue.then(readLive).catch(() => undefined).then(() => { readingLive = false; });
+					}
+				}, run.liveMs ?? AGY_LIVE_MS);
+				liveTimer?.unref?.();
+			}
 		};
 		// One at a time, in order: a step done waits for its thought (a moment) before its calls are told.
 		let queue: Promise<void> = Promise.resolve();
 		let readingLive = false;
-		onJsonLines(child.stdout, message => {
-			lastHeardAt = Date.now();
-			queue = queue.then(async () => {
-				if (message.event === 'init' && typeof message.conversation_id === 'string' && message.conversation_id) {
-					root = message.conversation_id;
-					session = root;
-					reply.session(root);
-					if (!turn.compact) {
-						run.ownMcpTold?.set(root, ownMcp);
-					}
-					// What its transcript holds already is of the conversation's earlier turns.
-					if (thinkingStarted) {
-						await transcriptOf(root)?.skipToEnd();
-						live ??= run.liveStepsOf?.(root);
-						// Read while its model works: not while its calls run, nor once its answer is over.
-						liveTimer ??= live && setInterval(() => {
-							if (!readingLive && !gotResult && !leadCalls.size && liveFrom !== undefined) {
-								readingLive = true;
-								queue = queue.then(readLive).catch(() => undefined).then(() => { readingLive = false; });
-							}
-						}, run.liveMs ?? AGY_LIVE_MS);
-						liveTimer?.unref?.();
-					}
-				} else if (message.event === 'step_update' && message.step_update && typeof message.step_update === 'object') {
-					await step(message.step_update as Record<string, unknown>);
-				} else if (message.event === 'result' && message.result && typeof message.result === 'object') {
-					result(message.result as Record<string, unknown>);
-				}
-			}).catch(() => undefined);
-		});
-		const stallMs = controls?.stallMs ?? AGY_STALL_MS;
-		const watchdog = setInterval(() => {
-			if (gotResult || stalled || inFlight > 0 || token.isCancellationRequested || Date.now() - lastHeardAt < stallMs) {
-				return;
-			}
-			stalled = true;
-			error = `No answer from the model for ${Math.round(stallMs / 1000)} s.`;
-			apiError = 'stalled';
-			stop();
-		}, Math.max(10, Math.min(5_000, Math.floor(stallMs / 4))));
-		watchdog.unref?.();
-		child.stderr?.setEncoding('utf8');
-		child.stderr?.on('data', (data: string) => { stderr = (stderr + data).slice(-4000); });
-		const stopping = token.onCancellationRequested(stop);
 		const finish = () => {
-			clearInterval(watchdog);
+			running.dispose();
 			if (liveTimer) {
 				clearInterval(liveTimer);
 			}
 			live?.dispose();
-			stopping.dispose();
-			served?.dispose();
-			if (killTimer) {
-				clearTimeout(killTimer);
+			closeTranscripts();
+			route.answer = undefined;
+			// A kept program's MCP server stays with it; a program of the turn's own goes with the turn.
+			if (!kept) {
+				served?.dispose();
 			}
 		};
-		child.on('error', err => {
-			if (following) {
-				clearInterval(following);
+		const outcome = (): TurnResult => {
+			const failure = error && !token.isCancellationRequested ? error : undefined;
+			return { ...(session ? { session } : {}), ...(failure ? { error: failure } : {}), ...(failure && apiError ? { apiError } : {}) };
+		};
+		/** Its turn went well: what its subagents wrote last told, the program left at rest for the next turn. */
+		const rest = async () => {
+			if (settled) {
+				return;
 			}
+			settled = true;
+			agent.unlisten(listener);
+			await endSubagents(true);
 			finish();
-			reject(err);
-		});
-		child.on('close', code => {
-			// Everything it said is told first, its subagents' last steps too.
-			void queue.then(async () => {
-				await endSubagents(!token.isCancellationRequested && !stalled && !error && (gotResult || code === 0));
-				finish();
-				if (!gotResult && !token.isCancellationRequested && !stalled && code !== 0) {
-					const last = stderr.split(/\r?\n/).map(line => line.trim()).filter(Boolean).pop();
-					error = error ?? `Antigravity CLI exited with code ${code}${last ? `: ${last}` : ''}`;
-					apiError = apiError ?? agyApiErrorOf(last);
+			kept!.session = session ?? kept!.session;
+			await keep!.pool.release(keep!.conversation, kept!, kept!.session ? keep!.recordOf?.(kept!.session) : undefined).catch(() => undefined);
+			resolve(outcome());
+		};
+		const listener: ChildListener = {
+			message: message => {
+				running.heard();
+				queue = queue.then(async () => {
+					if (message.event === 'init' && typeof message.conversation_id === 'string' && message.conversation_id) {
+						if (message.conversation_id !== root) {
+							await begin(message.conversation_id);
+						}
+					} else if (message.event === 'step_update' && message.step_update && typeof message.step_update === 'object') {
+						await step(message.step_update as Record<string, unknown>);
+					} else if (message.event === 'result' && message.result && typeof message.result === 'object') {
+						result(message.result as Record<string, unknown>);
+						if (keeping) {
+							await rest();
+						}
+					}
+				}).catch(() => undefined);
+			},
+			error: err => {
+				if (settled) {
+					return;
 				}
-				const failure = error && !token.isCancellationRequested ? error : undefined;
-				resolve({ ...(session ? { session } : {}), ...(failure ? { error: failure } : {}), ...(failure && apiError ? { apiError } : {}) });
-			});
-		});
-		child.stdin?.write(`${JSON.stringify({ event: 'user', message: { content } })}\n`);
+				settled = true;
+				agent.unlisten(listener);
+				if (following) {
+					clearInterval(following);
+				}
+				finish();
+				reject(err);
+			},
+			close: code => {
+				// Everything it said is told first, its subagents' last steps too.
+				void queue.then(async () => {
+					if (settled) {
+						return;
+					}
+					settled = true;
+					agent.unlisten(listener);
+					await endSubagents(!token.isCancellationRequested && !running.stalled && !error && (gotResult || code === 0));
+					finish();
+					if (!gotResult && !token.isCancellationRequested && !running.stalled && code !== 0) {
+						error = error ?? running.exitError('Antigravity CLI', code);
+						apiError = apiError ?? agyApiErrorOf(running.lastErrorLine());
+					}
+					resolve(outcome());
+				});
+			},
+		};
+		agent.listen(listener);
+		const message = { event: 'user', message: { content } };
+		if (started) {
+			running.write(message);
+		} else {
+			// A kept program says nothing of its conversation at its later turns: its start is set here, before the message.
+			queue = queue.then(() => begin(kept!.session ?? turn.session!)).catch(() => undefined).then(() => running.write(message));
+		}
 	});
 }

@@ -39,6 +39,19 @@
 	},
 	"versions": [
 		{
+			"version": "1.2.0",
+			"path": "packages/breezell.agent-bridge/1.2.0/breezell.agent-bridge-1.2.0.vsix",
+			"sha256": "029fc973146bd23ec849cf556dccae156c00a58efd21b1fe52c892c721d8b11e",
+			"size": 448253,
+			"apiVersion": 1,
+			"permissions": [
+				"ui.contribute",
+				"chat.agent",
+				"chat.events"
+			],
+			"publishedAt": "2026-11-26T16:27:16.470Z"
+		},
+		{
 			"version": "1.1.1",
 			"path": "packages/breezell.agent-bridge/1.1.1/breezell.agent-bridge-1.1.1.vsix",
 			"sha256": "f1ad14757bbe1b7b301b8b5751bd0f5623462e1a6c0d5b62dc4130ac50b46a8c",

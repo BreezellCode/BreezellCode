@@ -9,5 +9,7 @@
 	"config.subagentsFollowModel": "開啟時，Claude Code 開的每個子代理都使用對話選的模型和思考強度。關閉時，由 Claude Code 自己為子代理選模型。",
 	"command.recheckAntigravity": "重新檢查 Antigravity CLI",
 	"config.antigravityEnabled": "連接這台電腦上安裝的 Antigravity CLI（agy）。請在 Box › 模型 › 帳號登入 中開啟，並同意開啟時顯示的內容。",
-	"config.antigravityDeleteConversations": "在 Breezell 刪除對話時，一併刪除 Antigravity CLI 中的對話和它的子代理對話。關閉時只刪除 Breezell 這邊。"
+	"config.antigravityDeleteConversations": "在 Breezell 刪除對話時，一併刪除 Antigravity CLI 中的對話和它的子代理對話。關閉時只刪除 Breezell 這邊。",
+	"command.keepAlive": "訊息之間保持代理程式執行",
+	"config.keepAlive": "對話的代理程式（Claude Code、Antigravity CLI）回覆後保持執行多少分鐘，讓下一則訊息直接交給它：回覆開始得比較快，但每個保持中的對話在這段時間會佔用約 200–300 MB 記憶體。0：關閉（預設），每則訊息都重新啟動代理程式。"
 }

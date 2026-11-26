@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fakeChild } from './fake-child.mjs';
@@ -15,7 +15,7 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const require = createRequire(import.meta.url);
 const esbuild = require('esbuild');
 const out = mkdtempSync(join(tmpdir(), 'agent-bridge-agyturn-'));
-await esbuild.build({ entryPoints: [join(root, 'src/antigravityAgent.ts')], bundle: true, platform: 'node', format: 'cjs', outfile: join(out, 'agyturn.cjs'), logLevel: 'silent' });
+await esbuild.build({ entryPoints: [join(root, 'src/agents/antigravity/index.ts')], bundle: true, platform: 'node', format: 'cjs', outfile: join(out, 'agyturn.cjs'), logLevel: 'silent' });
 const agy = require(join(out, 'agyturn.cjs'));
 test.after(() => rmSync(out, { recursive: true, force: true }));
 
@@ -561,7 +561,42 @@ test('agy\'s transcript as it grows: whole lines only, its model\'s steps only, 
 	writeFileSync(file, transcriptLine({ step_index: 9, type: 'PLANNER_RESPONSE', thinking: 'C' }));
 	await t.read();
 	assert.deepEqual(t.stepOf(9), { thinking: 'C' }, 'written anew: read from its start');
+	t.dispose();
 	rmSync(dir, { recursive: true, force: true });
+});
+
+test('agy\'s transcript stays open for the turn: a read that finds nothing new asks only its size; a file put in its place is opened anew', async () => {
+	const dir = mkdtempSync(join(tmpdir(), 'agent-bridge-agytranscript-'));
+	const file = join(dir, 't.jsonl');
+	writeFileSync(file, transcriptLine({ step_index: 1, type: 'PLANNER_RESPONSE', thinking: 'A' }));
+	let now = 0;
+	const t = new agy.AgyTranscript(file, false, () => now);
+	const fs = await import('node:fs');
+	const open = fs.promises.open;
+	let opened = 0;
+	fs.promises.open = function (path, ...args) { opened += path === file ? 1 : 0; return open.call(this, path, ...args); };
+	try {
+		await t.read();
+		for (let i = 0; i < 10; i++) {
+			await t.read();
+		}
+		appendFileSync(file, transcriptLine({ step_index: 2, type: 'PLANNER_RESPONSE', thinking: 'B' }));
+		await t.read();
+		assert.deepEqual(t.stepOf(2), { thinking: 'B' });
+		assert.equal(opened, 1, 'opened once, however often it is read');
+		// Another file put where it was (written anew elsewhere and moved there): after a while without growth, opened anew.
+		writeFileSync(`${file}.new`, transcriptLine({ step_index: 1, type: 'PLANNER_RESPONSE', thinking: 'A' }) + transcriptLine({ step_index: 2, type: 'PLANNER_RESPONSE', thinking: 'B' }) + transcriptLine({ step_index: 3, type: 'PLANNER_RESPONSE', thinking: 'C' }));
+		renameSync(`${file}.new`, file);
+		now += 5_000;
+		await t.read();
+		await t.read();
+		assert.deepEqual(t.stepOf(3), { thinking: 'C' });
+		assert.equal(opened, 2);
+	} finally {
+		fs.promises.open = open;
+		t.dispose();
+		rmSync(dir, { recursive: true, force: true });
+	}
 });
 
 // What agy 1.5.17 wrote for a subagent: its call on the lead's stream (it returns at once), the subagent's own steps

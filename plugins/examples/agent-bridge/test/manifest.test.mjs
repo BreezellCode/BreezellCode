@@ -34,9 +34,27 @@ test('only ui.contribute and chat.agent (the tile answers conversations); runs o
 
 test('its page in Box is the tile\'s, with a button that brings the conversations in; the command is its own', () => {
 	assert.deepEqual(pkg.contributes.breezell.launcher, { signIn: 'claudeCode', sidebar: true });
-	assert.deepEqual(tile.actions.map(a => a.command), ['agentBridge.claudeCode.sync']);
+	assert.deepEqual(tile.actions.map(a => a.command), ['agentBridge.claudeCode.sync', 'agentBridge.keepAlive.configure']);
 	assert.deepEqual(Object.keys(tile.actions[0].l10n).sort(), ['zh-CN', 'zh-TW']);
 	assert.ok(pkg.contributes.commands.some(c => c.command === 'agentBridge.claudeCode.sync'));
+});
+
+test('keeping the agents running between messages: one setting, off by default, a button on both tiles that says what it costs', () => {
+	const setting = pkg.contributes.configuration.properties['agentBridge.keepAlive.minutes'];
+	assert.deepEqual([setting.type, setting.default, setting.minimum, setting.maximum, setting.scope], ['number', 0, 0, 240, 'application'], 'off until the user sets a time');
+	assert.ok(pkg.contributes.commands.some(c => c.command === 'agentBridge.keepAlive.configure'));
+	for (const each of pkg.contributes.breezell.ui.signIns) {
+		const action = each.actions.find(a => a.command === 'agentBridge.keepAlive.configure');
+		assert.ok(action, `${each.id}: its button`);
+		assert.ok(each.actions.length <= 3, 'at most three buttons a tile');
+		assert.ok(action.title.length <= 40 && Object.values(action.l10n).every(t => t.length <= 40));
+		for (const text of [action.description, ...Object.values(action.descriptionL10n)]) {
+			assert.ok(text.length <= 600, 'within what Breezell shows of a button\'s note');
+		}
+		assert.match(action.descriptionL10n['zh-TW'], /200–300 MB/, 'what it costs');
+		assert.match(action.descriptionL10n['zh-TW'], /預設關閉/);
+		assert.ok(!/breezell/i.test(action.title));
+	}
 });
 
 test('deleting in Claude Code too: a switch of its page, off by default, that says what it does and asks before it turns on', () => {

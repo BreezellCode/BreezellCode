@@ -8,6 +8,7 @@
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { removeTree } from '../../core/files';
 import { isSubagentTool, UNSHOWN_TOOLS, viewOfResult, viewOfUse, withUri, type ToolView } from './views';
 
 /** One message of a session, with the id of the record it comes from (vscode.breezell.AgentConversationMessage). */
@@ -47,9 +48,6 @@ const viewSize = (view: ToolView | undefined): number => view?.kind === 'edit' ?
 
 /** The view without its text: the call still shows what it is, without its diff. */
 const withoutText = (view: ToolView): ToolView => view.kind === 'edit' ? { kind: 'edit', path: view.path, ...(view.uri ? { uri: view.uri } : {}) } : view.kind === 'create' ? { kind: 'create', path: view.path, ...(view.uri ? { uri: view.uri } : {}) } : view;
-
-/** How paths under a config folder are joined: Windows' way for C:\\… or \\\\wsl$\\…, POSIX otherwise. */
-export const joinFor = (root: string): ((...parts: string[]) => string) => /^([A-Za-z]:|\\\\)/.test(root) ? path.win32.join : path.posix.join;
 
 /** The folder of a project's sessions, as Claude Code names it. */
 export const projectDirName = (cwd: string): string => cwd.replace(/[^A-Za-z0-9]/g, '-');
@@ -263,25 +261,6 @@ export interface SessionFile {
 const SESSION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SESSION_FILE = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.jsonl$/i;
 
-/** Removes a folder and what is in it; a link in it is removed itself, never followed. */
-async function removeTree(target: string, join: (...parts: string[]) => string): Promise<boolean> {
-	let stat: fs.Stats;
-	try {
-		stat = await fs.promises.lstat(target);
-	} catch {
-		return false;
-	}
-	if (stat.isDirectory()) {
-		for (const name of await fs.promises.readdir(target)) {
-			await removeTree(join(target, name), join);
-		}
-		await fs.promises.rmdir(target);
-	} else {
-		await fs.promises.unlink(target);
-	}
-	return true;
-}
-
 /**
  * Deletes one of Claude Code's conversations: its file (`<session>.jsonl`) and its folder (`<session>/`,
  * its subagents' records), in the folder of sessions of `cwd`, or of whichever project has it. Nothing
@@ -306,8 +285,9 @@ export async function deleteSession(root: string, cwd: string | undefined, sessi
 	if (!dir) {
 		return false;
 	}
-	const file = await removeTree(join(dir, `${session}.jsonl`), join);
-	const folder = await removeTree(join(dir, session), join);
+	// A link inside is removed itself, never followed.
+	const file = await removeTree(join(dir, `${session}.jsonl`), join, 'remove') === 'removed';
+	const folder = await removeTree(join(dir, session), join, 'remove') === 'removed';
 	return file || folder;
 }
 

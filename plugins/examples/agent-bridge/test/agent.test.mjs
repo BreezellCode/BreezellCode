@@ -14,7 +14,7 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const require = createRequire(import.meta.url);
 const esbuild = require('esbuild');
 const out = mkdtempSync(join(tmpdir(), 'agent-bridge-agent-'));
-await esbuild.build({ entryPoints: [join(root, 'src/agent.ts')], bundle: true, platform: 'node', format: 'cjs', outfile: join(out, 'agent.cjs'), logLevel: 'silent' });
+await esbuild.build({ entryPoints: [join(root, 'src/agents/claudeCode/index.ts')], bundle: true, platform: 'node', format: 'cjs', outfile: join(out, 'agent.cjs'), logLevel: 'silent' });
 const agent = require(join(out, 'agent.cjs'));
 rmSync(out, { recursive: true, force: true });
 

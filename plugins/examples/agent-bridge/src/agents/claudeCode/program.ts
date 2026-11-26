@@ -10,14 +10,14 @@
  * wsl.exe, and comes first in a window that is itself in WSL.
  */
 import * as path from 'node:path';
-import type { UsageLine } from './limits';
-import { firstLine, locateProgram, messageOf, parseVersion, programCandidates, wslFindScript, findProgramInWsl, defaultIsFile, type Env, type LocateOptions, type ProgramSpec, type Runner, type Starter, type Target } from './cli';
+import type { UsageLine } from '../../core/limits';
+import { askVersion, installOf, locateProgram, messageOf, programCandidates, wslFindScript, findProgramInWsl, defaultIsFile, type Env, type Install, type LocateOptions, type ProgramSpec, type Runner, type Starter, type Target } from '../../core/cli';
 
-// What other parts of the plugin (and its tests) know from here: the program-running half is cli.ts, shared with
-// the other agents.
-export { resetInstant, type UsageLine } from './limits';
-export { RUN_TIMEOUT_MS, WSL_TIMEOUT_MS, createRunner, createStarter, decodeOutput, envValue, nativeTarget, parseVersion, withFolderOnPath, wslArgs, wslExe, wslPathOf, wslRunScript, wslUncPath } from './cli';
-export type { RunOptions, RunResult, Runner, Starter, Target } from './cli';
+// What other parts of the plugin (and its tests) know from here: the program-running half is core/cli.ts, shared
+// with the other agents.
+export { resetInstant, type UsageLine } from '../../core/limits';
+export { RUN_TIMEOUT_MS, WSL_TIMEOUT_MS, createRunner, createStarter, decodeOutput, envValue, nativeTarget, parseVersion, withFolderOnPath, wslArgs, wslExe, wslPathOf, wslRunScript, wslUncPath } from '../../core/cli';
+export type { RunOptions, RunResult, Runner, Starter, Target } from '../../core/cli';
 
 /** Claude Code's config folder on this computer: CLAUDE_CONFIG_DIR when set, else .claude in the home folder. */
 export const nativeConfigDir = (env: Env, home: string, platform: string): string => env.CLAUDE_CONFIG_DIR || (platform === 'win32' ? path.win32 : path.posix).join(home, '.claude');
@@ -31,15 +31,13 @@ export const CLAUDE_PROGRAM: ProgramSpec = {
 	wslConfigDir: '${CLAUDE_CONFIG_DIR:-$HOME/.claude}',
 };
 
-type Found = { readonly where: 'native' | 'wsl'; readonly location: string; readonly distro?: string };
-
 /** What was found out, before it is put into words. */
 export type Check =
 	| { readonly kind: 'notInstalled'; readonly lookedInWsl: boolean }
-	| (Found & { readonly kind: 'notSignedIn'; readonly version?: string })
-	| (Found & { readonly kind: 'tooOld'; readonly version?: string })
-	| (Found & { readonly kind: 'signedIn'; readonly version?: string; readonly email?: string; readonly organization?: string; readonly plan?: string; readonly authMethod?: string })
-	| ({ readonly kind: 'failed'; readonly message: string } & Partial<Found>);
+	| (Install & { readonly kind: 'notSignedIn'; readonly version?: string })
+	| (Install & { readonly kind: 'tooOld'; readonly version?: string })
+	| (Install & { readonly kind: 'signedIn'; readonly version?: string; readonly email?: string; readonly organization?: string; readonly plan?: string; readonly authMethod?: string })
+	| ({ readonly kind: 'failed'; readonly message: string } & Partial<Install>);
 
 /** Every place Claude Code may be on this computer, in the order they are tried. */
 export function candidates(env: Env, platform: string, home: string, listDir?: (dir: string) => string[]): string[] {
@@ -131,22 +129,28 @@ export async function fetchUsage(target: Target): Promise<UsageLine[] | undefine
 	}
 }
 
-/** Asks one Claude Code: its version, whether it is signed in, and to what. */
-export async function inspect(target: Target): Promise<Check> {
-	const found: Found = { where: target.where, location: target.path, ...(target.distro ? { distro: target.distro } : {}) };
-	let version: string | undefined;
-	try {
-		const result = await target.ask(['--version']);
-		version = parseVersion(result.stdout);
-		if (!version) {
-			return { kind: 'failed', ...found, message: firstLine(result.stderr) ?? firstLine(result.stdout) ?? `exit code ${result.code}` };
-		}
-	} catch (error) {
-		return { kind: 'failed', ...found, message: messageOf(error) };
+/**
+ * What `auth status --json` said last, per install, and the plan `--text` named then: while the account says the same,
+ * its plan is the same, and `--text` (another start of Claude Code) is not run again.
+ */
+const statusSeen = new WeakMap<Target, { readonly json: string; readonly loginMethod?: string }>();
+
+/**
+ * Asks one Claude Code: its version, whether it is signed in, and to what. `version`: its version when it is known
+ * already (its program unchanged since it was asked), so that it is not asked again.
+ */
+export async function inspect(target: Target, known?: { readonly version?: string }): Promise<Check> {
+	const found = installOf(target);
+	const asked = known?.version ? { version: known.version } : await askVersion(target);
+	if (!('version' in asked)) {
+		return { kind: 'failed', ...found, message: asked.message };
 	}
+	const { version } = asked;
 	let status: ReturnType<typeof parseAuthStatus>;
+	let json: string;
 	try {
-		status = parseAuthStatus((await target.ask(['auth', 'status', '--json'])).stdout);
+		json = (await target.ask(['auth', 'status', '--json'])).stdout;
+		status = parseAuthStatus(json);
 	} catch (error) {
 		return { kind: 'failed', ...found, message: messageOf(error) };
 	}
@@ -154,14 +158,21 @@ export async function inspect(target: Target): Promise<Check> {
 		return { kind: 'tooOld', ...found, version };
 	}
 	if (!status.loggedIn) {
+		statusSeen.delete(target);
 		return { kind: 'notSignedIn', ...found, version };
 	}
 	// The plan in Claude Code's own words; the sign-in stands without it.
+	const seen = statusSeen.get(target);
 	let loginMethod: string | undefined;
-	try {
-		loginMethod = parseLoginMethod((await target.ask(['auth', 'status', '--text'])).stdout);
-	} catch {
-		loginMethod = undefined;
+	if (seen?.json === json) {
+		loginMethod = seen.loginMethod;
+	} else {
+		try {
+			loginMethod = parseLoginMethod((await target.ask(['auth', 'status', '--text'])).stdout);
+		} catch {
+			loginMethod = undefined;
+		}
+		statusSeen.set(target, { json, ...(loginMethod ? { loginMethod } : {}) });
 	}
 	return { kind: 'signedIn', ...found, version, email: status.email, organization: status.orgName, plan: parsePlan(loginMethod, status.subscriptionType, status.planTier), authMethod: status.authMethod };
 }
@@ -176,5 +187,8 @@ export function locate(options: DetectOptions): Promise<Target | undefined> {
 /** Finds Claude Code and asks it. */
 export async function detect(options: DetectOptions): Promise<{ check: Check; target?: Target }> {
 	const target = await locate(options);
-	return target ? { check: await inspect(target), target } : { check: { kind: 'notInstalled', lookedInWsl: options.platform === 'win32' } };
+	return target ? { check: await inspect(target), target } : { check: notInstalled(options.platform) };
 }
+
+/** What a check says when no Claude Code was found (on Windows, WSL was looked in too). */
+export const notInstalled = (platform: string): Check => ({ kind: 'notInstalled', lookedInWsl: platform === 'win32' });

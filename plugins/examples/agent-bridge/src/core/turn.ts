@@ -1,10 +1,11 @@
 /*
  * A turn of a Breezell conversation answered by one of the user's own command-line agents (Claude Code,
  * Antigravity CLI): what Breezell gives it and takes back, and what is the same for each agent — the message it
- * is sent (the user's words, the attachments, what Breezell remembers, the rules, the notices, the mode), the
- * plan card it can end with, and reading a JSON line stream. How each agent is run is its own (agent.ts,
- * antigravityAgent.ts).
+ * is sent (the user's words, the attachments, what Breezell remembers, the rules, the notices, the mode) and the
+ * plan card it can end with. How each agent is run is its own (agents/<agent>/turn.ts), on what every agent's turn
+ * shares: its process (process.ts), its output's lines (lines.ts), Breezell's tools (tools.ts).
  */
+import type { KeptProcesses } from './keepAlive';
 import type { ToolView } from './views';
 
 export type Attachment = { readonly name: string; readonly kind: string; readonly path?: string; readonly lines?: readonly [number, number]; readonly text?: string; readonly data?: { readonly mimeType: string; readonly base64: string } };
@@ -102,6 +103,12 @@ export interface TurnControls {
 	 * so a turn tells only what it added to them.
 	 */
 	usageTotals?: { of(session: string): Readonly<Record<string, ModelUsage>> | undefined; keep(session: string, totals: Record<string, ModelUsage>): void };
+	/**
+	 * The agent's program kept between this conversation's turns (keepAlive.ts), while the user turned that on; none: a
+	 * program a turn. `recordOf`: where the agent keeps a session's record, as this computer reaches it (a kept program
+	 * is not gone on with once that changed by something else).
+	 */
+	keepAlive?: { readonly pool: KeptProcesses; readonly conversation: string; readonly recordOf?: (session: string) => string | undefined };
 }
 
 /** The files the agent names, as Breezell reaches them: their URIs, and (for a Write it asks about) their text now. */
@@ -265,28 +272,3 @@ export function planCardOf(markdown: string): { title?: string; markdown: string
 
 /** What the agent is told when its plan went to Breezell's plan card: its turn ends there. */
 export const PLAN_SHOWN = 'Breezell shows your plan to the user as a plan card. End your turn now with one short line and make no changes: the user chooses Execute to have you carry it out, or tells you what to change.';
-
-/** Each JSON object an agent writes on `stream`, one a line (stream-json); other lines are passed over. */
-export function onJsonLines(stream: NodeJS.ReadableStream | null | undefined, handle: (message: Record<string, unknown>) => void): void {
-	let buffer = '';
-	stream?.setEncoding('utf8');
-	stream?.on('data', (data: string) => {
-		buffer += data;
-		for (let i = buffer.indexOf('\n'); i >= 0; i = buffer.indexOf('\n')) {
-			const line = buffer.slice(0, i).trim();
-			buffer = buffer.slice(i + 1);
-			if (!line.startsWith('{')) {
-				continue;
-			}
-			let parsed: unknown;
-			try {
-				parsed = JSON.parse(line);
-			} catch {
-				continue;
-			}
-			if (parsed && typeof parsed === 'object') {
-				handle(parsed as Record<string, unknown>);
-			}
-		}
-	});
-}

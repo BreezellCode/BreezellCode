@@ -13,7 +13,7 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const require = createRequire(import.meta.url);
 const esbuild = require('esbuild');
 const out = mkdtempSync(join(tmpdir(), 'agent-bridge-mcp-'));
-await esbuild.build({ entryPoints: [join(root, 'src/mcpHttp.ts')], bundle: true, platform: 'node', format: 'cjs', outfile: join(out, 'mcp.cjs'), logLevel: 'silent' });
+await esbuild.build({ entryPoints: [join(root, 'src/core/mcpHttp.ts')], bundle: true, platform: 'node', format: 'cjs', outfile: join(out, 'mcp.cjs'), logLevel: 'silent' });
 const mcp = require(join(out, 'mcp.cjs'));
 
 const post = (url, token, body) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body) });
