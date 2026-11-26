@@ -25,6 +25,7 @@ it declares here that it does not know.
 | Fences | `ui.renderers` | `chat.render` | A code fence of a language drawn by one of its pages |
 | Modes | `ui.modes` | `ui.contribute` | An entry in the mode picker: a built-in mode plus the plugin's instructions |
 | Sign-in tiles | `ui.signIns` | `ui.contribute` | A tile on Box › Models › Sign in for a service the plugin connects to *(new)* |
+| Spaces | `ui.spaces` | `ui.contribute` | A space of the plugin's own in Box: an entry in the space switcher, and pages drawn in Breezell's look or its own *(new)* |
 
 A plugin needs the permission whichever list it is in (`permissions` or `optionalPermissions`), and
 `validate` says when one is missing. An entry that does not pass is left out and the rest stay, so one
@@ -445,3 +446,207 @@ await vscode.breezell.ui.setSignInStatus('myService', {
 - `"launcher": { "signIn": "myService" }` gives the plugin a page in Box: its tile's page (see
   [Opening a plugin](manifest.md#opening-a-plugin)).
 
+## Spaces in Box *(new)*
+
+A space of the plugin's own in **Box**: an entry in the space switcher at the top of Box's sidebar, after
+Breezell's own spaces, and its pages in the sidebar under it. Breezell draws each page from blocks the
+plugin declares (headings, text, rows, bars, lists, buttons and controls over the plugin's own settings),
+in Breezell's own look; a page can also be the plugin's own HTML, in an isolated frame. Every page says
+whose it is, and the space's tile carries the plugins' mark. Needs a Breezell newer than 1.4.691; one space
+per plugin, 12 pages a space, 24 blocks a page.
+
+```json
+"contributes": {
+	"commands": [
+		{ "command": "studio.refresh", "title": "Studio: Refresh" },
+		{ "command": "studio.open", "title": "Studio: Open a job" }
+	],
+	"configuration": {
+		"properties": {
+			"studio.autoRefresh": { "type": "boolean", "default": true, "description": "Refresh by itself" },
+			"studio.mode": { "type": "string", "enum": ["fast", "careful"], "default": "fast", "description": "How jobs run" }
+		}
+	},
+	"breezell": {
+		"ui": {
+			"spaces": [{
+				"id": "studio", "title": "Studio", "l10n": { "zh-TW": "工作室" },
+				"subtitle": "Jobs · Settings", "icon": "rocket",
+				"pages": [
+					{ "id": "overview", "title": "Overview", "description": "What it is doing now.", "blocks": [
+						{ "type": "text", "text": "Waiting…", "state": "news" },
+						{ "type": "rows", "title": "Status", "state": "status" },
+						{ "type": "meters", "title": "Quota", "state": "quota" },
+						{ "type": "button", "command": "studio.refresh", "title": "Refresh", "icon": "refresh" },
+						{ "type": "heading", "title": "Jobs" },
+						{ "type": "list", "state": "jobs", "command": "studio.open" }
+					] },
+					{ "id": "settings", "title": "Settings", "blocks": [
+						{ "type": "setting", "setting": "studio.autoRefresh", "title": "Refresh by itself" },
+						{ "type": "setting", "setting": "studio.mode", "title": "Mode", "choices": [{ "value": "fast", "title": "Fast" }, { "value": "careful", "title": "Careful" }] }
+					] },
+					{ "id": "editor", "title": "Editor", "frame": { "entry": "pages/editor.html" } }
+				]
+			}]
+		}
+	}
+}
+```
+
+What a block shows from the plugin goes under the name in its `state`, sent with
+`vscode.breezell.ui.setState(spaceId, values)`: a text for a text block, rows for a rows block, bars for a
+meters block, items for a list. Each call is merged into what was sent before, and `null` takes a name's
+content away. What was sent goes when the extension host stops: send it again when the plugin starts.
+
+```ts
+await vscode.breezell.ui.setState('studio', {
+	news: 'Two jobs ran today.',
+	status: [{ label: 'Mode', value: 'fast' }, { label: 'Last run', value: '10:24' }],
+	quota: [{ label: 'Today', percent: 40, detail: 'Resets at midnight' }],
+	jobs: [{ id: 'job-1', title: 'Render', detail: 'Running', icon: 'sync' }],
+});
+```
+
+- A button runs one of the plugin's own commands. Picking a list item runs the list's `command` with
+  `{ item: <its id> }`, and only for an item the plugin sent.
+- A `setting` block draws the control its setting's type takes, as Feature Options does: a switch for a
+  boolean, a slider for a number with a `minimum` and `maximum`, a colour for `"format": "color-hex"`, a
+  text field for a string, and a choice for a string with an `enum` (the block names each value in
+  `choices`). It reads and writes only a setting the plugin registered itself.
+- A `frame` block, or a page's `frame`, is the plugin's own HTML page, as [Pages](#pages) are: the plugin
+  hears of its opening in `ui.onDidOpenSurface`, under the id `space:<space>/<page>`, or
+  `space:<space>/<page>/<index>` for a block.
+- Every text the plugin sends is shown as plain lines, within the limits below. A name in `state` holds one
+  type of content: a block showing it as another type is left out.
+- What a Breezell does not know (a field, a block type of a newer Breezell) is passed over, so a plugin can
+  use what is new and still load in an older Breezell, with what that one knows.
+
+<!-- generated from Breezell's plugin UI definition by sync-ui-definition.mjs: edit the definition, not this -->
+### ui.spaces
+
+Box: the space switcher, and the space's own sidebar and pages. At most 1 a plugin; needs the "ui.contribute" permission.
+
+#### space
+
+A space of the plugin's own in Box: an entry in the space switcher, and its pages in the sidebar.
+
+| Key | Takes | |
+| --- | --- | --- |
+| `id` | an id: a letter, then letters, digits, _ or - | required |
+| `title` | text, at most 40 characters; translations in "l10n" | required. Its name in the switcher. |
+| `subtitle` | text, at most 40 characters; translations in "subtitleL10n" | optional. The line under its name. |
+| `icon` | a codicon's name, or plugin:<path> to an image (png, jpg, gif, webp, avif) | optional. Its tile in the switcher; the plugins' icon when not given. |
+| `pages` | a list of pages, at most 12 | required |
+
+#### page
+
+A page of the space: its entry in the space's sidebar, and what it shows: blocks Breezell draws, or a page of the plugin's own.
+
+| Key | Takes | |
+| --- | --- | --- |
+| `id` | an id: a letter, then letters, digits, _ or - | required |
+| `title` | text, at most 40 characters; translations in "l10n" | required |
+| `description` | text, at most 200 characters; translations in "descriptionL10n" | optional. Said under the page's title. |
+| `blocks` | a list of blocks, at most 24 | optional |
+| `frame` | a frame | optional. The page is a page of the plugin's own: give this or "blocks". |
+
+#### block
+
+One part of a page, picked by "type". Breezell draws every one of them in its own look.
+
+#### block "heading"
+
+A heading over the blocks after it.
+
+| Key | Takes | |
+| --- | --- | --- |
+| `title` | text, at most 40 characters; translations in "l10n" | required |
+| `description` | text, at most 200 characters; translations in "descriptionL10n" | optional. A line under it. |
+
+#### block "text"
+
+A paragraph: the plugin's words, or what it sends at run time under "state" (which then takes their place).
+
+| Key | Takes | |
+| --- | --- | --- |
+| `text` | text, at most 600 characters; translations in "textL10n" | optional |
+| `state` | a name: a letter, then letters, digits or _ (32 at most) | optional |
+
+#### block "rows"
+
+Rows of a label and a value, which the plugin sends at run time.
+
+| Key | Takes | |
+| --- | --- | --- |
+| `title` | text, at most 40 characters; translations in "l10n" | optional |
+| `state` | a name: a letter, then letters, digits or _ (32 at most) | required |
+
+#### block "meters"
+
+Bars of how much of something is used (0 to 100), which the plugin sends at run time.
+
+| Key | Takes | |
+| --- | --- | --- |
+| `title` | text, at most 40 characters; translations in "l10n" | optional |
+| `state` | a name: a letter, then letters, digits or _ (32 at most) | required |
+
+#### block "list"
+
+A list the plugin sends at run time; with "command", picking an item runs it with { item: <the item's id> }.
+
+| Key | Takes | |
+| --- | --- | --- |
+| `title` | text, at most 40 characters; translations in "l10n" | optional |
+| `state` | a name: a letter, then letters, digits or _ (32 at most) | required |
+| `command` | one of the plugin's own commands (contributes.commands) | optional |
+
+#### block "setting"
+
+A control over one of the plugin's own settings, after its type: a switch, a number, a colour, a text, or a choice of its enum.
+
+| Key | Takes | |
+| --- | --- | --- |
+| `setting` | one of the plugin's own settings (contributes.configuration) | required |
+| `title` | text, at most 40 characters; translations in "l10n" | required |
+| `description` | text, at most 200 characters; translations in "descriptionL10n" | optional. Said under the control. |
+| `choices` | a list of choices, at most 6 | optional. For a setting with an enum: a title for each value offered. |
+
+#### choice
+
+One value of the setting's enum, as the control names it.
+
+| Key | Takes | |
+| --- | --- | --- |
+| `value` | text, at most 200 characters | required. A value of the setting's enum. |
+| `title` | text, at most 40 characters; translations in "l10n" | required. What the control calls it. |
+
+#### block "button"
+
+A button that runs one of the plugin's own commands.
+
+| Key | Takes | |
+| --- | --- | --- |
+| `command` | one of the plugin's own commands (contributes.commands) | required |
+| `title` | text, at most 40 characters; translations in "l10n" | required |
+| `description` | text, at most 200 characters; translations in "descriptionL10n" | optional. Its tooltip. |
+| `icon` | a codicon's name | optional |
+
+#### block "frame"
+
+The plugin's own page among the blocks, in an isolated frame under a line naming the plugin.
+
+| Key | Takes | |
+| --- | --- | --- |
+| `entry` | an .html page inside the plugin | required |
+| `height` | a whole number from 32 to 2000 | optional. Pixels; 240 when not given. |
+| `network` | https origins, at most 8 | optional. https origins it may reach; none unless listed. |
+
+#### frame
+
+The plugin's own page, in an isolated frame under a line naming the plugin: no script of it runs in Breezell's window.
+
+| Key | Takes | |
+| --- | --- | --- |
+| `entry` | an .html page inside the plugin | required. The page. |
+| `network` | https origins, at most 8 | optional. https origins it may reach; none unless listed. |
+<!-- end of the generated reference -->

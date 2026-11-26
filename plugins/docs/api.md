@@ -108,6 +108,7 @@ spent, subagents included (Breezell newer than 1.4.56); checks that run beside a
 | Member | Permission | What it is |
 |---|---|---|
 | `onDidOpenSurface` | none (the page is declared) | One of the plugin's pages opened: `surfaceId`, `context`, `postMessage(m)`, `onDidReceiveMessage`, `onDidClose`, `screenRect()`. See [Pages](ui.md#pages) |
+| `setState(spaceId, values)` | `ui.contribute` | What the blocks of one of its spaces show, by the names in their `state`: a text, rows, bars or list items; merged into what was sent before, `null` takes one away. Breezell newer than 1.4.691. See [Spaces in Box](ui.md#spaces-in-box-new) |
 | `setSignInStatus(tileId, status)` | `ui.contribute` | How one of its sign-in tiles' connections stands: `connected`, `busy`, `detail`, `account` rows, `usage` bars; `undefined` forgets it. See [Sign-in tiles](ui.md#sign-in-tiles-new) |
 
 ## `agents`

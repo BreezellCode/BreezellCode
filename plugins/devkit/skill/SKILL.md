@@ -38,6 +38,7 @@ Read the reference page for the part you touch before writing it: they are short
 | Skills, rules, MCP servers with no code | none (`agent.tools` for MCP) | `contributes.breezell.skills`, `rules`, `mcpServers` | `references/agent.md` |
 | Buttons, slash menu rows, pages, modes, settings cards | `ui.contribute` (normal) | `contributes.breezell.ui` | `references/ui.md` |
 | A tile on Box › Models › Sign in for a service the plugin connects to (Breezell newer than 1.4.64) | `ui.contribute` (normal) | `ui.signIns` + `ui.setSignInStatus` | `references/ui.md` |
+| A space of the plugin's own in Box, with pages Breezell draws or its own HTML (Breezell newer than 1.4.691) | `ui.contribute` (normal) | `ui.spaces` + `ui.setState` | `references/ui.md` |
 | Answer conversations with an agent the plugin runs (Breezell newer than 1.4.64) | `chat.agent` | `agents.register`, `setModels`, `importConversation` | `references/own-agent.md` |
 | Hide, move, restyle or replace Breezell's parts; colours, fonts, a stylesheet; a companion | `ui.modify` | `contributes.breezell.ui` | `references/ui.md` |
 | Draw a code fence language | `chat.render` | `ui.renderers` | `references/ui.md` |

@@ -216,6 +216,14 @@ declare module 'vscode' {
 			 * Breezell newer than 1.4.64.
 			 */
 			export function setSignInStatus(tileId: string, status: SignInStatus | undefined): Thenable<void>;
+			/**
+			 * `ui.contribute`: what the blocks of one of the plugin's spaces (`contributes.breezell.ui.spaces`)
+			 * show now, by the names in their `state`: a text for a text block, rows for a rows block, bars
+			 * for a meters block, items for a list. Merged into what was sent before; `null` takes a name's
+			 * content away. What does not fit its block is left out and logged. What was sent goes when the
+			 * extension host stops. Breezell newer than 1.4.691.
+			 */
+			export function setState(spaceId: string, values: { readonly [name: string]: SpaceState | null }): Thenable<void>;
 		}
 
 		/**
@@ -560,6 +568,30 @@ declare module 'vscode' {
 			 * `view.kind` 'subagent'); the turn goes on. False, or none: it cannot, and the user is told to stop the turn.
 			 */
 			stopSubagent?(conversationId: string, toolId: string): boolean | Thenable<boolean>;
+		}
+
+		/** What a block of a space shows, sent with `ui.setState`: a text, rows, bars or list items, after the block's type. */
+		export type SpaceState = string | readonly SpaceRow[] | readonly SpaceMeter[] | readonly SpaceListItem[];
+		/** A row of a rows block: a label (40 characters) and a value (160). At most 12. */
+		export interface SpaceRow {
+			readonly label: string;
+			readonly value: string;
+		}
+		/** A bar of a meters block: a label (40 characters), 0 to 100, and a line under it (120). At most 6. */
+		export interface SpaceMeter {
+			readonly label: string;
+			readonly percent: number;
+			readonly detail?: string;
+		}
+		/**
+		 * An item of a list block: its id (64 characters: what the list's command is given, as `{ item: id }`),
+		 * a title (80), a line under it (160) and a codicon's name. At most 50.
+		 */
+		export interface SpaceListItem {
+			readonly id: string;
+			readonly title: string;
+			readonly detail?: string;
+			readonly icon?: string;
 		}
 
 		/** What a sign-in tile's page shows of the plugin's connection (`ui.setSignInStatus`). */

@@ -87,6 +87,595 @@ const uiProtected = name => UI_PROTECTED.some(area => name === area || name.star
 const UI_THEME_BACKGROUNDS = ['editor', 'sideBar', 'panel', 'input', 'editorWidget', 'dropdown', 'menu', 'quickInput', 'notifications'];
 const UI_THEME_BACKGROUND = new RegExp(`^(transparent|var\\(--vscode-(${UI_THEME_BACKGROUNDS.join('|')})-background\\))$`);
 const UI_UNSAFE_CSS = /url|expression|image|import|attr|element|paint|@|;|\{|\}|\\|\/\*|<|>|javascript:/i;
+// ---- generated from Breezell's plugin UI definition (breezellPluginUiDefinition.ts) by scripts/breezell-plugin-devkit/sync-ui-definition.mjs: do not edit by hand ----
+const UI_DEFINITION = (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+  // src/vs/workbench/contrib/breezell/common/breezellPluginUiDefinition.ts
+  var breezellPluginUiDefinition_exports = {};
+  __export(breezellPluginUiDefinition_exports, {
+    PLUGIN_ASSET_PREFIX: () => PLUGIN_ASSET_PREFIX,
+    PLUGIN_UI_BLOCKS: () => PLUGIN_UI_BLOCKS,
+    PLUGIN_UI_CODICON: () => PLUGIN_UI_CODICON,
+    PLUGIN_UI_DEFINITION_LIMITS: () => PLUGIN_UI_DEFINITION_LIMITS,
+    PLUGIN_UI_ID: () => PLUGIN_UI_ID,
+    PLUGIN_UI_SLOTS: () => PLUGIN_UI_SLOTS,
+    PluginUiField: () => PluginUiField,
+    checkDefinedPluginUi: () => checkDefinedPluginUi,
+    describePluginUiSlot: () => describePluginUiSlot,
+    isInternalCommand: () => isInternalCommand,
+    isPluginUiControlValue: () => isPluginUiControlValue,
+    ownCommands: () => ownCommands,
+    ownSettings: () => ownSettings,
+    plainLine: () => plainLine,
+    pluginAssetPath: () => pluginAssetPath,
+    pluginUiFields: () => pluginUiFields,
+    pluginUiKind: () => pluginUiKind,
+    pluginUiPermissionsNeeded: () => pluginUiPermissionsNeeded,
+    pluginUiReadContext: () => pluginUiReadContext,
+    pluginUiSettingControl: () => pluginUiSettingControl,
+    pluginUiStateTypes: () => pluginUiStateTypes,
+    pluginUiText: () => pluginUiText,
+    pluginUiTypes: () => pluginUiTypes,
+    readDefinedPluginUi: () => readDefinedPluginUi,
+    readPluginUiState: () => readPluginUiState
+  });
+
+  // src/vs/workbench/contrib/breezell/common/breezellPluginPaths.ts
+  function isSafeMarketPath(path) {
+    return path.length > 0 && path.length <= 300 && /^[A-Za-z0-9._\-/]+$/.test(path) && !path.startsWith("/") && path.split("/").every((segment) => segment.length > 0 && segment !== "." && segment !== "..");
+  }
+  function l10nMap(value, maxChars) {
+    const out = {};
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      for (const [locale, text] of Object.entries(value)) {
+        if (typeof text === "string" && text.trim()) {
+          out[locale] = text.trim().slice(0, maxChars);
+        }
+      }
+    }
+    return out;
+  }
+
+  // src/vs/workbench/contrib/breezell/common/breezellPluginUiDefinition.ts
+  var PLUGIN_UI_ID = /^[a-z][a-zA-Z0-9_-]{0,63}$/;
+  var PLUGIN_UI_CODICON = /^[a-z0-9][a-z0-9-]{0,63}$/;
+  var PLUGIN_ASSET_PREFIX = "plugin:";
+  var IMAGE_FILE = /\.(png|jpe?g|gif|webp|avif)$/i;
+  var STATE_KEY = /^[a-zA-Z][a-zA-Z0-9_]{0,31}$/;
+  var HTTPS_ORIGIN = /^https:\/\/[a-z0-9.-]{1,200}(:[0-9]{1,5})?$/i;
+  var HTML_FILE = /\.html?$/i;
+  var isRecord = (value) => !!value && typeof value === "object" && !Array.isArray(value);
+  function pluginAssetPath(value) {
+    if (!value.startsWith(PLUGIN_ASSET_PREFIX)) {
+      return void 0;
+    }
+    const path = value.slice(PLUGIN_ASSET_PREFIX.length).replace(/^\.\//, "");
+    return isSafeMarketPath(path) && IMAGE_FILE.test(path) ? path : void 0;
+  }
+  var plainLine = (value, max) => {
+    if (typeof value !== "string") {
+      return void 0;
+    }
+    const line = value.replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]+/g, " ").replace(/\s+/g, " ").trim();
+    return line ? line.slice(0, max) : void 0;
+  };
+  var ownCommands = (packageJson) => {
+    const list = isRecord(packageJson) && isRecord(packageJson.contributes) ? packageJson.contributes.commands : void 0;
+    const items = Array.isArray(list) ? list : isRecord(list) ? [list] : [];
+    return new Set(items.map((c) => isRecord(c) && typeof c.command === "string" ? c.command : "").filter(Boolean));
+  };
+  var ownSettings = (packageJson) => {
+    const settings = /* @__PURE__ */ new Map();
+    const contributes = isRecord(packageJson) && isRecord(packageJson.contributes) ? packageJson.contributes : {};
+    for (const block of Array.isArray(contributes.configuration) ? contributes.configuration : [contributes.configuration]) {
+      if (isRecord(block) && isRecord(block.properties)) {
+        for (const [key, schema] of Object.entries(block.properties)) {
+          if (isRecord(schema)) {
+            settings.set(key, schema);
+          }
+        }
+      }
+    }
+    return settings;
+  };
+  var isInternalCommand = (command) => /breezell/i.test(command);
+  var PLUGIN_UI_DEFINITION_LIMITS = {
+    titleChars: 40,
+    /** The line under a space's name in the switcher. */
+    subtitleChars: 40,
+    descriptionChars: 200,
+    /** A text block's paragraph. */
+    textChars: 600,
+    pagesPerSpace: 12,
+    blocksPerPage: 24,
+    choices: 6,
+    /** A text setting's longest value, and a choice's value. */
+    settingTextChars: 200,
+    networkOrigins: 8,
+    frameMinHeight: 32,
+    frameMaxHeight: 2e3,
+    frameDefaultHeight: 240,
+    /** What a plugin sends at run time (readPluginUiState). */
+    stateRows: 12,
+    stateLabelChars: 40,
+    stateValueChars: 160,
+    stateMeters: 6,
+    stateMeterDetailChars: 120,
+    stateTextLines: 12,
+    stateListItems: 50,
+    stateItemIdChars: 64,
+    stateItemTitleChars: 80,
+    stateItemDetailChars: 160
+  };
+  var L = PLUGIN_UI_DEFINITION_LIMITS;
+  function pluginUiReadContext(packageJson, fileExists) {
+    return { commands: ownCommands(packageJson), settings: ownSettings(packageJson), ...fileExists ? { fileExists } : {} };
+  }
+  var PluginUiField = class _PluginUiField {
+    constructor(takes, reader, isOptional = false, about = "", holds = []) {
+      this.takes = takes;
+      this.reader = reader;
+      this.isOptional = isOptional;
+      this.about = about;
+      this.holds = holds;
+    }
+    /** Reads `key` of a declaration; undefined when it is not there. */
+    read(declaration, key, at) {
+      const value = declaration[key];
+      return value === void 0 ? void 0 : this.reader(value, key, declaration, at);
+    }
+    /** It may be left out; one that is there but does not pass is left out too (and said), not the whole entry. */
+    optional() {
+      return new _PluginUiField(this.takes, this.reader, true, this.about, this.holds);
+    }
+    doc(about) {
+      return new _PluginUiField(this.takes, this.reader, this.isOptional, about, this.holds);
+    }
+  };
+  var refuse = (refused) => ({ refused });
+  var isRefusal = (value) => isRecord(value) && typeof value.refused === "string" && Object.keys(value).length === 1;
+  function pluginUiKind(name, about, fields, finish) {
+    return {
+      name,
+      about,
+      fields,
+      read(raw, at) {
+        if (!isRecord(raw)) {
+          at.problems.push(`${at.where} must be an object`);
+          return void 0;
+        }
+        const entry = {};
+        let passed = true;
+        for (const [key, field] of Object.entries(fields)) {
+          const got = field.read(raw, key, at);
+          if (!got) {
+            if (!field.isOptional) {
+              at.problems.push(`${at.where} needs "${key}"`);
+              passed = false;
+            }
+            continue;
+          }
+          if (got.problem) {
+            at.problems.push(`${at.where}: ${got.problem}`);
+          }
+          if (got.value !== void 0) {
+            entry[key] = got.value;
+          } else if (!field.isOptional) {
+            passed = false;
+          }
+        }
+        if (!passed) {
+          return void 0;
+        }
+        if (!finish) {
+          return entry;
+        }
+        const done = finish(entry, at);
+        if (isRefusal(done)) {
+          at.problems.push(`${at.where}: ${done.refused}`);
+          return void 0;
+        }
+        return done;
+      }
+    };
+  }
+  function pluginUiTypes(name, about, types) {
+    return {
+      name,
+      about,
+      fields: {},
+      types,
+      read(raw, at) {
+        if (!isRecord(raw)) {
+          at.problems.push(`${at.where} must be an object`);
+          return void 0;
+        }
+        const type = raw.type;
+        const kind = typeof type === "string" && Object.prototype.hasOwnProperty.call(types, type) ? types[type] : void 0;
+        if (typeof type !== "string" || !kind) {
+          at.problems.push(`${at.where}: "type" must be one of ${Object.keys(types).join(", ")}`);
+          return void 0;
+        }
+        const value = kind.read(raw, at);
+        return value === void 0 ? void 0 : { type, ...value };
+      }
+    };
+  }
+  var pluginUiText = (value, language) => value.l10n[language] ?? value.text;
+  var pluginUiFields = {
+    /** An id: a letter, then letters, digits, _ or - (64 at most). */
+    id: () => new PluginUiField("an id: a letter, then letters, digits, _ or -", (value, key) => typeof value === "string" && PLUGIN_UI_ID.test(value) ? { value } : { problem: `"${key}" must be a letter, then letters, digits, _ or - (64 at most)` }),
+    /** A plain value, such as one of a setting's enum. */
+    value: (max) => new PluginUiField(`text, at most ${max} characters`, (value, key) => typeof value === "string" && value.length > 0 && value.length <= max ? { value } : { problem: `"${key}" must be a text of at most ${max} characters` }),
+    /**
+     * A text people read, with its translations beside it (`l10n` for a title, `<key>L10n` for another).
+     * `notBreezell`: no text in it may name Breezell, or the plugin's part could pass for Breezell's own.
+     */
+    text: (max, options = {}) => new PluginUiField(`text, at most ${max} characters; translations in "${options.l10n ?? "<key>L10n"}"`, (value, key, declaration) => {
+      if (typeof value !== "string" || !value.trim()) {
+        return { problem: `"${key}" must be a text` };
+      }
+      const l10nKey = options.l10n ?? `${key}L10n`;
+      const translations = declaration[l10nKey];
+      if (translations !== void 0 && !isRecord(translations)) {
+        return { problem: `"${l10nKey}" must map languages to texts, like { "zh-TW": "…" }` };
+      }
+      const all = [value, ...Object.values(isRecord(translations) ? translations : {}).filter((t) => typeof t === "string")];
+      if (options.notBreezell && all.some((t) => /breezell/i.test(t))) {
+        return { problem: `"${key}": a name with "Breezell" in it is Breezell's, not a plugin's` };
+      }
+      const text = { text: value.trim().slice(0, max), l10n: l10nMap(translations, max) };
+      return all.some((t) => t.trim().length > max) ? { value: text, problem: `"${key}" is cut to ${max} characters (its translations too)` } : { value: text };
+    }),
+    /** A codicon's name. */
+    codicon: () => new PluginUiField("a codicon's name", (value, key) => typeof value === "string" && PLUGIN_UI_CODICON.test(value) ? { value } : { problem: `"${key}" must be a codicon's name, like "rocket"` }),
+    /** A codicon's name, or `plugin:<path>` to an image file of the plugin's own. */
+    icon: () => new PluginUiField("a codicon's name, or plugin:<path> to an image (png, jpg, gif, webp, avif)", (value, key, _declaration, at) => {
+      if (typeof value === "string" && PLUGIN_UI_CODICON.test(value)) {
+        return { value: { codicon: value } };
+      }
+      const image = typeof value === "string" ? pluginAssetPath(value) : void 0;
+      if (!image) {
+        return { problem: `"${key}" must be a codicon's name, or plugin:<path> to an image file inside the plugin` };
+      }
+      return at.context.fileExists && !at.context.fileExists(image) ? { problem: `"${key}": "${image}" does not exist` } : { value: { image } };
+    }),
+    /** One of the plugin's own commands. */
+    command: () => new PluginUiField("one of the plugin's own commands (contributes.commands)", (value, key, _declaration, at) => {
+      if (typeof value !== "string" || !at.context.commands.has(value)) {
+        return { problem: `"${key}" must be one of the plugin's own commands, in contributes.commands` };
+      }
+      return isInternalCommand(value) ? { problem: `"${key}": a command with "breezell" in its name is Breezell's: rename "${value}"` } : { value };
+    }),
+    /** One of the plugin's own settings, none named after Breezell. */
+    setting: () => new PluginUiField("one of the plugin's own settings (contributes.configuration)", (value, key, _declaration, at) => {
+      if (typeof value !== "string" || !at.context.settings.has(value)) {
+        return { problem: `"${key}" must be one of the plugin's own settings, in contributes.configuration` };
+      }
+      return /breezell/i.test(value) ? { problem: `"${key}": a setting named after Breezell is not for a plugin` } : { value };
+    }),
+    /** A name what the plugin sends at run time goes under (setState). */
+    state: () => new PluginUiField("a name: a letter, then letters, digits or _ (32 at most)", (value, key) => typeof value === "string" && STATE_KEY.test(value) ? { value } : { problem: `"${key}" must be a name: a letter, then letters, digits or _ (32 at most)` }),
+    /** A file inside the plugin, of a kind (`file`: what the file must be, said in the problem). */
+    file: (kind, file) => new PluginUiField(`${file} inside the plugin`, (value, key, _declaration, at) => {
+      const path = typeof value === "string" ? value.replace(/^\.\//, "") : "";
+      if (!isSafeMarketPath(path) || !kind.test(path)) {
+        return { problem: `"${key}" must be ${file} inside the plugin` };
+      }
+      return at.context.fileExists && !at.context.fileExists(path) ? { problem: `"${key}": "${path}" does not exist` } : { value: path };
+    }),
+    /** https origins a page of the plugin's may reach: none unless listed. */
+    origins: (max) => new PluginUiField(`https origins, at most ${max}`, (value, key) => {
+      const origins = Array.isArray(value) ? value.filter((o) => typeof o === "string" && HTTPS_ORIGIN.test(o)) : [];
+      if (!Array.isArray(value) || origins.length !== value.length) {
+        return { problem: `"${key}" takes https origins, like ["https://api.example.com"]` };
+      }
+      return value.length > max ? { value: origins.slice(0, max), problem: `"${key}": at most ${max}` } : { value: origins };
+    }),
+    /** A whole number from `min` to `max`; one outside is brought within. */
+    integer: (min, max) => new PluginUiField(`a whole number from ${min} to ${max}`, (value, key) => {
+      if (typeof value !== "number" || !Number.isFinite(value)) {
+        return { problem: `"${key}" must be a number` };
+      }
+      const within = Math.min(max, Math.max(min, Math.round(value)));
+      return within === value ? { value } : { value: within, problem: `"${key}" is taken as ${within}: from ${min} to ${max}` };
+    }),
+    /** One entry of a kind. */
+    one: (kind) => new PluginUiField(`a ${kind.name}`, (value, key, _declaration, at) => {
+      const entry = kind.read(value, { ...at, where: `${at.where} › ${key}` });
+      return entry === void 0 ? { problem: `"${key}" is left out` } : { value: entry };
+    }, false, "", [kind]),
+    /**
+     * A list of entries of a kind. Entries that do not pass are left out (and said), so one bad entry does
+     * not take the rest with it; past `max` the rest are left out. `unique`: a key no two may share.
+     */
+    list: (kind, limits) => new PluginUiField(`a list of ${kind.name}s, at most ${limits.max}`, (value, key, _declaration, at) => {
+      if (!Array.isArray(value)) {
+        return { problem: `"${key}" must be a list` };
+      }
+      const listed = at.where ? `${at.where} › ${key}` : `ui.${key}`;
+      const entries = [];
+      value.slice(0, limits.max).forEach((raw, index) => {
+        const name = limits.unique && isRecord(raw) && typeof raw[limits.unique] === "string" ? JSON.stringify(raw[limits.unique]) : `#${index + 1}`;
+        const where = `${listed} ${name}`;
+        const entry = kind.read(raw, { ...at, where });
+        if (entry === void 0) {
+          return;
+        }
+        const unique = limits.unique;
+        if (unique && entries.some((e) => e[unique] === entry[unique])) {
+          at.problems.push(`${where}: the ${unique} is used twice`);
+          return;
+        }
+        entries.push(entry);
+      });
+      if (value.length > limits.max) {
+        at.problems.push(`${listed}: at most ${limits.max}; the rest are left out`);
+      }
+      return limits.min && entries.length < limits.min ? { problem: `"${key}" needs at least ${limits.min}` } : { value: entries };
+    }, false, "", [kind])
+  };
+  var F = pluginUiFields;
+  function pluginUiSettingControl(schema, choices, at) {
+    const known = Array.isArray(schema.enum) ? schema.enum.filter((v) => typeof v === "string") : void 0;
+    if (choices && !known?.length) {
+      at.problems.push(`${at.where}: "choices" are for a setting with an enum; they are passed over`);
+    }
+    if (schema.type === "boolean") {
+      return { kind: "switch" };
+    }
+    if ((schema.type === "number" || schema.type === "integer") && !known) {
+      const minimum = typeof schema.minimum === "number" && Number.isFinite(schema.minimum) ? schema.minimum : void 0;
+      const maximum = typeof schema.maximum === "number" && Number.isFinite(schema.maximum) ? schema.maximum : void 0;
+      const step = typeof schema.multipleOf === "number" && schema.multipleOf > 0 ? schema.multipleOf : schema.type === "integer" ? 1 : void 0;
+      if (minimum === void 0 || maximum === void 0 || minimum >= maximum) {
+        return refuse('a number needs "minimum" and "maximum" in its contributes.configuration entry');
+      }
+      return { kind: "number", minimum, maximum, ...step ? { step } : {} };
+    }
+    if (schema.type === "string" && !known && schema.format === "color-hex") {
+      return { kind: "color" };
+    }
+    if (schema.type === "string" && !known) {
+      return { kind: "text", maxLength: Math.min(L.settingTextChars, typeof schema.maxLength === "number" && schema.maxLength > 0 ? Math.floor(schema.maxLength) : L.settingTextChars) };
+    }
+    if (known?.length) {
+      const named = (choices ?? []).filter((choice) => {
+        if (known.includes(choice.value)) {
+          return true;
+        }
+        at.problems.push(`${at.where}: the choice ${JSON.stringify(choice.value)} is not among the setting's enum`);
+        return false;
+      });
+      return named.length < 2 ? refuse(`needs "choices": at least two of the setting's enum, at most ${L.choices}, each with a title`) : { kind: "choices", choices: named };
+    }
+    return refuse('a setting here is a boolean, a string (with an enum for choices, "format": "color-hex" for a colour) or a number with a minimum and maximum');
+  }
+  var HEX_COLOR = /^#[0-9a-f]{6}([0-9a-f]{2})?$/i;
+  function isPluginUiControlValue(control, value) {
+    switch (control.kind) {
+      case "choices":
+        return control.choices.some((choice) => choice.value === value);
+      case "number":
+        return typeof value === "number" && Number.isFinite(value) && value >= control.minimum && value <= control.maximum;
+      case "text":
+        return typeof value === "string" && value.length <= control.maxLength && !/[\u0000-\u001f\u007f]/.test(value);
+      case "color":
+        return typeof value === "string" && HEX_COLOR.test(value);
+      case "switch":
+        return typeof value === "boolean";
+    }
+  }
+  var CHOICE = pluginUiKind("choice", "One value of the setting's enum, as the control names it.", {
+    value: F.value(L.settingTextChars).doc("A value of the setting's enum."),
+    title: F.text(L.titleChars, { l10n: "l10n" }).doc("What the control calls it.")
+  });
+  var FRAME = pluginUiKind("frame", "The plugin's own page, in an isolated frame under a line naming the plugin: no script of it runs in Breezell's window.", {
+    entry: F.file(HTML_FILE, "an .html page").doc("The page."),
+    network: F.origins(L.networkOrigins).optional().doc("https origins it may reach; none unless listed.")
+  });
+  var PLUGIN_UI_BLOCKS = pluginUiTypes("block", 'One part of a page, picked by "type". Breezell draws every one of them in its own look.', {
+    heading: pluginUiKind("heading", "A heading over the blocks after it.", {
+      title: F.text(L.titleChars, { l10n: "l10n", notBreezell: true }),
+      description: F.text(L.descriptionChars).optional().doc("A line under it.")
+    }),
+    text: pluginUiKind("text", `A paragraph: the plugin's words, or what it sends at run time under "state" (which then takes their place).`, {
+      text: F.text(L.textChars).optional(),
+      state: F.state().optional()
+    }, (block) => block.text || block.state ? block : refuse('needs "text", "state" or both')),
+    rows: pluginUiKind("rows", "Rows of a label and a value, which the plugin sends at run time.", {
+      title: F.text(L.titleChars, { l10n: "l10n", notBreezell: true }).optional(),
+      state: F.state()
+    }),
+    meters: pluginUiKind("meters", "Bars of how much of something is used (0 to 100), which the plugin sends at run time.", {
+      title: F.text(L.titleChars, { l10n: "l10n", notBreezell: true }).optional(),
+      state: F.state()
+    }),
+    list: pluginUiKind("list", `A list the plugin sends at run time; with "command", picking an item runs it with { item: <the item's id> }.`, {
+      title: F.text(L.titleChars, { l10n: "l10n", notBreezell: true }).optional(),
+      state: F.state(),
+      command: F.command().optional()
+    }),
+    setting: pluginUiKind("setting", "A control over one of the plugin's own settings, after its type: a switch, a number, a colour, a text, or a choice of its enum.", {
+      setting: F.setting(),
+      title: F.text(L.titleChars, { l10n: "l10n", notBreezell: true }),
+      description: F.text(L.descriptionChars).optional().doc("Said under the control."),
+      choices: F.list(CHOICE, { max: L.choices, unique: "value" }).optional().doc("For a setting with an enum: a title for each value offered.")
+    }, (block, at) => {
+      const control = pluginUiSettingControl(at.context.settings.get(block.setting) ?? {}, block.choices, at);
+      return isRefusal(control) ? control : { setting: block.setting, title: block.title, ...block.description ? { description: block.description } : {}, control };
+    }),
+    button: pluginUiKind("button", "A button that runs one of the plugin's own commands.", {
+      command: F.command(),
+      title: F.text(L.titleChars, { l10n: "l10n", notBreezell: true }),
+      description: F.text(L.descriptionChars).optional().doc("Its tooltip."),
+      icon: F.codicon().optional()
+    }),
+    frame: pluginUiKind("frame", "The plugin's own page among the blocks, in an isolated frame under a line naming the plugin.", {
+      entry: F.file(HTML_FILE, "an .html page"),
+      height: F.integer(L.frameMinHeight, L.frameMaxHeight).optional().doc(`Pixels; ${L.frameDefaultHeight} when not given.`),
+      network: F.origins(L.networkOrigins).optional().doc("https origins it may reach; none unless listed.")
+    })
+  });
+  var PAGE = pluginUiKind("page", "A page of the space: its entry in the space's sidebar, and what it shows: blocks Breezell draws, or a page of the plugin's own.", {
+    id: F.id(),
+    title: F.text(L.titleChars, { l10n: "l10n", notBreezell: true }),
+    description: F.text(L.descriptionChars, { notBreezell: true }).optional().doc("Said under the page's title."),
+    blocks: F.list(PLUGIN_UI_BLOCKS, { max: L.blocksPerPage }).optional(),
+    frame: F.one(FRAME).optional().doc(`The page is a page of the plugin's own: give this or "blocks".`)
+  }, (page) => page.blocks === void 0 === (page.frame === void 0) ? refuse('needs "blocks" or "frame": one of them') : page);
+  var SPACE = pluginUiKind("space", "A space of the plugin's own in Box: an entry in the space switcher, and its pages in the sidebar.", {
+    id: F.id(),
+    title: F.text(L.titleChars, { l10n: "l10n", notBreezell: true }).doc("Its name in the switcher."),
+    subtitle: F.text(L.subtitleChars, { notBreezell: true }).optional().doc("The line under its name."),
+    icon: F.icon().optional().doc("Its tile in the switcher; the plugins' icon when not given."),
+    pages: F.list(PAGE, { max: L.pagesPerSpace, min: 1, unique: "id" })
+  }, (space, at) => {
+    const typeOf = /* @__PURE__ */ new Map();
+    const pages = space.pages.map((page) => page.blocks ? {
+      ...page,
+      blocks: page.blocks.filter((block) => {
+        const state = "state" in block ? block.state : void 0;
+        const known = state ? typeOf.get(state) : void 0;
+        if (state && !known) {
+          typeOf.set(state, block.type);
+        } else if (state && known !== block.type) {
+          at.problems.push(`${at.where} › pages ${JSON.stringify(page.id)}: "${state}" is shown as ${known} already; a ${block.type} block cannot show it too, so it is left out`);
+          return false;
+        }
+        return true;
+      })
+    } : page);
+    return { ...space, pages };
+  });
+  var PLUGIN_UI_SLOTS = {
+    spaces: { kind: SPACE, max: 1, permission: "ui.contribute", place: "Box: the space switcher, and the space's own sidebar and pages" }
+  };
+  function readDefinedPluginUi(ui, context, problems) {
+    const defined = {};
+    for (const [key, slot] of Object.entries(PLUGIN_UI_SLOTS)) {
+      const got = F.list(slot.kind, { max: slot.max, unique: "id" }).read(ui, key, { where: "", context, problems });
+      if (got?.problem) {
+        problems.push(`ui.${key}: ${got.problem}`);
+      }
+      if (got?.value?.length) {
+        defined[key] = got.value;
+      }
+    }
+    return defined;
+  }
+  function pluginUiPermissionsNeeded(defined) {
+    return Object.entries(PLUGIN_UI_SLOTS).filter(([key]) => !!defined[key]?.length).map(([key, slot]) => ({ key, permission: slot.permission }));
+  }
+  function checkDefinedPluginUi(ui, packageJson, fileExists) {
+    if (!isRecord(ui)) {
+      return { problems: [], permissions: [] };
+    }
+    const problems = [];
+    const defined = readDefinedPluginUi(ui, pluginUiReadContext(packageJson, fileExists), problems);
+    return { problems, permissions: pluginUiPermissionsNeeded(defined) };
+  }
+  var STATE_READERS = {
+    text: (raw) => typeof raw === "string" ? raw.slice(0, L.textChars).split(/\r?\n/).map((line) => plainLine(line, L.textChars)).filter((line) => !!line).slice(0, L.stateTextLines) : void 0,
+    rows: (raw) => Array.isArray(raw) ? raw.slice(0, L.stateRows).flatMap((row) => {
+      const label = isRecord(row) ? plainLine(row.label, L.stateLabelChars) : void 0;
+      const value = isRecord(row) ? plainLine(row.value, L.stateValueChars) : void 0;
+      return label && value ? [{ label, value }] : [];
+    }) : void 0,
+    meters: (raw) => Array.isArray(raw) ? raw.slice(0, L.stateMeters).flatMap((meter) => {
+      const label = isRecord(meter) ? plainLine(meter.label, L.stateLabelChars) : void 0;
+      const percent = isRecord(meter) && typeof meter.percent === "number" && Number.isFinite(meter.percent) ? Math.round(Math.min(100, Math.max(0, meter.percent)) * 10) / 10 : void 0;
+      const detail = isRecord(meter) ? plainLine(meter.detail, L.stateMeterDetailChars) : void 0;
+      return label && percent !== void 0 ? [{ label, percent, ...detail ? { detail } : {} }] : [];
+    }) : void 0,
+    list: (raw) => Array.isArray(raw) ? raw.slice(0, L.stateListItems).flatMap((item) => {
+      const id = isRecord(item) ? plainLine(item.id, L.stateItemIdChars) : void 0;
+      const title = isRecord(item) ? plainLine(item.title, L.stateItemTitleChars) : void 0;
+      const detail = isRecord(item) ? plainLine(item.detail, L.stateItemDetailChars) : void 0;
+      const icon = isRecord(item) && typeof item.icon === "string" && PLUGIN_UI_CODICON.test(item.icon) ? item.icon : void 0;
+      return id && title ? [{ id, title, ...detail ? { detail } : {}, ...icon ? { icon } : {} }] : [];
+    }) : void 0
+  };
+  function pluginUiStateTypes(space) {
+    const types = /* @__PURE__ */ new Map();
+    for (const page of space.pages) {
+      for (const block of page.blocks ?? []) {
+        if ((block.type === "text" || block.type === "rows" || block.type === "meters" || block.type === "list") && block.state) {
+          types.set(block.state, block.type);
+        }
+      }
+    }
+    return types;
+  }
+  function readPluginUiState(space, raw) {
+    if (!isRecord(raw)) {
+      return { values: {}, problems: ["the state must be an object of names and what each shows"] };
+    }
+    const types = pluginUiStateTypes(space);
+    const values = {};
+    const problems = [];
+    for (const [name, value] of Object.entries(raw)) {
+      const type = types.get(name);
+      const read = type && value !== null ? STATE_READERS[type](value) : void 0;
+      if (!type) {
+        problems.push(`"${name}": no block of space "${space.id}" shows it`);
+      } else if (value === null) {
+        values[name] = null;
+      } else if (read === void 0) {
+        problems.push(`"${name}" is shown by a ${type} block: ${type === "text" ? "it takes a text" : "it takes a list"}`);
+      } else {
+        values[name] = read;
+      }
+    }
+    return { values, problems };
+  }
+  function describePluginUiSlot(key) {
+    const slot = PLUGIN_UI_SLOTS[key];
+    const out = [`### ui.${key}`, "", `${slot.place}. At most ${slot.max} a plugin; needs the "${slot.permission}" permission.`];
+    const seen = /* @__PURE__ */ new Set();
+    const describe = (kind, title) => {
+      if (seen.has(kind)) {
+        return;
+      }
+      seen.add(kind);
+      out.push("", `#### ${title}`, "", kind.about);
+      const fields = Object.entries(kind.fields);
+      if (fields.length) {
+        out.push("", "| Key | Takes | |", "| --- | --- | --- |");
+        for (const [name, field] of fields) {
+          out.push(`| \`${name}\` | ${field.takes.replace("<key>L10n", `${name}L10n`)} | ${[field.isOptional ? "optional" : "required", field.about].filter(Boolean).join(". ")} |`);
+        }
+      }
+      for (const field of fields.map(([, f]) => f)) {
+        field.holds.forEach((held) => describe(held, held.name));
+      }
+      for (const [type, typed] of Object.entries(kind.types ?? {})) {
+        describe(typed, `${kind.name} "${type}"`);
+      }
+    };
+    describe(slot.kind, slot.kind.name);
+    return out.join("\n") + "\n";
+  }
+  return __toCommonJS(breezellPluginUiDefinition_exports);
+})();
+// ---- end of the generated plugin UI definition ----
 const UI_COLOR = /^(#[0-9a-f]{3,8}|(rgb|rgba|hsl|hsla)\([0-9.,%\s/]{1,40}\)|transparent|currentcolor|[a-z]{3,24}|var\(--(vscode|breezell)-[a-zA-Z0-9-]{1,80}\))$/i;
 const UI_LITERAL_COLOR = /^(#[0-9a-f]{3,8}|(rgb|rgba|hsl|hsla)\([0-9.,%\s/]{1,40}\))$/i;
 const UI_MAX_PX = { padding: 64, margin: 64, gap: 64, borderRadius: 64, borderWidth: 4, size: 2000 };
@@ -955,6 +1544,12 @@ function checkUi(ui, pkg, errors, dir) {
 	}
 	if (list('signIns').some(s => s?.agent === true)) {
 		needs('chat.agent', 'a sign-in tile with "agent"');
+	}
+	// The places Breezell's plugin UI definition opens (ui.spaces...): checked by Breezell's own code, generated above.
+	const defined = UI_DEFINITION.checkDefinedPluginUi(ui, pkg, relative => !fileMissing(relative));
+	errors.push(...defined.problems);
+	for (const { key, permission } of defined.permissions) {
+		needs(permission, `ui.${key}`);
 	}
 }
 
