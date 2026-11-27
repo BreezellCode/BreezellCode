@@ -28,6 +28,17 @@ The change applies from the next message you send.
 - A format you ask for wins: ask for a table, a numbered list or a long answer and you get it.
 - Breezell's own reports after multi-step work keep their shape.
 
+## Vivid tone
+
+Replies open by praising your thinking, use striking comparisons, say what is at stake and end on a line for you. It can be on together with Less AI tone: the layout then stays plain and the energy comes from what is said.
+
+On the same page, "Vivid tone" has the same three choices, and "Off" is its default.
+
+- An opening that praises your question or idea, about what you actually asked.
+- Striking comparisons and what is at stake, so the point lands.
+- A last line aimed at you instead of a summary.
+- Facts, numbers, code, commands and commit messages stay exactly as they would be, and a wrong premise is still corrected.
+
 ## Notes
 
 - The rules are about 2,500 characters and go into every matching request. They sit with the other rules, which do not change between requests, so the provider's prompt cache keeps working.

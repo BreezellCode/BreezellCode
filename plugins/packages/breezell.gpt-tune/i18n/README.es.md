@@ -28,6 +28,17 @@ El cambio se aplica desde el siguiente mensaje que envíes.
 - El formato que pides manda: pide una tabla, una lista numerada o una respuesta larga y la tendrás.
 - Los informes de Breezell tras un trabajo de varios pasos mantienen su forma.
 
+## Tono vivo
+
+Las respuestas empiezan elogiando tu idea, usan comparaciones llamativas, dicen qué está en juego y terminan con una frase para ti. Puede estar activado junto con “Menos tono de IA”: entonces el formato sigue sencillo y la energía sale de lo que se dice.
+
+En la misma página, “Tono vivo” tiene las mismas tres opciones y su valor por defecto es “Desactivado”.
+
+- Un comienzo que elogia tu pregunta o tu idea, sobre lo que de verdad preguntaste.
+- Comparaciones llamativas y lo que está en juego, para que la idea cale.
+- Una última frase dirigida a ti en lugar de un resumen.
+- Los datos, números, código, comandos y mensajes de commit quedan igual, y una premisa equivocada se sigue corrigiendo.
+
 ## Notas
 
 - Las reglas ocupan unos 2.500 caracteres y van en cada petición que cumple la condición. Están junto a las demás reglas y no cambian entre peticiones, así que la caché de prompts del proveedor sigue funcionando.

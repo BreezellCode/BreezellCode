@@ -28,6 +28,17 @@ A mudança vale a partir da próxima mensagem que você enviar.
 - O formato que você pede vale mais: peça uma tabela, uma lista numerada ou uma resposta longa e você terá.
 - Os relatórios do Breezell depois de um trabalho de várias etapas mantêm a forma de sempre.
 
+## Tom vibrante
+
+As respostas começam elogiando a sua ideia, usam comparações marcantes, dizem o que está em jogo e terminam com uma frase para você. Pode ficar ligado junto com “Menos tom de IA”: aí o formato continua simples e a energia vem do que é dito.
+
+Na mesma página, “Tom vibrante” tem as mesmas três opções, e o padrão é “Desligado”.
+
+- Um começo que elogia a sua pergunta ou ideia, sobre o que você de fato perguntou.
+- Comparações marcantes e o que está em jogo, para o ponto ficar claro.
+- Uma última frase dirigida a você em vez de um resumo.
+- Fatos, números, código, comandos e mensagens de commit ficam como seriam, e uma premissa errada continua sendo corrigida.
+
 ## Observações
 
 - As regras têm cerca de 2.500 caracteres e entram em cada pedido que atende à condição. Ficam junto das outras regras e não mudam entre pedidos, então o cache de prompts do provedor continua funcionando.

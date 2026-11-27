@@ -1,7 +1,7 @@
 {
 	"id": "breezell.gpt-tune",
 	"displayName": "GPT Tune",
-	"description": "Makes the AI write like a person: plain wording, lighter formatting, answers sized to the question, and your own voice kept when it edits your text. For GPT models, or every model.",
+	"description": "Makes the AI write like a person: plain wording, lighter formatting, answers sized to the question, and your own voice kept when it edits your text. For GPT models, or every model. A separate \"Vivid tone\" adds praise for your thinking, striking comparisons and what is at stake.",
 	"categories": [],
 	"tags": [
 		"gpt",
@@ -30,34 +30,43 @@
 	"l10n": {
 		"zh-CN": {
 			"displayName": "GPT 调校",
-			"description": "让 AI 写起来像人：用词平实、格式清爽、篇幅看问题而定，润色你的文字时保留你的语气。可只用于 GPT 模型，或所有模型。"
+			"description": "让 AI 写起来像人：用词平实、格式清爽、篇幅看问题而定，润色你的文字时保留你的语气。可只用于 GPT 模型，或所有模型。另有独立的“张力”选项：称赞你的想法、生动的比喻、讲出利害。"
 		},
 		"zh-TW": {
 			"displayName": "GPT 調校",
-			"description": "讓 AI 寫起來像人：用詞平實、格式清爽、篇幅看問題而定，潤飾你的文字時保留你的語氣。可只用於 GPT 模型，或所有模型。"
+			"description": "讓 AI 寫起來像人：用詞平實、格式清爽、篇幅看問題而定，潤飾你的文字時保留你的語氣。可只用於 GPT 模型，或所有模型。另有獨立的「張力」選項：稱讚你的想法、生動的比喻、講出利害。"
 		},
 		"ja": {
 			"displayName": "GPT チューン",
-			"description": "AI の文章を人が書いたように整えます。飾らない言葉、軽い書式、質問に合った長さで、あなたの文章を直すときはあなたの口調を残します。GPT モデルだけ、またはすべてのモデルに使えます。"
+			"description": "AI の文章を人が書いたように整えます。飾らない言葉、軽い書式、質問に合った長さで、あなたの文章を直すときはあなたの口調を残します。GPT モデルだけ、またはすべてのモデルに使えます。別の「熱のある語り口」では、考えをほめ、鮮やかなたとえで何が懸かっているかを語ります。"
 		},
 		"ko": {
 			"displayName": "GPT 튜닝",
-			"description": "AI가 사람처럼 쓰게 합니다. 담백한 표현, 가벼운 서식, 질문에 맞는 분량, 그리고 내 글을 다듬을 때는 내 말투를 그대로 둡니다. GPT 모델에만 또는 모든 모델에 쓸 수 있습니다."
+			"description": "AI가 사람처럼 쓰게 합니다. 담백한 표현, 가벼운 서식, 질문에 맞는 분량, 그리고 내 글을 다듬을 때는 내 말투를 그대로 둡니다. GPT 모델에만 또는 모든 모델에 쓸 수 있습니다. 별도의 \"생동감 있는 말투\"는 생각을 칭찬하고 생생한 비유로 무엇이 걸려 있는지 말합니다."
 		},
 		"ru": {
 			"displayName": "Настройка GPT",
-			"description": "ИИ пишет как человек: простые слова, меньше оформления, объём по вопросу, а при правке вашего текста сохраняется ваш голос. Только для моделей GPT или для всех моделей."
+			"description": "ИИ пишет как человек: простые слова, меньше оформления, объём по вопросу, а при правке вашего текста сохраняется ваш голос. Только для моделей GPT или для всех моделей. Отдельный «Яркий тон»: похвала вашей мысли, яркие сравнения и что поставлено на карту."
 		},
 		"es": {
 			"displayName": "Ajuste de GPT",
-			"description": "La IA escribe como una persona: palabras sencillas, menos formato, respuestas a la medida de la pregunta y tu propia voz cuando corrige tus textos. Solo para modelos GPT o para todos."
+			"description": "La IA escribe como una persona: palabras sencillas, menos formato, respuestas a la medida de la pregunta y tu propia voz cuando corrige tus textos. Solo para modelos GPT o para todos. Aparte, “Tono vivo”: elogio de tu idea, comparaciones llamativas y qué está en juego."
 		},
 		"pt-BR": {
 			"displayName": "Ajuste do GPT",
-			"description": "A IA escreve como uma pessoa: palavras simples, menos formatação, respostas do tamanho da pergunta e a sua própria voz quando ela revisa seus textos. Só para modelos GPT ou para todos."
+			"description": "A IA escreve como uma pessoa: palavras simples, menos formatação, respostas do tamanho da pergunta e a sua própria voz quando ela revisa seus textos. Só para modelos GPT ou para todos. À parte, “Tom vibrante”: elogio à sua ideia, comparações marcantes e o que está em jogo."
 		}
 	},
 	"versions": [
+		{
+			"version": "1.1.0",
+			"path": "packages/breezell.gpt-tune/1.1.0/breezell.gpt-tune-1.1.0.vsix",
+			"sha256": "9f7fc3e1809f5734eda083856e39fc581e9977ffb6d06b70ae92f1b657220e08",
+			"size": 46963,
+			"apiVersion": 1,
+			"permissions": [],
+			"publishedAt": "2026-11-27T05:11:06.077Z"
+		},
 		{
 			"version": "1.0.0",
 			"path": "packages/breezell.gpt-tune/1.0.0/breezell.gpt-tune-1.0.0.vsix",
