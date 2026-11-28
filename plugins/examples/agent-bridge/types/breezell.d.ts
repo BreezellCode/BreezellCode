@@ -368,6 +368,13 @@ declare module 'vscode' {
 			 * cannot ask the user lets those run only when this says so; absent (an older Breezell): it does not.
 			 */
 			readonly autoApprove?: { readonly mcp: boolean };
+			/**
+			 * The conversation is a teammate in one of Breezell's Teams (Breezell newer than 1.4.694): it works on its part of
+			 * the lead's task, and its last reply is its report to the lead. Turn the agent's own subagents and its questions
+			 * to the user off in such a turn, as Breezell's own teammates have none: only the lead talks to the user. Breezell
+			 * offers no `ask_question` then, refuses the agent's own questions, and shows a subagent's calls as the teammate's.
+			 */
+			readonly teammate?: true;
 		}
 
 		export interface AgentHistoryEntry {

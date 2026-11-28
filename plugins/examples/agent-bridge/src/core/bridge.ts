@@ -496,7 +496,7 @@ export abstract class AgentBridge<C extends { readonly kind: string }> implement
 		};
 		this.turns.set(turn.conversationId, controls);
 		try {
-			return await this.runOn(target, { model: turn.model, text: turn.text, attachments: turn.attachments, cwd, session: turn.session, history: turn.history, effort: turn.effort, addDirs, memories: turn.memories, continuing: turn.continuing, notices: turn.notices, rules: turn.rules, mode: turn.mode, ...(turn.compact ? { compact: true } : {}), ...(turn.autoApprove ? { autoApprove: { mcp: turn.autoApprove.mcp === true } } : {}) }, reply, token,
+			return await this.runOn(target, { model: turn.model, text: turn.text, attachments: turn.attachments, cwd, session: turn.session, history: turn.history, effort: turn.effort, addDirs, memories: turn.memories, continuing: turn.continuing, notices: turn.notices, rules: turn.rules, mode: turn.mode, ...(turn.compact ? { compact: true } : {}), ...(turn.autoApprove ? { autoApprove: { mcp: turn.autoApprove.mcp === true } } : {}), ...(turn.teammate === true ? { teammate: true } : {}) }, reply, token,
 				path => target.where === 'wsl' ? wslPathOf(path) : path, files, controls, turn.conversationId);
 		} finally {
 			// What it wrote stays, an error shows after it, and the session goes on next time either way.

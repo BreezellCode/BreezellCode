@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.1
+
+- Teammates on Claude Code or Antigravity CLI in Breezell's Teams do their part themselves and ask you nothing, as Breezell's own teammates: only the team's lead talks to you. Claude Code's own subagents, its questions and its notebook edits are off for a teammate, so every change it makes goes through Breezell's tools, where the team sees whose file it is. Needs a Breezell newer than 1.4.694, whose Teams can put a teammate on Claude Code or Antigravity CLI.
+
 ## 1.2.0
 
 - Less CPU and memory while Claude Code or Antigravity CLI is connected:

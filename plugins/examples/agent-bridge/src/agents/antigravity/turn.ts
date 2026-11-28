@@ -110,6 +110,8 @@ const PLAN_DESCRIPTION = 'Give your plan to the user as Breezell\'s plan card, w
 /** What the model is told of its own MCP servers while the user does not auto-approve MCP tools, and when that changed. */
 export const OWN_MCP_OFF_NOTE = 'Your own MCP servers (all but breezell) are turned off in this conversation: their calls are refused, so do not call their tools.';
 export const OWN_MCP_ON_NOTE = 'Your own MCP servers are turned on in this conversation now: you may call their tools.';
+/** What a teammate in Breezell's Teams is told instead of how to ask the user (Turn.teammate). */
+export const TEAMMATE_NOTE = 'You are a teammate in Breezell\'s Teams: do not ask the user anything (only the lead talks to the user) and do not start subagents of your own (invoke_subagent): do the work yourself, and end your turn with your report to the lead.';
 const PLAN_NOTE = 'Breezell is in Plan mode for this message: read and investigate, but change no files and run no commands. When your plan is ready, give it to the user with the breezell tool update_plan (the whole plan as Markdown), then end your turn.';
 
 /** The id of the call an MCP request is for, as agy's stream names its step: its conversation and the step's index. */
@@ -121,13 +123,13 @@ export function agyCallIdOf(params: Record<string, unknown> | undefined): string
 }
 
 /** What a new session is told before its first message: how it works in Breezell, and the user's rules (agy keeps both with the conversation). */
-export function agySessionNote(turn: Pick<Turn, 'cwd' | 'addDirs' | 'rules'>, pathFor: (path: string) => string, toolsFolder: string, options?: { readonly ownMcp?: boolean }): string {
+export function agySessionNote(turn: Pick<Turn, 'cwd' | 'addDirs' | 'rules' | 'teammate'>, pathFor: (path: string) => string, toolsFolder: string, options?: { readonly ownMcp?: boolean }): string {
 	const project = turn.cwd ? pathFor(turn.cwd) : undefined;
 	const more = turn.addDirs?.length ? ` (with ${turn.addDirs.join(', ')})` : '';
 	const lines = [
 		'<breezell-session>',
 		`Breezell, the user's editor, runs you for this conversation, and the user reads your replies there.${project ? ` The project folder is ${project}${more}.` : ''}`,
-		'Your own tools that write files and run commands are turned off here. Change files with the breezell tools edit_file and write_to_file, and run shell commands with the breezell tool run_terminal_cmd, whenever Breezell offers them: Breezell shows each change and each command to the user. To ask the user something, use the breezell tool ask_question.',
+		`Your own tools that write files and run commands are turned off here. Change files with the breezell tools edit_file and write_to_file, and run shell commands with the breezell tool run_terminal_cmd, whenever Breezell offers them: Breezell shows each change and each command to the user. ${turn.teammate ? TEAMMATE_NOTE : 'To ask the user something, use the breezell tool ask_question.'}`,
 		`The folder ${toolsFolder} only holds Breezell's connection settings: never read or change anything in it.`,
 		...(options?.ownMcp ? [] : [OWN_MCP_OFF_NOTE]),
 		'</breezell-session>',

@@ -132,6 +132,13 @@ export function toolsOffIn(mode: Turn['mode']): string[] {
 }
 
 /**
+ * Claude Code's own tools off for a teammate in Breezell's Teams (Turn.teammate), as Breezell's own teammates have none
+ * of them: its subagents (Agent, and Task in older versions), whose changes the team's file ownership would not see as
+ * the teammate's; its questions to the user, whom only the lead asks; its notebook edits, which no Breezell tool takes.
+ */
+export const TEAMMATE_TOOLS_OFF: readonly string[] = ['Agent', 'Task', 'AskUserQuestion', 'NotebookEdit'];
+
+/**
  * Claude Code's own tools Breezell's own model has the like of and runs without asking (reading and searching files,
  * anywhere; fetching a page, searching the web): Claude Code's run so too, whatever the user's auto-approve settings.
  */
@@ -247,7 +254,7 @@ export async function runTurn(target: Target, turn: Turn, reply: Reply, token: C
 	// as Breezell's own are, and Claude Code's own tools for those are off, so every command and change goes there.
 	const offered = host.offered;
 	const allowed = [...offered.filter(tool => UNASKED_BREEZELL_TOOLS.has(tool.name)).map(tool => `mcp__${BREEZELL_MCP_SERVER}__${tool.name}`), ...attachedReadRules(turn, pathFor)];
-	const replaced = [...new Set([...offered.flatMap(tool => OWN_TOOLS_REPLACED[tool.name] ?? []), ...toolsOffIn(turn.mode)])];
+	const replaced = [...new Set([...offered.flatMap(tool => OWN_TOOLS_REPLACED[tool.name] ?? []), ...toolsOffIn(turn.mode), ...(turn.teammate ? TEAMMATE_TOOLS_OFF : [])])];
 	const args = [
 		...turnArgs(turn, !refusedThinkingDisplay.has(installKey(target))),
 		...(allowed.length ? ['--allowedTools', allowed.join(',')] : []),

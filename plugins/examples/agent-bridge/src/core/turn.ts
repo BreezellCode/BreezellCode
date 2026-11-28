@@ -34,6 +34,11 @@ export interface Turn {
 	 * (vscode.breezell.AgentTurn.autoApprove; none from a Breezell up to 1.4.68). `mcp`: its own MCP servers' tools.
 	 */
 	readonly autoApprove?: { readonly mcp: boolean };
+	/**
+	 * A teammate in Breezell's Teams (vscode.breezell.AgentTurn.teammate; none from a Breezell up to 1.4.694): the agent
+	 * asks the user nothing and starts no subagents of its own, as Breezell's own teammates.
+	 */
+	readonly teammate?: true;
 	/** The folder it works in, as a path of this computer or of WSL. */
 	readonly cwd?: string;
 	readonly session?: string;

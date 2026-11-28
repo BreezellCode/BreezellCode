@@ -668,3 +668,18 @@ test('two subagents from one call, each a row of its own; the turn stopped while
 	assert.deepEqual(ends.map(t => [t.id, t.status, t.view.description, t.view.stopped]), [['c1:2/0', 'error', 'Reader A', true], ['c1:2/1', 'error', 'Reader B', true]]);
 	rmSync(s.dir, { recursive: true, force: true });
 });
+
+test('a teammate in Breezell\'s Teams: its new session is told it asks the user nothing and starts no subagents; a conversation of the user\'s is told how to ask', async () => {
+	for (const teammate of [true, false]) {
+		const s = setup({ turn: teammate ? { teammate: true } : {}, tools: TOOLS.filter(tool => !teammate || tool.name !== 'ask_question') });
+		await startedOf(s);
+		const content = s.child.sent[0].message.content;
+		assert.equal(content.includes(agy.TEAMMATE_NOTE), teammate, `teammate: ${teammate}`);
+		assert.equal(content.includes('use the breezell tool ask_question'), !teammate);
+		s.child.say({ event: 'init', conversation_id: 'c1', init: {} });
+		s.child.say({ event: 'result', result: { conversation_id: 'c1', status: 'SUCCESS' } });
+		s.child.end(0);
+		await s.done;
+		rmSync(s.dir, { recursive: true, force: true });
+	}
+});

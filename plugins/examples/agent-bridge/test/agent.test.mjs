@@ -1083,3 +1083,21 @@ test('its subagents on the conversation\'s model when the switch says so: Claude
 		await running;
 	}
 });
+
+test('a teammate in Breezell\'s Teams: its own subagents, its questions to the user and its notebook edits off, beside the tools Breezell\'s take over; a conversation of the user\'s keeps them', async () => {
+	const schema = { type: 'object', properties: {}, required: [] };
+	const controls = { breezellTools: ['run_terminal_cmd', 'edit_file', 'write_to_file'].map(name => ({ name, inputSchema: schema })), callBreezellTool: async () => ({ text: 'ok' }) };
+	const argsOf = async turn => {
+		const child = fakeChild();
+		const running = agent.runTurn(target(child), { model: 'opus', text: 'do your part', attachments: [], cwd: '/w', ...turn }, replyLog().reply, token(), p => p, undefined, controls);
+		await tick();
+		const off = child.args[child.args.indexOf('--disallowedTools') + 1];
+		child.say({ type: 'result', subtype: 'success', session_id: 's-1' });
+		child.end(0);
+		await running;
+		return off;
+	};
+	assert.equal(await argsOf({ teammate: true }), 'Bash,Monitor,Edit,MultiEdit,Write,Agent,Task,AskUserQuestion,NotebookEdit');
+	assert.equal(await argsOf({}), 'Bash,Monitor,Edit,MultiEdit,Write', 'the user\'s own conversation: its subagents and its questions stay');
+	assert.deepEqual(agent.TEAMMATE_TOOLS_OFF, ['Agent', 'Task', 'AskUserQuestion', 'NotebookEdit']);
+});
