@@ -53,6 +53,9 @@ index (Refresh). A window opened on its own (lite mode) downloads it too. A plug
 It works for every extension, not only Breezell plugins, so a blocked plugin cannot escape it by
 dropping its `breezell` object. Plugins that were never uploaded are matched by id the same way.
 
+The phone app reads it too, for [phone plugins](phone.md): one it names is not offered in the phone's market, and
+an installed one is turned off with the reason (the phone downloads the list with the phone market).
+
 The maintainers edit the file on GitHub:
 
 ```json

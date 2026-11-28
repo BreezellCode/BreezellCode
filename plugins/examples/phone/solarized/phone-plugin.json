@@ -1,0 +1,112 @@
+{
+	"id": "breezell.solarized",
+	"version": "1.0.0",
+	"phoneApi": 1,
+	"displayName": "Solarized",
+	"description": "Ethan Schoonover's Solarized for the phone app: a dark and a light theme of calm blue-green grounds, made easy to read.",
+	"l10n": {
+		"zh-TW": {
+			"displayName": "Solarized",
+			"description": "把 Ethan Schoonover 的 Solarized 配色帶到手機 App：深色和淺色兩個主題，沉靜的藍綠色調，也容易閱讀。"
+		},
+		"ja": {
+			"displayName": "Solarized",
+			"description": "Ethan Schoonover の Solarized をスマートフォンアプリに：落ち着いた青緑のダークとライトの 2 つのテーマで、読みやすさも保ちます。"
+		},
+		"ko": {
+			"displayName": "Solarized",
+			"description": "Ethan Schoonover의 Solarized를 휴대폰 앱에: 차분한 청록색의 다크와 라이트 두 가지 테마로, 읽기 쉽게 다듬었습니다."
+		}
+	},
+	"author": {
+		"name": "Breezell"
+	},
+	"license": "MIT",
+	"categories": [
+		"Themes"
+	],
+	"tags": [
+		"solarized",
+		"theme",
+		"dark",
+		"light"
+	],
+	"themes": [
+		{
+			"id": "dark",
+			"name": {
+				"en": "Solarized dark",
+				"zh-TW": "Solarized 深色",
+				"ja": "Solarized ダーク",
+				"ko": "Solarized 다크"
+			},
+			"base": "dark",
+			"palette": {
+				"bg": "#002b36",
+				"surface": "#073642",
+				"border": "#0e4b59",
+				"divider": "#0a3f4c",
+				"border-strong": "#586e75",
+				"ink": "#93a1a1",
+				"muted": "#839496",
+				"accent": "#2aa198",
+				"on-accent": "#002b36",
+				"accent-soft": "#08393e",
+				"accent-ink": "#45c4b8",
+				"ring": "rgba(42, 161, 152, 0.18)",
+				"error-ink": "#f07167",
+				"bubble": "#0a3f4c",
+				"code-bg": "#00212b",
+				"scrim": "rgba(0, 20, 26, 0.6)",
+				"syn-plain": "#93a1a1",
+				"syn-kw": "#859900",
+				"syn-str": "#2aa198",
+				"syn-num": "#e06c9f",
+				"syn-cmt": "#6c8189",
+				"syn-type": "#b58900",
+				"syn-gutter": "#586e75",
+				"file-code": "#268bd2",
+				"file-data": "#b58900",
+				"link-hover": "#5cc8be"
+			}
+		},
+		{
+			"id": "light",
+			"name": {
+				"en": "Solarized light",
+				"zh-TW": "Solarized 淺色",
+				"ja": "Solarized ライト",
+				"ko": "Solarized 라이트"
+			},
+			"base": "light",
+			"palette": {
+				"bg": "#fdf6e3",
+				"surface": "#fffbef",
+				"border": "#e6dec8",
+				"divider": "#efe8d4",
+				"border-strong": "#93a1a1",
+				"ink": "#073642",
+				"muted": "#586e75",
+				"accent": "#2aa198",
+				"on-accent": "#002b36",
+				"accent-soft": "#dcefe9",
+				"accent-ink": "#1a7069",
+				"ring": "rgba(42, 161, 152, 0.16)",
+				"error-ink": "#c62a26",
+				"bubble": "#eee8d5",
+				"code-bg": "#fffbef",
+				"scrim": "rgba(7, 54, 66, 0.3)",
+				"syn-plain": "#073642",
+				"syn-kw": "#6a7a00",
+				"syn-str": "#1a7f78",
+				"syn-num": "#b02a6c",
+				"syn-cmt": "#7b8f95",
+				"syn-type": "#8f6c00",
+				"syn-gutter": "#93a1a1",
+				"file-code": "#1f6fa8",
+				"file-data": "#8f6c00",
+				"link-hover": "#1a7069"
+			}
+		}
+	]
+}

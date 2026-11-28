@@ -46,6 +46,7 @@ Read the reference page for the part you touch before writing it: they are short
 | The model picker | `models.select` (normal) | `models.list`, `models.select` | `references/models.md` |
 | Custom APIs without keys / with keys | `providers.list` (normal) / `providers.read` | `providers.list` / `providers.listCustom` | `references/models.md` |
 | A restart | `app.restart` (normal), `app.forceRestart` | `app.requestRestart`, `contributes.breezell.restart` | `references/restart.md` |
+| A theme or a file preview for the Breezell phone app (not an extension: one `phone-plugin.json`, no code) | none | `init --template phone`, `phone-validate`, `phone-submit` | `references/phone.md` |
 
 Every permission: `references/permissions.md`. Every call: `references/api.md`. Errors: `references/errors.md`.
 Limits: `references/limits.md`. Whole examples to start from: `references/recipes.md`.

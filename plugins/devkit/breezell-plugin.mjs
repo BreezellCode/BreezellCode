@@ -10,8 +10,13 @@
  *                        --closed  minified build and media scripts only, no source, no maps (breezell.source = "closed")
  *    submit [dir] --market <clone of BreezellCode/BreezellCode>
  *                      copy the .vsix into the market, update its plugin.json and index.json
+ *    phone-validate [dir]
+ *                      check phone-plugin.json, a plugin of the Breezell phone app (data only), with the app's rules
+ *    phone-submit [dir] --market <clone of BreezellCode/BreezellCode>
+ *                      copy phone-plugin.json into the market's phone part, update its plugin.json and phone/index.json
  *    index <market plugins folder> [--check]
- *                      rebuild index.json from packages/<id>/plugin.json; --check verifies every package
+ *                      rebuild index.json from packages/<id>/plugin.json (and phone/index.json from
+ *                      phone/packages/<id>/plugin.json); --check verifies every package, every phone plugin
  *                      and blocklist.json
  *    templates-json    print devkit/templates.json (what Breezell's "Create a plugin" uses)
  *    types             print the plugin API typings
@@ -137,10 +142,13 @@ const UI_DEFINITION = (() => {
     readPluginUiState: () => readPluginUiState
   });
 
-  // src/vs/workbench/contrib/breezell/common/breezellPluginPaths.ts
+  // src/vs/workbench/contrib/breezell/common/pluginMarketShared.ts
   function isSafeMarketPath(path) {
     return path.length > 0 && path.length <= 300 && /^[A-Za-z0-9._\-/]+$/.test(path) && !path.startsWith("/") && path.split("/").every((segment) => segment.length > 0 && segment !== "." && segment !== "..");
   }
+  var BREEZELL_PLUGIN_MAX_PACKAGE_BYTES = 50 * 1024 * 1024;
+
+  // src/vs/workbench/contrib/breezell/common/breezellPluginPaths.ts
   function l10nMap(value, maxChars) {
     const out = {};
     if (value && typeof value === "object" && !Array.isArray(value)) {
@@ -2487,6 +2495,932 @@ function checkBlocklist(marketRoot) {
 }
 
 // ---------------------------------------------------------------------------
+// Phone plugins: plugins/phone/, data the Breezell phone app draws (themes, file previews), no code
+// ---------------------------------------------------------------------------
+
+// ---- generated from the phone app's plugin rules (packages/protocol/src/phonePlugins.ts) by scripts/breezell-plugin-devkit/sync-phone-plugin.mjs: do not edit by hand ----
+const PHONE_PLUGIN = (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+  // Breezellwangye/breezell-mobile/packages/protocol/src/phone-plugin-rules.ts
+  var phone_plugin_rules_exports = {};
+  __export(phone_plugin_rules_exports, {
+    PHONE_BASE_PALETTES: () => PHONE_BASE_PALETTES,
+    PHONE_CONTRAST_PAIRS: () => PHONE_CONTRAST_PAIRS,
+    PHONE_LOCALES: () => PHONE_LOCALES,
+    PHONE_MARKET_INDEX_PATH: () => PHONE_MARKET_INDEX_PATH,
+    PHONE_PLUGIN_API: () => PHONE_PLUGIN_API,
+    PHONE_PLUGIN_LIMITS: () => PHONE_PLUGIN_LIMITS,
+    PHONE_PREVIEW_VARIABLES: () => PHONE_PREVIEW_VARIABLES,
+    PHONE_RENDERERS: () => PHONE_RENDERERS,
+    PHONE_THEME_VARIABLES: () => PHONE_THEME_VARIABLES,
+    README_LOCALES: () => README_LOCALES,
+    addsOf: () => addsOf,
+    compareVersions: () => compareVersions,
+    effectivePalette: () => effectivePalette,
+    isPhoneMarketPath: () => isPhoneMarketPath,
+    isPhonePaletteValue: () => isPhonePaletteValue,
+    isPhoneReadableMarketPath: () => isPhoneReadableMarketPath,
+    isValidPluginId: () => isValidPluginId,
+    isValidVersion: () => isValidVersion,
+    paletteProblems: () => paletteProblems,
+    parsePhoneMarketEntry: () => parsePhoneMarketEntry,
+    parsePhoneMarketIndex: () => parsePhoneMarketIndex,
+    parsePhonePluginManifest: () => parsePhonePluginManifest,
+    phoneBlockReason: () => phoneBlockReason,
+    phonePluginBlock: () => phonePluginBlock,
+    phoneReadmeOf: () => phoneReadmeOf,
+    wordsIn: () => wordsIn,
+    writtenWords: () => writtenWords
+  });
+
+  // Breezellwangye/breezell-mobile/packages/protocol/src/cssColour.ts
+  var UNSAFE_CSS = /url|expression|image|import|attr|element|paint|@|;|\{|\}|\\|\/\*|<|>|javascript:/i;
+  var LITERAL_COLOR = /^(#[0-9a-f]{3,8}|(rgb|rgba|hsl|hsla)\([0-9.,%\s/]{1,40}\))$/i;
+  function splitTopLevel(value, separator) {
+    const out = [];
+    let depth = 0;
+    let current = "";
+    for (const char of value) {
+      if (char === "(") {
+        depth++;
+      } else if (char === ")") {
+        depth = Math.max(0, depth - 1);
+      }
+      if (char === separator && depth === 0) {
+        out.push(current);
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+    out.push(current);
+    return out;
+  }
+  var SHADOW_LIMITS = { offset: 16, blur: 48, spread: 8 };
+  var shadowPx = (value) => value === "0" ? 0 : /^-?[0-9]{1,3}(\.[0-9]{1,2})?px$/.test(value) ? Number(value.slice(0, -2)) : void 0;
+  function isShadow(value, isColour, limits = SHADOW_LIMITS) {
+    if (value === "none") {
+      return true;
+    }
+    const layers = splitTopLevel(value, ",");
+    return layers.length >= 1 && layers.length <= 3 && layers.every((layer) => {
+      const parts = splitTopLevel(layer.trim(), " ").filter(Boolean);
+      const sizes = parts.map(shadowPx).filter((n) => n !== void 0);
+      const colors = parts.filter((part) => shadowPx(part) === void 0 && part !== "inset" && isColour(part));
+      const insets = parts.filter((part) => part === "inset");
+      if (colors.length > 1 || insets.length > 1 || sizes.length < 2 || sizes.length > 4 || colors.length + sizes.length + insets.length !== parts.length) {
+        return false;
+      }
+      const [x = 0, y = 0, blur = 0, spread = 0] = sizes;
+      return Math.abs(x) <= limits.offset && Math.abs(y) <= limits.offset && blur >= 0 && blur <= limits.blur && Math.abs(spread) <= limits.spread;
+    });
+  }
+  function parseCssColor(value) {
+    const v = value.trim().toLowerCase();
+    const hex = /^#([0-9a-f]{3,8})$/.exec(v);
+    if (hex) {
+      const h = hex[1];
+      if (h.length === 3 || h.length === 4) {
+        const parts = [...h].map((c) => parseInt(c + c, 16));
+        return [parts[0], parts[1], parts[2], h.length === 4 ? parts[3] / 255 : 1];
+      }
+      if (h.length === 6 || h.length === 8) {
+        const parts = [0, 2, 4, 6].map((i) => parseInt(h.slice(i, i + 2), 16));
+        return [parts[0], parts[1], parts[2], h.length === 8 ? parts[3] / 255 : 1];
+      }
+      return void 0;
+    }
+    const fn = /^(rgba?|hsla?)\((.*)\)$/.exec(v);
+    if (!fn) {
+      return void 0;
+    }
+    const numbers = fn[2].split(/[\s,/]+/).filter(Boolean);
+    if (numbers.length < 3 || numbers.length > 4) {
+      return void 0;
+    }
+    const channel = (text, max) => {
+      const n = Number(text.replace("%", ""));
+      if (!Number.isFinite(n)) {
+        return void 0;
+      }
+      return text.endsWith("%") ? Math.min(max, Math.max(0, n / 100 * max)) : Math.min(max, Math.max(0, n));
+    };
+    const alpha = numbers.length === 4 ? channel(numbers[3], 1) : 1;
+    if (alpha === void 0) {
+      return void 0;
+    }
+    if (fn[1].startsWith("rgb")) {
+      const [r, g, b] = numbers.slice(0, 3).map((n) => channel(n, 255));
+      return r === void 0 || g === void 0 || b === void 0 ? void 0 : [r, g, b, alpha];
+    }
+    const hue = Number(numbers[0].replace(/deg$/, ""));
+    const s = channel(numbers[1], 1);
+    const l = channel(numbers[2], 1);
+    if (!Number.isFinite(hue) || s === void 0 || l === void 0 || !numbers[1].endsWith("%") || !numbers[2].endsWith("%")) {
+      return void 0;
+    }
+    const k = (n) => (n + (hue % 360 + 360) % 360 / 30) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+    return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255), alpha];
+  }
+  function contrastRatio(a, b) {
+    const luminance = (c) => {
+      const [r = 0, g = 0, b2 = 0] = c.slice(0, 3).map((v) => {
+        const s = v / 255;
+        return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b2;
+    };
+    const [light = 0, dark = 0] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (light + 0.05) / (dark + 0.05);
+  }
+
+  // Breezellwangye/breezell-mobile/packages/protocol/src/pluginMarket.ts
+  var PLUGIN_ID_PART = /^[a-z0-9][a-z0-9-]{0,62}$/;
+  function isValidPluginId(id) {
+    const parts = id.split(".");
+    return parts.length === 2 && PLUGIN_ID_PART.test(parts[0]) && PLUGIN_ID_PART.test(parts[1]);
+  }
+  var VERSION = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/;
+  function isValidVersion(version) {
+    return VERSION.test(version);
+  }
+  function compareVersions(a, b) {
+    const ma = VERSION.exec(a);
+    const mb = VERSION.exec(b);
+    if (!ma || !mb) {
+      return ma ? 1 : mb ? -1 : 0;
+    }
+    for (let i = 1; i <= 3; i++) {
+      const d = Number(ma[i]) - Number(mb[i]);
+      if (d !== 0) {
+        return d < 0 ? -1 : 1;
+      }
+    }
+    if (ma[4] === mb[4]) {
+      return 0;
+    }
+    if (!ma[4]) {
+      return 1;
+    }
+    if (!mb[4]) {
+      return -1;
+    }
+    return ma[4] < mb[4] ? -1 : 1;
+  }
+  function isSafeMarketPath(path) {
+    return path.length > 0 && path.length <= 300 && /^[A-Za-z0-9._\-/]+$/.test(path) && !path.startsWith("/") && path.split("/").every((segment) => segment.length > 0 && segment !== "." && segment !== "..");
+  }
+  var BREEZELL_MARKET_BLOCKLIST_PATH = "blocklist.json";
+  var BREEZELL_PLUGIN_MAX_PACKAGE_BYTES = 50 * 1024 * 1024;
+  var README_LOCALES = ["zh-CN", "zh-TW", "ja", "ko", "ru", "es", "pt-BR"];
+
+  // Breezellwangye/breezell-mobile/packages/protocol/src/phonePlugins.ts
+  var PHONE_PLUGIN_API = 1;
+  var PHONE_PLUGIN_LIMITS = {
+    /** A manifest's bytes (it is kept on the phone whole). */
+    manifestBytes: 32 * 1024,
+    themes: 8,
+    viewers: 8,
+    extensions: 12,
+    nameChars: 60,
+    descriptionChars: 400,
+    valueChars: 120,
+    /** Plugins of the market kept on one phone. */
+    installed: 40
+  };
+  var PHONE_LOCALES = { en: "en", zh: "zh-TW", ja: "ja", ko: "ko" };
+  var wordsIn = (words, lang) => words[lang] ?? words.en;
+  var PHONE_THEME_VARIABLES = {
+    "bg": "colour",
+    "surface": "colour",
+    "border": "colour",
+    "divider": "colour",
+    "border-strong": "colour",
+    "ink": "colour",
+    "muted": "colour",
+    "accent": "colour",
+    "on-accent": "colour",
+    "accent-soft": "colour",
+    "accent-ink": "colour",
+    "ring": "colour",
+    "error-ink": "colour",
+    "icon-shadow": "shadow",
+    "icon-shadow-lg": "shadow",
+    "bubble": "colour",
+    "code-bg": "colour",
+    "scrim": "colour",
+    "syn-plain": "colour",
+    "syn-kw": "colour",
+    "syn-str": "colour",
+    "syn-num": "colour",
+    "syn-cmt": "colour",
+    "syn-type": "colour",
+    "syn-gutter": "colour",
+    "file-code": "colour",
+    "file-data": "colour",
+    "link-hover": "colour"
+  };
+  var PHONE_BASE_PALETTES = {
+    dark: {
+      "bg": "#141311",
+      "surface": "#1c1b18",
+      "border": "#2f2c27",
+      "divider": "#2a2823",
+      "border-strong": "#57524a",
+      "ink": "#ede9e1",
+      "muted": "#a29c90",
+      "accent": "#7dd3ae",
+      "on-accent": "#10201a",
+      "accent-soft": "#23352d",
+      "accent-ink": "#7dd3ae",
+      "ring": "rgba(125, 211, 174, 0.16)",
+      "error-ink": "#ff9a8b",
+      "icon-shadow": "0 0 0 1px rgba(255, 255, 255, 0.08), 0 12px 32px rgba(0, 0, 0, 0.5)",
+      "icon-shadow-lg": "0 0 0 1px rgba(255, 255, 255, 0.08), 0 24px 60px rgba(0, 0, 0, 0.55)",
+      "bubble": "#2a2823",
+      "code-bg": "#0e0d0c",
+      "scrim": "rgba(0, 0, 0, 0.55)",
+      "syn-plain": "#ede9e1",
+      "syn-kw": "#c7a6f2",
+      "syn-str": "#e8c07d",
+      "syn-num": "#f0b27a",
+      "syn-cmt": "#8c867a",
+      "syn-type": "#8ec5f0",
+      "syn-gutter": "#7d776c",
+      "file-code": "#8ec5f0",
+      "file-data": "#e8c07d",
+      "link-hover": "#a6e6ca"
+    },
+    light: {
+      "bg": "#faf8f4",
+      "surface": "#ffffff",
+      "border": "#e3ded5",
+      "divider": "#eeeae3",
+      "border-strong": "#b9b2a6",
+      "ink": "#1c1a17",
+      "muted": "#6b655b",
+      "accent": "#1f7a5a",
+      "on-accent": "#ffffff",
+      "accent-soft": "#dcefe6",
+      "accent-ink": "#17664a",
+      "ring": "rgba(31, 122, 90, 0.16)",
+      "error-ink": "#b3261e",
+      "icon-shadow": "0 10px 24px rgba(28, 26, 23, 0.18)",
+      "icon-shadow-lg": "0 18px 40px rgba(28, 26, 23, 0.22)",
+      "bubble": "#ece8e0",
+      "code-bg": "#ffffff",
+      "scrim": "rgba(28, 26, 23, 0.32)",
+      "syn-plain": "#1c1a17",
+      "syn-kw": "#7a3eb8",
+      "syn-str": "#8a5a00",
+      "syn-num": "#a04b15",
+      "syn-cmt": "#6b655b",
+      "syn-type": "#1f5f9e",
+      "syn-gutter": "#8c867a",
+      "file-code": "#2f6fa8",
+      "file-data": "#9a6200",
+      "link-hover": "#17664a"
+    }
+  };
+  var PHONE_SHADOW_LIMITS = { offset: 32, blur: 80, spread: 8 };
+  var PHONE_CONTRAST_PAIRS = [
+    ["ink", "bg", 4.5],
+    ["ink", "surface", 4.5],
+    ["on-accent", "accent", 4.5],
+    ["muted", "bg", 3]
+  ];
+  var OPAQUE = ["bg", "surface", "ink", "muted", "accent", "on-accent"];
+  var PHONE_PREVIEW_VARIABLES = ["bg", "bubble", "surface", "border", "border-strong", "accent"];
+  var PHONE_RENDERERS = {
+    /** A Markdown file as the page it makes. */
+    markdown: {},
+    /** Separated values as rows of cards: the separator ('auto': a tab for .tsv, a comma otherwise), whether the first row names the columns. */
+    table: { separator: ["auto", ",", "	", ";", "|"], header: "boolean" }
+  };
+  var isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+  var PART_ID = /^[a-z0-9][a-z0-9-]{0,31}$/;
+  var EXTENSION = /^[a-z0-9][a-z0-9+_-]{0,15}$/;
+  var SHA256 = /^[0-9a-f]{64}$/;
+  var textOf = (value, max) => typeof value === "string" && value.trim() && value.trim().length <= max ? value.trim() : void 0;
+  var isHttpsUrl = (value) => {
+    if (typeof value !== "string" || value.length > 300) {
+      return false;
+    }
+    try {
+      return new URL(value).protocol === "https:";
+    } catch {
+      return false;
+    }
+  };
+  function phoneWordsOf(value, max, where, problems) {
+    const en = textOf(isRecord(value) ? value.en : value, max);
+    if (!en) {
+      return void 0;
+    }
+    const words = { en };
+    if (isRecord(value)) {
+      for (const lang of ["zh", "ja", "ko"]) {
+        const raw = value[PHONE_LOCALES[lang]];
+        if (raw === void 0) {
+          continue;
+        }
+        const text = textOf(raw, max);
+        if (text) {
+          words[lang] = text;
+        } else {
+          problems.push(`${where}: "${PHONE_LOCALES[lang]}" must be text of at most ${max} characters`);
+        }
+      }
+    }
+    return words;
+  }
+  function namedOf(raw, problems) {
+    const l10n = isRecord(raw.l10n) ? raw.l10n : {};
+    const field = (key, max) => phoneWordsOf({
+      en: raw[key],
+      ...Object.fromEntries(["zh", "ja", "ko"].flatMap((lang) => {
+        const translated = l10n[PHONE_LOCALES[lang]];
+        return isRecord(translated) && translated[key] !== void 0 ? [[PHONE_LOCALES[lang], translated[key]]] : [];
+      }))
+    }, max, key, problems);
+    return { name: field("displayName", PHONE_PLUGIN_LIMITS.nameChars), description: field("description", PHONE_PLUGIN_LIMITS.descriptionChars) };
+  }
+  function isPhonePaletteValue(name, value) {
+    const kind = Object.prototype.hasOwnProperty.call(PHONE_THEME_VARIABLES, name) ? PHONE_THEME_VARIABLES[name] : void 0;
+    if (!kind || typeof value !== "string" || value.length > PHONE_PLUGIN_LIMITS.valueChars) {
+      return false;
+    }
+    const v = value.trim();
+    if (!v || UNSAFE_CSS.test(v) || /var\(|env\(/i.test(v)) {
+      return false;
+    }
+    const isColour = (part) => LITERAL_COLOR.test(part) && parseCssColor(part) !== void 0;
+    return kind === "colour" ? isColour(v) : isShadow(v, isColour, PHONE_SHADOW_LIMITS);
+  }
+  var effectivePalette = (theme) => ({ ...PHONE_BASE_PALETTES[theme.base], ...theme.palette });
+  function paletteProblems(theme) {
+    const palette = effectivePalette(theme);
+    const problems = [];
+    const colours = /* @__PURE__ */ new Map();
+    for (const name of OPAQUE) {
+      const colour = parseCssColor(palette[name]);
+      if (!colour || colour[3] < 1) {
+        problems.push(`"${name}" must be a colour nothing shows through`);
+      } else {
+        colours.set(name, colour);
+      }
+    }
+    for (const [text, ground, least] of PHONE_CONTRAST_PAIRS) {
+      const a = colours.get(text) ?? parseCssColor(palette[text]);
+      const b = colours.get(ground);
+      if (a && b) {
+        const ratio = contrastRatio(a, b);
+        if (ratio < least) {
+          problems.push(`"${text}" on "${ground}" reads at ${ratio.toFixed(2)}:1, under ${least}:1`);
+        }
+      }
+    }
+    return problems;
+  }
+  function themeOf(raw, where, problems) {
+    if (!isRecord(raw)) {
+      problems.push(`${where}: not an object`);
+      return void 0;
+    }
+    const id = typeof raw.id === "string" && PART_ID.test(raw.id) ? raw.id : void 0;
+    const at = id ? `theme "${id}"` : where;
+    const name = phoneWordsOf(raw.name, PHONE_PLUGIN_LIMITS.nameChars, `${at} name`, problems);
+    const base = raw.base === "dark" || raw.base === "light" ? raw.base : void 0;
+    if (!id || !name || !base || !isRecord(raw.palette)) {
+      problems.push(`${at}: needs an "id" (a-z, 0-9, -), a "name", a "base" ("dark" or "light") and a "palette"`);
+      return void 0;
+    }
+    const palette = {};
+    for (const [key, value] of Object.entries(raw.palette)) {
+      if (!Object.prototype.hasOwnProperty.call(PHONE_THEME_VARIABLES, key)) {
+        problems.push(`${at}: "${key}" is not a variable of the app's themes`);
+      } else if (!isPhonePaletteValue(key, value)) {
+        problems.push(`${at}: "${key}" must be ${PHONE_THEME_VARIABLES[key] === "colour" ? "a colour written out (#rgb, #rrggbb, rgb(), hsl())" : "a shadow of at most 3 layers in px with colours written out"}, at most ${PHONE_PLUGIN_LIMITS.valueChars} characters`);
+      } else {
+        palette[key] = value.trim();
+      }
+    }
+    const unreadable = paletteProblems({ base, palette });
+    if (unreadable.length) {
+      problems.push(...unreadable.map((problem) => `${at} is left out: ${problem}`));
+      return void 0;
+    }
+    return { id, name, base, palette };
+  }
+  function optionsOf(renderer, raw, at, problems) {
+    if (raw === void 0) {
+      return {};
+    }
+    if (!isRecord(raw)) {
+      problems.push(`${at}: "options" must be an object`);
+      return void 0;
+    }
+    if (renderer === "markdown") {
+      return {};
+    }
+    const options = {};
+    if (raw.separator !== void 0) {
+      if (!PHONE_RENDERERS.table.separator.includes(raw.separator)) {
+        problems.push(`${at}: "separator" must be one of "auto", ",", "\\t", ";", "|"`);
+        return void 0;
+      }
+      options.separator = raw.separator;
+    }
+    if (raw.header !== void 0) {
+      if (typeof raw.header !== "boolean") {
+        problems.push(`${at}: "header" must be true or false`);
+        return void 0;
+      }
+      options.header = raw.header;
+    }
+    return options;
+  }
+  function viewerOf(raw, where, problems) {
+    if (!isRecord(raw)) {
+      problems.push(`${where}: not an object`);
+      return void 0;
+    }
+    const id = typeof raw.id === "string" && PART_ID.test(raw.id) ? raw.id : void 0;
+    const at = id ? `viewer "${id}"` : where;
+    const renderer = typeof raw.renderer === "string" && Object.prototype.hasOwnProperty.call(PHONE_RENDERERS, raw.renderer) ? raw.renderer : void 0;
+    if (!id || !renderer) {
+      problems.push(`${at}: needs an "id" (a-z, 0-9, -) and a "renderer" the app has (${Object.keys(PHONE_RENDERERS).join(", ")})`);
+      return void 0;
+    }
+    const extensions = [...new Set((Array.isArray(raw.extensions) ? raw.extensions : []).map((e) => typeof e === "string" ? e.trim().toLowerCase().replace(/^\./, "") : ""))];
+    const bad = extensions.filter((e) => !EXTENSION.test(e));
+    if (!extensions.length || bad.length || extensions.length > PHONE_PLUGIN_LIMITS.extensions) {
+      problems.push(`${at}: "extensions" must list 1 to ${PHONE_PLUGIN_LIMITS.extensions} file extensions ("md", "csv")`);
+      return void 0;
+    }
+    const options = optionsOf(renderer, raw.options, at, problems);
+    if (!options) {
+      return void 0;
+    }
+    const name = raw.name === void 0 ? void 0 : phoneWordsOf(raw.name, PHONE_PLUGIN_LIMITS.nameChars, `${at} name`, problems);
+    return { id, renderer, extensions, options, ...name ? { name } : {} };
+  }
+  function listOf(raw, key, max, problems, read) {
+    if (raw === void 0) {
+      return [];
+    }
+    if (!Array.isArray(raw)) {
+      problems.push(`"${key}" must be a list`);
+      return [];
+    }
+    if (raw.length > max) {
+      problems.push(`"${key}": only the first ${max} are read`);
+    }
+    const out = [];
+    raw.slice(0, max).forEach((item, i) => {
+      const entry = read(item, `${key}[${i}]`, problems);
+      if (entry && out.some((other) => other.id === entry.id)) {
+        problems.push(`${key}[${i}]: "${entry.id}" is there twice`);
+      } else if (entry) {
+        out.push(entry);
+      }
+    });
+    return out;
+  }
+  function parsePhonePluginManifest(raw) {
+    if (!isRecord(raw)) {
+      return { reason: "the manifest is not a JSON object", code: "invalid" };
+    }
+    const id = typeof raw.id === "string" ? raw.id.trim().toLowerCase() : "";
+    if (!isValidPluginId(id)) {
+      return { reason: `"id" must be publisher.name (a-z, 0-9, -), not ${JSON.stringify(raw.id)}`, code: "invalid" };
+    }
+    const version = typeof raw.version === "string" ? raw.version.trim() : "";
+    if (!isValidVersion(version)) {
+      return { reason: `${id}: "version" must be like 1.0.0`, code: "invalid" };
+    }
+    const phoneApi = raw.phoneApi;
+    if (typeof phoneApi !== "number" || !Number.isInteger(phoneApi) || phoneApi < 1) {
+      return { reason: `${id}: "phoneApi" must be ${PHONE_PLUGIN_API}`, code: "invalid" };
+    }
+    if (phoneApi > PHONE_PLUGIN_API) {
+      return { reason: `${id} needs a newer version of the app (phoneApi ${phoneApi})`, code: "newer" };
+    }
+    const problems = [];
+    const { name, description } = namedOf(raw, problems);
+    if (!name || !description) {
+      return { reason: `${id}: needs a "displayName" of at most ${PHONE_PLUGIN_LIMITS.nameChars} characters and a "description" of at most ${PHONE_PLUGIN_LIMITS.descriptionChars}`, code: "invalid" };
+    }
+    const authorName = isRecord(raw.author) ? textOf(raw.author.name, 100) : textOf(raw.author, 100);
+    const authorUrl = isRecord(raw.author) && isHttpsUrl(raw.author.url) ? raw.author.url : void 0;
+    const license = textOf(raw.license, 100);
+    if (raw.onByDefault !== void 0 && typeof raw.onByDefault !== "boolean") {
+      problems.push('"onByDefault" must be true or false');
+    }
+    const themes = listOf(raw.themes, "themes", PHONE_PLUGIN_LIMITS.themes, problems, themeOf);
+    const viewers = listOf(raw.viewers, "viewers", PHONE_PLUGIN_LIMITS.viewers, problems, viewerOf);
+    if (!themes.length && !viewers.length) {
+      return { reason: `${id} adds nothing the app can use${problems.length ? `: ${problems.join("; ")}` : ""}`, code: "invalid" };
+    }
+    return {
+      manifest: {
+        id,
+        version,
+        phoneApi,
+        name,
+        description,
+        ...authorName ? { author: { name: authorName, ...authorUrl ? { url: authorUrl } : {} } } : {},
+        ...license ? { license } : {},
+        onByDefault: raw.onByDefault === true,
+        themes,
+        viewers
+      },
+      problems
+    };
+  }
+  var writtenWords = (words) => Object.fromEntries(Object.keys(PHONE_LOCALES).flatMap((lang) => words[lang] ? [[PHONE_LOCALES[lang], words[lang]]] : []));
+  function addsOf(manifest) {
+    return {
+      themes: manifest.themes.map((theme) => {
+        const palette = effectivePalette(theme);
+        return { id: theme.id, name: writtenWords(theme.name), base: theme.base, preview: Object.fromEntries(PHONE_PREVIEW_VARIABLES.map((key) => [key, palette[key]])) };
+      }),
+      viewers: manifest.viewers.map((viewer) => ({ id: viewer.id, renderer: viewer.renderer, extensions: viewer.extensions }))
+    };
+  }
+  var isPhoneMarketPath = (path) => isSafeMarketPath(path) && path.startsWith("phone/") && /\.(json|md)$/.test(path);
+  var isPhoneReadableMarketPath = (path) => isPhoneMarketPath(path) || path === BREEZELL_MARKET_BLOCKLIST_PATH;
+  var PHONE_MARKET_INDEX_PATH = "phone/index.json";
+  var listText = (value, max, chars) => Array.isArray(value) ? value.flatMap((v) => textOf(v, chars) ?? []).slice(0, max) : [];
+  function parsePhoneMarketEntry(raw) {
+    if (!isRecord(raw)) {
+      return { reason: "not an object" };
+    }
+    const id = typeof raw.id === "string" ? raw.id.toLowerCase() : "";
+    if (!isValidPluginId(id)) {
+      return { reason: `invalid id ${JSON.stringify(raw.id)}` };
+    }
+    const version = typeof raw.version === "string" ? raw.version : "";
+    const phoneApi = raw.phoneApi;
+    if (!isValidVersion(version) || typeof phoneApi !== "number" || !Number.isInteger(phoneApi) || phoneApi < 1) {
+      return { reason: `${id}: invalid version or phoneApi` };
+    }
+    const pkg = raw.package;
+    if (!isRecord(pkg) || typeof pkg.path !== "string" || !isPhoneMarketPath(pkg.path) || !pkg.path.endsWith(".json") || typeof pkg.sha256 !== "string" || !SHA256.test(pkg.sha256) || typeof pkg.size !== "number" || !Number.isInteger(pkg.size) || pkg.size <= 0 || pkg.size > PHONE_PLUGIN_LIMITS.manifestBytes) {
+      return { reason: `${id}: invalid package` };
+    }
+    const problems = [];
+    const { name, description } = namedOf(raw, problems);
+    const author = isRecord(raw.author) ? textOf(raw.author.name, 100) : void 0;
+    const updatedAt = textOf(raw.updatedAt, 40);
+    if (!name || !description || !author || !updatedAt) {
+      return { reason: `${id}: needs a displayName, a description, an author and updatedAt` };
+    }
+    const authorUrl = isRecord(raw.author) && isHttpsUrl(raw.author.url) ? raw.author.url : void 0;
+    const license = textOf(raw.license, 100);
+    const readme = typeof raw.readme === "string" && isPhoneMarketPath(raw.readme) ? raw.readme : void 0;
+    const readmes = {};
+    for (const lang of ["zh", "ja", "ko"]) {
+      const path = isRecord(raw.readmes) ? raw.readmes[PHONE_LOCALES[lang]] : void 0;
+      if (typeof path === "string" && isPhoneMarketPath(path)) {
+        readmes[lang] = path;
+      }
+    }
+    const rawAdds = isRecord(raw.adds) ? raw.adds : {};
+    const themes = (Array.isArray(rawAdds.themes) ? rawAdds.themes : []).slice(0, PHONE_PLUGIN_LIMITS.themes).flatMap((theme) => {
+      if (!isRecord(theme) || typeof theme.id !== "string" || !PART_ID.test(theme.id) || theme.base !== "dark" && theme.base !== "light" || !isRecord(theme.preview)) {
+        return [];
+      }
+      const words = phoneWordsOf(theme.name, PHONE_PLUGIN_LIMITS.nameChars, `${id} theme name`, problems);
+      const preview = theme.preview;
+      if (!words || !PHONE_PREVIEW_VARIABLES.every((key) => isPhonePaletteValue(key, preview[key]))) {
+        return [];
+      }
+      return [{ id: theme.id, name: words, base: theme.base, preview: Object.fromEntries(PHONE_PREVIEW_VARIABLES.map((key) => [key, String(preview[key]).trim()])) }];
+    });
+    const viewers = (Array.isArray(rawAdds.viewers) ? rawAdds.viewers : []).slice(0, PHONE_PLUGIN_LIMITS.viewers).flatMap((viewer) => {
+      if (!isRecord(viewer) || typeof viewer.id !== "string" || !PART_ID.test(viewer.id) || typeof viewer.renderer !== "string" || !Object.prototype.hasOwnProperty.call(PHONE_RENDERERS, viewer.renderer)) {
+        return [];
+      }
+      const extensions = listText(viewer.extensions, PHONE_PLUGIN_LIMITS.extensions, 16).filter((e) => EXTENSION.test(e));
+      return extensions.length ? [{ id: viewer.id, renderer: viewer.renderer, extensions }] : [];
+    });
+    return {
+      entry: {
+        id,
+        version,
+        phoneApi,
+        name,
+        description,
+        categories: listText(raw.categories, 6, 40),
+        tags: listText(raw.tags, 12, 40),
+        author: { name: author, ...authorUrl ? { url: authorUrl } : {} },
+        ...license ? { license } : {},
+        ...readme ? { readme } : {},
+        ...Object.keys(readmes).length ? { readmes } : {},
+        adds: { themes, viewers },
+        package: { path: pkg.path, sha256: pkg.sha256, size: pkg.size },
+        updatedAt
+      }
+    };
+  }
+  function parsePhoneMarketIndex(raw) {
+    if (!isRecord(raw) || raw.schemaVersion !== 1 || !Array.isArray(raw.plugins)) {
+      return { error: 'the phone index is not schemaVersion 1 with a "plugins" list' };
+    }
+    const updatedAt = textOf(raw.updatedAt, 40) ?? "";
+    const plugins = [];
+    const skipped = [];
+    for (const item of raw.plugins.slice(0, 1e3)) {
+      const parsed = parsePhoneMarketEntry(item);
+      if ("reason" in parsed) {
+        skipped.push(parsed.reason);
+      } else if (plugins.some((entry) => entry.id === parsed.entry.id)) {
+        skipped.push(`${parsed.entry.id}: listed twice`);
+      } else {
+        plugins.push(parsed.entry);
+      }
+    }
+    return { index: { schemaVersion: 1, updatedAt, plugins }, skipped };
+  }
+  var phoneReadmeOf = (entry, lang) => (lang !== "en" ? entry.readmes?.[lang] : void 0) ?? entry.readme;
+  function phonePluginBlock(blocks, id, version) {
+    const lower = id.toLowerCase();
+    const publisher = lower.split(".")[0];
+    return blocks.find((block) => (block.id !== void 0 ? block.id === lower : block.publisher === publisher) && (!block.versions || block.versions.includes(version)));
+  }
+  var phoneBlockReason = (block, lang) => (lang !== "en" ? block.l10n?.[PHONE_LOCALES[lang]] : void 0) ?? block.reason;
+  return __toCommonJS(phone_plugin_rules_exports);
+})();
+// ---- end of the generated phone plugin rules ----
+
+/** A phone plugin's manifest, in its folder. */
+const PHONE_MANIFEST = 'phone-plugin.json';
+
+/**
+ * A phone plugin's manifest read with the phone app's own rules (PHONE_PLUGIN): the market takes none that the app
+ * would leave anything out of, so every problem fails here.
+ */
+function readPhoneManifest(file) {
+	if (!fs.existsSync(file)) {
+		fail(`${file} not found: a phone plugin is one ${PHONE_MANIFEST} (run "init --template phone" to start one)`);
+	}
+	const bytes = fs.readFileSync(file);
+	if (bytes.length > PHONE_PLUGIN.PHONE_PLUGIN_LIMITS.manifestBytes) {
+		fail(`${file} is ${bytes.length} bytes: a phone plugin's manifest is at most ${PHONE_PLUGIN.PHONE_PLUGIN_LIMITS.manifestBytes}`);
+	}
+	let raw;
+	try {
+		raw = JSON.parse(bytes.toString('utf8'));
+	} catch (err) {
+		fail(`${file} is not JSON: ${err.message}`);
+	}
+	const parsed = PHONE_PLUGIN.parsePhonePluginManifest(raw);
+	if ('reason' in parsed) {
+		fail(`${file}: ${parsed.reason}`);
+	}
+	if (parsed.problems.length) {
+		fail(`${file}:\n  - ${parsed.problems.join('\n  - ')}`);
+	}
+	if (raw.id !== parsed.manifest.id) {
+		fail(`${file}: write "id" as ${parsed.manifest.id} (lower case)`);
+	}
+	return { bytes, raw, manifest: parsed.manifest };
+}
+
+/** A phone plugin's categories and tags, as written in its manifest (the market lists them; the app reads neither). */
+const phoneListOf = (value, max) => (Array.isArray(value) ? value.filter(v => typeof v === 'string' && v.trim() && v.length <= 40).map(v => v.trim()).slice(0, max) : []);
+
+function phoneValidate(dir) {
+	const { manifest } = readPhoneManifest(path.join(dir, PHONE_MANIFEST));
+	if (!fs.existsSync(path.join(dir, 'README.md'))) {
+		log('warning: no README.md: the market shows it on the plugin\'s page');
+	}
+	const adds = [...manifest.themes.map(theme => `theme ${theme.id} (over ${theme.base})`), ...manifest.viewers.map(viewer => `${viewer.renderer} viewer for ${viewer.extensions.map(e => `.${e}`).join(' ')}`)];
+	log(`${PHONE_MANIFEST} is fine: ${manifest.id} ${manifest.version} adds ${adds.join(', ')}`);
+}
+
+function phoneSubmit(dir, flags) {
+	if (typeof flags.market !== 'string') {
+		fail('--market <path> is required: a clone of your fork of BreezellCode/BreezellCode');
+	}
+	const marketRoot = path.resolve(flags.market, 'plugins');
+	if (!fs.existsSync(path.join(marketRoot, 'index.json'))) {
+		fail(`${marketRoot} has no index.json: is --market a clone of BreezellCode/BreezellCode?`);
+	}
+	const { bytes, raw, manifest } = readPhoneManifest(path.join(dir, PHONE_MANIFEST));
+	const { id, version } = manifest;
+	// one namespace and one blocklist for both kinds
+	if (fs.existsSync(path.join(marketRoot, 'packages', id))) {
+		fail(`${id} is a Breezell plugin's id in the market: a phone plugin needs an id of its own`);
+	}
+	const relPackage = `phone/packages/${id}/${version}/${id}-${version}.json`;
+	const target = path.join(marketRoot, relPackage);
+	const digest = sha256(bytes);
+	if (fs.existsSync(target) && sha256(fs.readFileSync(target)) !== digest) {
+		fail(`${id} ${version} is already in the market with other contents: published versions do not change, raise "version"`);
+	}
+	const metaFile = path.join(marketRoot, 'phone', 'packages', id, 'plugin.json');
+	const previous = fs.existsSync(metaFile) ? readJson(metaFile) : undefined;
+	if (previous && previous.versions?.some(v => compareVersions(v.version, version) > 0)) {
+		fail(`${id} already has a newer version than ${version} in the market`);
+	}
+	fs.mkdirSync(path.dirname(target), { recursive: true });
+	fs.writeFileSync(target, bytes);
+	let readme;
+	if (fs.existsSync(path.join(dir, 'README.md'))) {
+		readme = `phone/packages/${id}/README.md`;
+		fs.copyFileSync(path.join(dir, 'README.md'), path.join(marketRoot, readme));
+	}
+	const readmes = {};
+	for (const locale of README_LOCALES) {
+		const source = translationFile(dir, `README.${locale}.md`);
+		if (source) {
+			readmes[locale] = `phone/packages/${id}/${TRANSLATIONS_DIR}/README.${locale}.md`;
+			fs.mkdirSync(path.join(marketRoot, 'phone', 'packages', id, TRANSLATIONS_DIR), { recursive: true });
+			fs.copyFileSync(source, path.join(marketRoot, readmes[locale]));
+		}
+	}
+	const l10n = {};
+	for (const [locale, text] of Object.entries(raw.l10n ?? {})) {
+		if (README_LOCALES.includes(locale) && text && typeof text === 'object') {
+			const words = Object.fromEntries(['displayName', 'description'].filter(key => typeof text[key] === 'string' && text[key].trim()).map(key => [key, text[key].trim()]));
+			if (Object.keys(words).length) {
+				l10n[locale] = words;
+			}
+		}
+	}
+	const versions = (previous?.versions ?? []).filter(v => v.version !== version);
+	versions.push({ version, path: relPackage, sha256: digest, size: bytes.length, phoneApi: manifest.phoneApi, adds: PHONE_PLUGIN.addsOf(manifest), publishedAt: new Date().toISOString() });
+	versions.sort((a, b) => compareVersions(b.version, a.version));
+	writeJson(metaFile, {
+		id,
+		displayName: raw.displayName.trim(),
+		description: raw.description.trim(),
+		categories: phoneListOf(raw.categories, 6).length ? phoneListOf(raw.categories, 6) : [manifest.themes.length ? 'Themes' : 'Viewers'],
+		tags: phoneListOf(raw.tags, 12),
+		author: manifest.author ?? { name: id.split('.')[0] },
+		license: manifest.license,
+		readme,
+		readmes: Object.keys(readmes).length ? readmes : undefined,
+		l10n: Object.keys(l10n).length ? l10n : undefined,
+		versions,
+	});
+	writeJson(path.join(marketRoot, PHONE_PLUGIN.PHONE_MARKET_INDEX_PATH), buildPhoneIndex(marketRoot));
+	log(`added the phone plugin ${id} ${version} to ${marketRoot}`);
+	log('next, in the market clone:');
+	log(`  git checkout -b phone/${id}-${version}`);
+	log(`  git add plugins && git commit -m "Phone plugin: ${id} ${version}"`);
+	log('  git push, then open a pull request to BreezellCode/BreezellCode');
+}
+
+/** plugins/phone/index.json, from every phone/packages/<id>/plugin.json: each plugin at its newest version. */
+function buildPhoneIndex(marketRoot) {
+	const packagesDir = path.join(marketRoot, 'phone', 'packages');
+	const plugins = [];
+	for (const id of fs.existsSync(packagesDir) ? fs.readdirSync(packagesDir).sort() : []) {
+		const metaFile = path.join(packagesDir, id, 'plugin.json');
+		if (!fs.existsSync(metaFile)) {
+			continue;
+		}
+		const meta = readJson(metaFile);
+		const latest = meta.versions?.[0];
+		if (!latest) {
+			continue;
+		}
+		plugins.push({
+			id: meta.id,
+			displayName: meta.displayName,
+			description: meta.description,
+			l10n: meta.l10n && Object.keys(meta.l10n).length ? meta.l10n : undefined,
+			version: latest.version,
+			phoneApi: latest.phoneApi,
+			categories: meta.categories ?? [],
+			tags: meta.tags ?? [],
+			author: meta.author,
+			license: meta.license,
+			readme: meta.readme,
+			readmes: meta.readmes && Object.keys(meta.readmes).length ? meta.readmes : undefined,
+			adds: latest.adds,
+			package: { path: latest.path, sha256: latest.sha256, size: latest.size },
+			updatedAt: latest.publishedAt,
+		});
+	}
+	const updatedAt = plugins.map(p => p.updatedAt).sort().pop() ?? '1970-01-01T00:00:00.000Z';
+	return { schemaVersion: 1, updatedAt, plugins };
+}
+
+/**
+ * Every phone plugin matches its plugin.json and reads with the phone app's rules with nothing left out, its id is
+ * not a Breezell plugin's, its card colours are its manifest's, and phone/index.json is what buildPhoneIndex makes.
+ */
+function checkPhoneMarket(marketRoot) {
+	const indexFile = path.join(marketRoot, PHONE_PLUGIN.PHONE_MARKET_INDEX_PATH);
+	if (!fs.existsSync(path.join(marketRoot, 'phone'))) {
+		return [];
+	}
+	const problems = [];
+	const index = buildPhoneIndex(marketRoot);
+	for (const entry of index.plugins) {
+		const where = `phone ${entry.id}@${entry.version}`;
+		if (!PHONE_PLUGIN.isValidPluginId(entry.id)) {
+			problems.push(`${where}: bad id`);
+			continue;
+		}
+		if (fs.existsSync(path.join(marketRoot, 'packages', entry.id))) {
+			problems.push(`${where}: a Breezell plugin of the market has this id`);
+		}
+		for (const [locale] of Object.entries(entry.readmes ?? {}).filter(([l]) => !README_LOCALES.includes(l))) {
+			problems.push(`${where}: unknown README locale ${locale}`);
+		}
+		for (const rel of [entry.package.path, entry.readme, ...Object.values(entry.readmes ?? {})].filter(Boolean)) {
+			if (!PHONE_PLUGIN.isPhoneMarketPath(rel) || !fs.existsSync(path.join(marketRoot, rel))) {
+				problems.push(`${where}: missing or unsafe path ${rel}`);
+			}
+		}
+		const listed = PHONE_PLUGIN.parsePhoneMarketEntry(entry);
+		if ('reason' in listed) {
+			problems.push(`${where}: the phone app would not list it: ${listed.reason}`);
+		}
+		const file = path.join(marketRoot, entry.package.path);
+		if (!fs.existsSync(file)) {
+			continue;
+		}
+		const bytes = fs.readFileSync(file);
+		if (sha256(bytes) !== entry.package.sha256 || bytes.length !== entry.package.size) {
+			problems.push(`${where}: sha256 or size differs from plugin.json`);
+			continue;
+		}
+		let parsed;
+		try {
+			parsed = PHONE_PLUGIN.parsePhonePluginManifest(JSON.parse(bytes.toString('utf8')));
+		} catch (err) {
+			problems.push(`${where}: the manifest is not JSON: ${err.message}`);
+			continue;
+		}
+		if ('reason' in parsed) {
+			problems.push(`${where}: ${parsed.reason}`);
+			continue;
+		}
+		parsed.problems.forEach(p => problems.push(`${where}: ${p}`));
+		if (parsed.manifest.id !== entry.id || parsed.manifest.version !== entry.version || parsed.manifest.phoneApi !== entry.phoneApi) {
+			problems.push(`${where}: the manifest says ${parsed.manifest.id}@${parsed.manifest.version} (phoneApi ${parsed.manifest.phoneApi})`);
+		}
+		if (JSON.stringify(PHONE_PLUGIN.addsOf(parsed.manifest)) !== JSON.stringify(entry.adds)) {
+			problems.push(`${where}: "adds" differs from what the manifest adds`);
+		}
+	}
+	if (!fs.existsSync(indexFile) || JSON.stringify(readJson(indexFile)) !== JSON.stringify(index)) {
+		problems.push(`${PHONE_PLUGIN.PHONE_MARKET_INDEX_PATH} is not up to date: run "node plugins/devkit/breezell-plugin.mjs index plugins"`);
+	}
+	return problems;
+}
+
+/** A phone plugin to start from: its manifest, a README, and this devkit to check it with. */
+function initPhone(target, values) {
+	const files = {
+		[PHONE_MANIFEST]: `${JSON.stringify({
+			id: values.id,
+			version: '0.1.0',
+			phoneApi: PHONE_PLUGIN.PHONE_PLUGIN_API,
+			displayName: values.displayName,
+			description: values.description || 'A theme for the Breezell phone app.',
+			author: { name: values.publisher },
+			license: 'MIT',
+			themes: [{ id: 'night', name: { en: `${values.displayName} night` }, base: 'dark', palette: { bg: '#10141c', surface: '#171d28', border: '#263041', 'border-strong': '#475569', ink: '#e8edf5', muted: '#9aa7bb', accent: '#7cb7ff', 'on-accent': '#0b1220', 'accent-soft': '#1c2a40', 'accent-ink': '#9cc8ff', bubble: '#1c2433' } }],
+		}, null, '\t')}\n`,
+		'README.md': `# ${values.displayName}\n\n${values.description || 'A theme for the Breezell phone app.'}\n\nA phone plugin is data: the phone app draws the colours and previews it names, no code of it runs. See plugins/docs/phone.md in BreezellCode/BreezellCode.\n\nCheck it with \`node tools/breezell-plugin.mjs phone-validate\`.\n`,
+		'tools/breezell-plugin.mjs': fs.readFileSync(SELF, 'utf8'),
+	};
+	for (const [rel, content] of Object.entries(files)) {
+		const file = path.join(target, ...rel.split('/'));
+		fs.mkdirSync(path.dirname(file), { recursive: true });
+		fs.writeFileSync(file, content);
+	}
+	log(`created the phone plugin ${values.id} in ${target}`);
+	log(`next: edit ${PHONE_MANIFEST}, then node tools/breezell-plugin.mjs phone-validate`);
+}
+
+// ---------------------------------------------------------------------------
 // Templates
 // ---------------------------------------------------------------------------
 
@@ -2565,17 +3499,21 @@ async function init(dir, flags) {
 		}
 	}
 	const source = flags.source === 'closed' ? 'closed' : 'open';
-	const set = templateSet() ?? await fetchTemplateSet();
-	const templateId = typeof flags.template === 'string' ? flags.template : 'webview';
-	const template = set.templates[templateId];
-	if (!template) {
-		fail(`unknown template "${templateId}" (${Object.keys(set.templates).join(', ')})`);
-	}
 	const target = path.resolve(dir ?? name);
 	if (fs.existsSync(target) && fs.readdirSync(target).length && !flags.force) {
 		fail(`${target} is not empty (use --force to write into it)`);
 	}
 	const values = { publisher, name, id: `${publisher}.${name}`, displayName, description, source, apiVersion: String(API_VERSION) };
+	// a phone plugin is a manifest, not an extension: none of the templates' files
+	if (flags.template === 'phone') {
+		return initPhone(target, values);
+	}
+	const set = templateSet() ?? await fetchTemplateSet();
+	const templateId = typeof flags.template === 'string' ? flags.template : 'webview';
+	const template = set.templates[templateId];
+	if (!template) {
+		fail(`unknown template "${templateId}" (${[...Object.keys(set.templates), 'phone'].join(', ')})`);
+	}
 	const fillIn = text => text.replace(/\{\{(\w+)\}\}/g, (m, key) => values[key] ?? m);
 	for (const [rel, content] of Object.entries({ ...set.shared, ...template.files })) {
 		const file = path.join(target, ...rel.split('/'));
@@ -2591,11 +3529,13 @@ async function init(dir, flags) {
 const HELP = `breezell-plugin ${DEVKIT_VERSION}
 
   init [dir] --id publisher.name [--display-name "My Plugin"] [--description "..."]
-             [--template webview|ai|blank] [--source open|closed]
+             [--template webview|ai|blank|phone] [--source open|closed]
   build [dir] [--closed] [--watch]
   validate [dir]
   pack [dir] --open | --closed [--out <folder>]
   submit [dir] --market <clone of BreezellCode/BreezellCode> [--vsix <file>]
+  phone-validate [dir]
+  phone-submit [dir] --market <clone of BreezellCode/BreezellCode>
   index <market plugins folder> [--check]
   templates-json [--check <file>]
   types
@@ -2623,19 +3563,30 @@ async function main() {
 			return void await pack(dir, flags);
 		case 'submit':
 			return submit(dir, flags);
+		case 'phone-validate':
+			return phoneValidate(dir);
+		case 'phone-submit':
+			return phoneSubmit(dir, flags);
 		case 'index': {
 			if (!positional[0]) {
 				fail('index <market plugins folder>');
 			}
 			if (flags.check) {
 				const { problems, count } = checkMarket(dir);
+				problems.push(...checkPhoneMarket(dir));
 				if (problems.length) {
 					fail(`market check failed:\n  - ${problems.join('\n  - ')}`);
 				}
-				return log(`market is consistent: ${count} plugins`);
+				const phone = buildPhoneIndex(dir).plugins.length;
+				return log(`market is consistent: ${count} plugins${phone ? `, ${phone} phone plugins` : ''}`);
 			}
 			writeJson(path.join(dir, 'index.json'), buildIndex(dir));
-			return log(`wrote ${path.join(dir, 'index.json')}`);
+			log(`wrote ${path.join(dir, 'index.json')}`);
+			if (fs.existsSync(path.join(dir, 'phone'))) {
+				writeJson(path.join(dir, PHONE_PLUGIN.PHONE_MARKET_INDEX_PATH), buildPhoneIndex(dir));
+				log(`wrote ${path.join(dir, PHONE_PLUGIN.PHONE_MARKET_INDEX_PATH)}`);
+			}
+			return undefined;
 		}
 		case 'templates-json': {
 			const set = templateSet();

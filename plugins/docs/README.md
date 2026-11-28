@@ -28,6 +28,7 @@ Typings: [`devkit/breezell.d.ts`](https://github.com/BreezellCode/BreezellCode/b
 | [An agent of your own](own-agent.md) | Answering conversations with an agent the plugin runs: its models in the picker, turns, tool calls, approvals, Breezell's tools for it, sessions |
 | [Breezell's screens](ui.md) | Buttons, the slash menu, pages, a companion, settings, patches, tokens, fonts, a stylesheet, variants, code fences, modes, sign-in tiles |
 | [Windows](windows.md) | Windows of the plugin's own, also without an editor |
+| [Phone plugins](phone.md) | Themes and file previews for the Breezell phone app, written as data: the manifest, palettes, viewers, publishing |
 | [Restarting Breezell](restart.md) | Asking for a restart, after an install or an update too |
 | [Translations](translations.md) | The README, name, description and commands in other languages |
 | [Security](security.md) | What plugins cannot reach, and what users and review expect |

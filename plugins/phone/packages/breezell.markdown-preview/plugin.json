@@ -1,0 +1,57 @@
+{
+	"id": "breezell.markdown-preview",
+	"displayName": "Markdown preview",
+	"description": "Shows a Markdown file as the page it makes, from its Preview button in the code view.",
+	"categories": [
+		"Viewers"
+	],
+	"tags": [],
+	"author": {
+		"name": "Breezell"
+	},
+	"license": "MIT",
+	"readme": "phone/packages/breezell.markdown-preview/README.md",
+	"readmes": {
+		"zh-TW": "phone/packages/breezell.markdown-preview/i18n/README.zh-TW.md",
+		"ja": "phone/packages/breezell.markdown-preview/i18n/README.ja.md",
+		"ko": "phone/packages/breezell.markdown-preview/i18n/README.ko.md"
+	},
+	"l10n": {
+		"zh-TW": {
+			"displayName": "Markdown 預覽",
+			"description": "在程式碼檢視中按「預覽」，把 Markdown 檔案顯示成排版好的頁面。"
+		},
+		"ja": {
+			"displayName": "Markdown プレビュー",
+			"description": "コードビューの「プレビュー」で、Markdown ファイルを整えたページとして表示します。"
+		},
+		"ko": {
+			"displayName": "Markdown 미리 보기",
+			"description": "코드 보기의 미리 보기 버튼으로 Markdown 파일을 완성된 페이지로 보여 줍니다."
+		}
+	},
+	"versions": [
+		{
+			"version": "1.0.0",
+			"path": "phone/packages/breezell.markdown-preview/1.0.0/breezell.markdown-preview-1.0.0.json",
+			"sha256": "5d1b96918d076d1cb6efa585d65082287bc59b37723a7ddf7c4d584113884018",
+			"size": 1108,
+			"phoneApi": 1,
+			"adds": {
+				"themes": [],
+				"viewers": [
+					{
+						"id": "markdown",
+						"renderer": "markdown",
+						"extensions": [
+							"md",
+							"markdown",
+							"mdx"
+						]
+					}
+				]
+			},
+			"publishedAt": "2026-11-28T05:48:25.974Z"
+		}
+	]
+}

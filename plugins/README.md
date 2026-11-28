@@ -20,7 +20,8 @@ recipes. Every new plugin also gets an AI skill made from the same pages
 | `devkit/templates/`, `devkit/templates.json` | Templates for new plugins (Breezell's "Create a plugin" uses the same) |
 | `devkit/skill/` | The AI skill every new plugin gets (`.agents/skills/breezell-plugin/`), with `docs/` as its references |
 | `docs/` | The plugin guide |
-| `examples/` | Source of the example plugins, one per kind of plugin (below) |
+| `phone/index.json`, `phone/packages/<publisher.name>/` | Phone plugins: the index, each one's details, its versions (manifests that never change) and READMEs |
+| `examples/` | Source of the example plugins, one per kind of plugin (below), and of the phone plugins (`examples/phone`) |
 
 ---
 
@@ -59,6 +60,7 @@ A Breezell plugin is a VS Code extension with a `breezell` object in its `packag
 | **Companion** | A pet on the chat box that follows what the AI is doing | [Desk Pet](examples/pet) | — |
 | **Long-running** | Keeps a conversation going until something is done, with limits and a page of its own | [Goal](examples/goal) | — |
 | **Agent** | Answers conversations with an agent of its own (a command-line agent the user signed in to), from a tile on Box › Models › Sign in, with Breezell's terminal, edits and review for it | [Agent Bridge](examples/agent-bridge) | — |
+| **Phone** | A theme or a file preview for the Breezell phone app, written as data: the app draws it, no code runs ([Phone plugins](docs/phone.md)) | [Solarized](examples/phone/solarized) | `init --template phone` |
 
 The kinds combine: one plugin can bring skills, a panel, AI commands and a window. For a large plugin
 with its own settings page, data downloaded from a GitHub release and a part installed in the system, see
@@ -148,6 +150,7 @@ Start with [Getting started](docs/getting-started.md), then read the page for wh
 | [An agent of your own](docs/own-agent.md) | Answering conversations with an agent the plugin runs: its models in the picker, turns, tool calls, approvals, Breezell's tools for it, sessions |
 | [Breezell's screens](docs/ui.md) | Buttons, the slash menu, pages, a companion, settings, patches, tokens, fonts, a stylesheet, variants, code fences, modes, sign-in tiles |
 | [Windows](docs/windows.md) | Windows of the plugin's own, also without an editor |
+| [Phone plugins](docs/phone.md) | Themes and file previews for the Breezell phone app, written as data: the manifest, palettes, viewers, publishing |
 | [Restarting Breezell](docs/restart.md) | Asking for a restart, after an install or an update too |
 | [Translations](docs/translations.md) | The README, name, description and commands in other languages |
 | [Security](docs/security.md) | What plugins cannot reach, and what users and review expect |

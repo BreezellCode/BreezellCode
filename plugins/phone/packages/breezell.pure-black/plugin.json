@@ -1,0 +1,66 @@
+{
+	"id": "breezell.pure-black",
+	"displayName": "Pure black",
+	"description": "A theme of true black, for OLED screens: less light, less battery.",
+	"categories": [
+		"Themes"
+	],
+	"tags": [],
+	"author": {
+		"name": "Breezell"
+	},
+	"license": "MIT",
+	"readme": "phone/packages/breezell.pure-black/README.md",
+	"readmes": {
+		"zh-TW": "phone/packages/breezell.pure-black/i18n/README.zh-TW.md",
+		"ja": "phone/packages/breezell.pure-black/i18n/README.ja.md",
+		"ko": "phone/packages/breezell.pure-black/i18n/README.ko.md"
+	},
+	"l10n": {
+		"zh-TW": {
+			"displayName": "純黑主題",
+			"description": "真正的黑色主題，適合 OLED 螢幕：更暗、更省電。"
+		},
+		"ja": {
+			"displayName": "ピュアブラック",
+			"description": "OLED 画面向けの真っ黒なテーマ：まぶしさも電池の消費も抑えます。"
+		},
+		"ko": {
+			"displayName": "퓨어 블랙",
+			"description": "OLED 화면을 위한 완전한 검정 테마: 덜 밝고 배터리를 아낍니다."
+		}
+	},
+	"versions": [
+		{
+			"version": "1.0.0",
+			"path": "phone/packages/breezell.pure-black/1.0.0/breezell.pure-black-1.0.0.json",
+			"sha256": "4464d942981db4ca9c39e93aa4a6545c8f92b3eae430277af1d056c82575ff7b",
+			"size": 1429,
+			"phoneApi": 1,
+			"adds": {
+				"themes": [
+					{
+						"id": "black",
+						"name": {
+							"en": "Pure black",
+							"zh-TW": "純黑",
+							"ja": "ピュアブラック",
+							"ko": "퓨어 블랙"
+						},
+						"base": "dark",
+						"preview": {
+							"bg": "#000000",
+							"bubble": "#161616",
+							"surface": "#0b0b0b",
+							"border": "#1f1f1f",
+							"border-strong": "#3a3a3a",
+							"accent": "#7dd3ae"
+						}
+					}
+				],
+				"viewers": []
+			},
+			"publishedAt": "2026-11-28T05:48:25.944Z"
+		}
+	]
+}

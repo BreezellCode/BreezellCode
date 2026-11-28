@@ -1,0 +1,46 @@
+{
+	"id": "breezell.table",
+	"version": "1.0.0",
+	"phoneApi": 1,
+	"displayName": "Table",
+	"description": "Shows a CSV or TSV file as a table of rows, each row opened to edit and save back.",
+	"l10n": {
+		"zh-TW": {
+			"displayName": "表格",
+			"description": "把 CSV 或 TSV 檔案顯示成一列一列的表格，點開一列就能編輯並存回電腦。"
+		},
+		"ja": {
+			"displayName": "テーブル",
+			"description": "CSV や TSV ファイルを行の表として表示し、行を開いて編集・保存できます。"
+		},
+		"ko": {
+			"displayName": "표",
+			"description": "CSV나 TSV 파일을 행의 표로 보여 주고, 행을 열어 편집하고 저장할 수 있습니다."
+		}
+	},
+	"author": {
+		"name": "Breezell"
+	},
+	"license": "MIT",
+	"onByDefault": true,
+	"viewers": [
+		{
+			"id": "table",
+			"name": {
+				"en": "Table",
+				"zh-TW": "表格",
+				"ja": "テーブル",
+				"ko": "표"
+			},
+			"renderer": "table",
+			"extensions": [
+				"csv",
+				"tsv"
+			],
+			"options": {
+				"separator": "auto",
+				"header": true
+			}
+		}
+	]
+}

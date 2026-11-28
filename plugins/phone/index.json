@@ -1,0 +1,266 @@
+{
+	"schemaVersion": 1,
+	"updatedAt": "2026-11-28T05:48:26.028Z",
+	"plugins": [
+		{
+			"id": "breezell.markdown-preview",
+			"displayName": "Markdown preview",
+			"description": "Shows a Markdown file as the page it makes, from its Preview button in the code view.",
+			"l10n": {
+				"zh-TW": {
+					"displayName": "Markdown 預覽",
+					"description": "在程式碼檢視中按「預覽」，把 Markdown 檔案顯示成排版好的頁面。"
+				},
+				"ja": {
+					"displayName": "Markdown プレビュー",
+					"description": "コードビューの「プレビュー」で、Markdown ファイルを整えたページとして表示します。"
+				},
+				"ko": {
+					"displayName": "Markdown 미리 보기",
+					"description": "코드 보기의 미리 보기 버튼으로 Markdown 파일을 완성된 페이지로 보여 줍니다."
+				}
+			},
+			"version": "1.0.0",
+			"phoneApi": 1,
+			"categories": [
+				"Viewers"
+			],
+			"tags": [],
+			"author": {
+				"name": "Breezell"
+			},
+			"license": "MIT",
+			"readme": "phone/packages/breezell.markdown-preview/README.md",
+			"readmes": {
+				"zh-TW": "phone/packages/breezell.markdown-preview/i18n/README.zh-TW.md",
+				"ja": "phone/packages/breezell.markdown-preview/i18n/README.ja.md",
+				"ko": "phone/packages/breezell.markdown-preview/i18n/README.ko.md"
+			},
+			"adds": {
+				"themes": [],
+				"viewers": [
+					{
+						"id": "markdown",
+						"renderer": "markdown",
+						"extensions": [
+							"md",
+							"markdown",
+							"mdx"
+						]
+					}
+				]
+			},
+			"package": {
+				"path": "phone/packages/breezell.markdown-preview/1.0.0/breezell.markdown-preview-1.0.0.json",
+				"sha256": "5d1b96918d076d1cb6efa585d65082287bc59b37723a7ddf7c4d584113884018",
+				"size": 1108
+			},
+			"updatedAt": "2026-11-28T05:48:25.974Z"
+		},
+		{
+			"id": "breezell.pure-black",
+			"displayName": "Pure black",
+			"description": "A theme of true black, for OLED screens: less light, less battery.",
+			"l10n": {
+				"zh-TW": {
+					"displayName": "純黑主題",
+					"description": "真正的黑色主題，適合 OLED 螢幕：更暗、更省電。"
+				},
+				"ja": {
+					"displayName": "ピュアブラック",
+					"description": "OLED 画面向けの真っ黒なテーマ：まぶしさも電池の消費も抑えます。"
+				},
+				"ko": {
+					"displayName": "퓨어 블랙",
+					"description": "OLED 화면을 위한 완전한 검정 테마: 덜 밝고 배터리를 아낍니다."
+				}
+			},
+			"version": "1.0.0",
+			"phoneApi": 1,
+			"categories": [
+				"Themes"
+			],
+			"tags": [],
+			"author": {
+				"name": "Breezell"
+			},
+			"license": "MIT",
+			"readme": "phone/packages/breezell.pure-black/README.md",
+			"readmes": {
+				"zh-TW": "phone/packages/breezell.pure-black/i18n/README.zh-TW.md",
+				"ja": "phone/packages/breezell.pure-black/i18n/README.ja.md",
+				"ko": "phone/packages/breezell.pure-black/i18n/README.ko.md"
+			},
+			"adds": {
+				"themes": [
+					{
+						"id": "black",
+						"name": {
+							"en": "Pure black",
+							"zh-TW": "純黑",
+							"ja": "ピュアブラック",
+							"ko": "퓨어 블랙"
+						},
+						"base": "dark",
+						"preview": {
+							"bg": "#000000",
+							"bubble": "#161616",
+							"surface": "#0b0b0b",
+							"border": "#1f1f1f",
+							"border-strong": "#3a3a3a",
+							"accent": "#7dd3ae"
+						}
+					}
+				],
+				"viewers": []
+			},
+			"package": {
+				"path": "phone/packages/breezell.pure-black/1.0.0/breezell.pure-black-1.0.0.json",
+				"sha256": "4464d942981db4ca9c39e93aa4a6545c8f92b3eae430277af1d056c82575ff7b",
+				"size": 1429
+			},
+			"updatedAt": "2026-11-28T05:48:25.944Z"
+		},
+		{
+			"id": "breezell.solarized",
+			"displayName": "Solarized",
+			"description": "Ethan Schoonover's Solarized for the phone app: a dark and a light theme of calm blue-green grounds, made easy to read.",
+			"l10n": {
+				"zh-TW": {
+					"displayName": "Solarized",
+					"description": "把 Ethan Schoonover 的 Solarized 配色帶到手機 App：深色和淺色兩個主題，沉靜的藍綠色調，也容易閱讀。"
+				},
+				"ja": {
+					"displayName": "Solarized",
+					"description": "Ethan Schoonover の Solarized をスマートフォンアプリに：落ち着いた青緑のダークとライトの 2 つのテーマで、読みやすさも保ちます。"
+				},
+				"ko": {
+					"displayName": "Solarized",
+					"description": "Ethan Schoonover의 Solarized를 휴대폰 앱에: 차분한 청록색의 다크와 라이트 두 가지 테마로, 읽기 쉽게 다듬었습니다."
+				}
+			},
+			"version": "1.0.0",
+			"phoneApi": 1,
+			"categories": [
+				"Themes"
+			],
+			"tags": [
+				"solarized",
+				"theme",
+				"dark",
+				"light"
+			],
+			"author": {
+				"name": "Breezell"
+			},
+			"license": "MIT",
+			"readme": "phone/packages/breezell.solarized/README.md",
+			"readmes": {
+				"zh-TW": "phone/packages/breezell.solarized/i18n/README.zh-TW.md",
+				"ja": "phone/packages/breezell.solarized/i18n/README.ja.md",
+				"ko": "phone/packages/breezell.solarized/i18n/README.ko.md"
+			},
+			"adds": {
+				"themes": [
+					{
+						"id": "dark",
+						"name": {
+							"en": "Solarized dark",
+							"zh-TW": "Solarized 深色",
+							"ja": "Solarized ダーク",
+							"ko": "Solarized 다크"
+						},
+						"base": "dark",
+						"preview": {
+							"bg": "#002b36",
+							"bubble": "#0a3f4c",
+							"surface": "#073642",
+							"border": "#0e4b59",
+							"border-strong": "#586e75",
+							"accent": "#2aa198"
+						}
+					},
+					{
+						"id": "light",
+						"name": {
+							"en": "Solarized light",
+							"zh-TW": "Solarized 淺色",
+							"ja": "Solarized ライト",
+							"ko": "Solarized 라이트"
+						},
+						"base": "light",
+						"preview": {
+							"bg": "#fdf6e3",
+							"bubble": "#eee8d5",
+							"surface": "#fffbef",
+							"border": "#e6dec8",
+							"border-strong": "#93a1a1",
+							"accent": "#2aa198"
+						}
+					}
+				],
+				"viewers": []
+			},
+			"package": {
+				"path": "phone/packages/breezell.solarized/1.0.0/breezell.solarized-1.0.0.json",
+				"sha256": "7f0ef63dc449c71800a56fda8122ded890e148d9f5ae129075dce1c62ec66535",
+				"size": 2929
+			},
+			"updatedAt": "2026-11-28T05:48:26.028Z"
+		},
+		{
+			"id": "breezell.table",
+			"displayName": "Table",
+			"description": "Shows a CSV or TSV file as a table of rows, each row opened to edit and save back.",
+			"l10n": {
+				"zh-TW": {
+					"displayName": "表格",
+					"description": "把 CSV 或 TSV 檔案顯示成一列一列的表格，點開一列就能編輯並存回電腦。"
+				},
+				"ja": {
+					"displayName": "テーブル",
+					"description": "CSV や TSV ファイルを行の表として表示し、行を開いて編集・保存できます。"
+				},
+				"ko": {
+					"displayName": "표",
+					"description": "CSV나 TSV 파일을 행의 표로 보여 주고, 행을 열어 편집하고 저장할 수 있습니다."
+				}
+			},
+			"version": "1.0.0",
+			"phoneApi": 1,
+			"categories": [
+				"Viewers"
+			],
+			"tags": [],
+			"author": {
+				"name": "Breezell"
+			},
+			"license": "MIT",
+			"readme": "phone/packages/breezell.table/README.md",
+			"readmes": {
+				"zh-TW": "phone/packages/breezell.table/i18n/README.zh-TW.md",
+				"ja": "phone/packages/breezell.table/i18n/README.ja.md",
+				"ko": "phone/packages/breezell.table/i18n/README.ko.md"
+			},
+			"adds": {
+				"themes": [],
+				"viewers": [
+					{
+						"id": "table",
+						"renderer": "table",
+						"extensions": [
+							"csv",
+							"tsv"
+						]
+					}
+				]
+			},
+			"package": {
+				"path": "phone/packages/breezell.table/1.0.0/breezell.table-1.0.0.json",
+				"sha256": "d0f17e60646c12ecdfbad54b46c7cead57013a1ecfd4c4dbe8671302ef516e69",
+				"size": 1068
+			},
+			"updatedAt": "2026-11-28T05:48:26.001Z"
+		}
+	]
+}

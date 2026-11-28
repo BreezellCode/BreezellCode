@@ -1,0 +1,89 @@
+{
+	"id": "breezell.solarized",
+	"displayName": "Solarized",
+	"description": "Ethan Schoonover's Solarized for the phone app: a dark and a light theme of calm blue-green grounds, made easy to read.",
+	"categories": [
+		"Themes"
+	],
+	"tags": [
+		"solarized",
+		"theme",
+		"dark",
+		"light"
+	],
+	"author": {
+		"name": "Breezell"
+	},
+	"license": "MIT",
+	"readme": "phone/packages/breezell.solarized/README.md",
+	"readmes": {
+		"zh-TW": "phone/packages/breezell.solarized/i18n/README.zh-TW.md",
+		"ja": "phone/packages/breezell.solarized/i18n/README.ja.md",
+		"ko": "phone/packages/breezell.solarized/i18n/README.ko.md"
+	},
+	"l10n": {
+		"zh-TW": {
+			"displayName": "Solarized",
+			"description": "把 Ethan Schoonover 的 Solarized 配色帶到手機 App：深色和淺色兩個主題，沉靜的藍綠色調，也容易閱讀。"
+		},
+		"ja": {
+			"displayName": "Solarized",
+			"description": "Ethan Schoonover の Solarized をスマートフォンアプリに：落ち着いた青緑のダークとライトの 2 つのテーマで、読みやすさも保ちます。"
+		},
+		"ko": {
+			"displayName": "Solarized",
+			"description": "Ethan Schoonover의 Solarized를 휴대폰 앱에: 차분한 청록색의 다크와 라이트 두 가지 테마로, 읽기 쉽게 다듬었습니다."
+		}
+	},
+	"versions": [
+		{
+			"version": "1.0.0",
+			"path": "phone/packages/breezell.solarized/1.0.0/breezell.solarized-1.0.0.json",
+			"sha256": "7f0ef63dc449c71800a56fda8122ded890e148d9f5ae129075dce1c62ec66535",
+			"size": 2929,
+			"phoneApi": 1,
+			"adds": {
+				"themes": [
+					{
+						"id": "dark",
+						"name": {
+							"en": "Solarized dark",
+							"zh-TW": "Solarized 深色",
+							"ja": "Solarized ダーク",
+							"ko": "Solarized 다크"
+						},
+						"base": "dark",
+						"preview": {
+							"bg": "#002b36",
+							"bubble": "#0a3f4c",
+							"surface": "#073642",
+							"border": "#0e4b59",
+							"border-strong": "#586e75",
+							"accent": "#2aa198"
+						}
+					},
+					{
+						"id": "light",
+						"name": {
+							"en": "Solarized light",
+							"zh-TW": "Solarized 淺色",
+							"ja": "Solarized ライト",
+							"ko": "Solarized 라이트"
+						},
+						"base": "light",
+						"preview": {
+							"bg": "#fdf6e3",
+							"bubble": "#eee8d5",
+							"surface": "#fffbef",
+							"border": "#e6dec8",
+							"border-strong": "#93a1a1",
+							"accent": "#2aa198"
+						}
+					}
+				],
+				"viewers": []
+			},
+			"publishedAt": "2026-11-28T05:48:26.028Z"
+		}
+	]
+}
